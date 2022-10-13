@@ -91,7 +91,7 @@ mob.set_matrices(ny, Re, alpha, beta, bsfl, map)
 mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
 
 # Create instance for Class SolveGeneralizedEVP
-solve = msg.SolveGeneralizedEVP(4*ny*4*ny) # System matrices are 4*ny by 4*ny
+solve = msg.SolveGeneralizedEVP(4*ny) # System matrices are 4*ny by 4*ny
 eigvals, eigvcts = solve.solve_eigenvalue_problem(mob.mat_lhs, mob.mat_rhs)
 
 # Plot and Write out eigenvalues

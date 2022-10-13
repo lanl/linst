@@ -9,14 +9,26 @@ i4  = np.dtype('i4') # integer 4
 i8  = np.dtype('i8') # integer 8
 
 class SolveGeneralizedEVP:
-
-    def __init__(self, size): # here I pass ny
+    """
+    This class define a solution object and contain the main function that provides the solution 
+    to the generalized eigenvalue problem (GEVP)
+    """
+    def __init__(self, size):
+        """
+        Constructor of class SolveGeneralizedEVP
+        """
         self.size = size
-        self.EigVal = np.zeros(size, dpc)
-        
+        self.EigVal = np.zeros(size*size, dpc)
+        self.EigVec = np.zeros((size, size), dpc)
 
     def solve_eigenvalue_problem(self, lhs, rhs):
-        evalue, evect = linalg.eig(lhs, rhs)
-        return evalue, evect
+        """
+        Function of class SolveGeneralizedEVP that solves the GEVP using linalg.eig
+        """
+        self.EigVal, self.EigVec = linalg.eig(lhs, rhs)
+        return self.EigVal, self.EigVec
+
+        #evalue, evect = linalg.eig(lhs, rhs)
+        #return evalue, evect
 
 

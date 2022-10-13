@@ -27,12 +27,17 @@ class GaussLobatto:
         self.DM = np.zeros((size,size,2), dp)
 
     def cheby(self,N): # here I pas ny-1
-        
+        """
+        This function computes the Gauss-Lobatto points
+        """
         for j in range(0, N+1):
             self.xc[j] = math.cos(j*math.pi/N)
 
     def spectral_diff_matrices(self,N): # here I pas ny-1
-        
+        """
+        This function computes the spectral differentiation matrices on [1,-1]:
+        D1 = d/dy, and D2 = d^2/dy^2
+        """        
         for i in range(0, N+1):
 
             if (i==0 or i==N):

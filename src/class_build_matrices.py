@@ -12,7 +12,7 @@ i8  = np.dtype('i8') # integer 8
 class BuildMatrices:
     """
     This class builds the main matrices A (mat_lhs) and B (mat_rhs) 
-    required to form the generalized eigenvalue problem A*q = omega*B*q
+    required to form the temporal generalized eigenvalue problem A*q = omega*B*q
     """
     def __init__(self, size): # here I pass 4*ny
         """
@@ -26,7 +26,9 @@ class BuildMatrices:
     def set_bc_shear_layer(self, lhs, rhs, ny, map):
         """
         This function sets the boundary conditions for the free shear layer test case:
-        u, v, w = 0 for y --> +/- infinity
+        1) u, v, w = 0 for y --> +/- infinity
+        2) The boundary conditions (called compatibility conditions) for pressure are derived
+        by considering the y-momentum equation in the freestream
         """
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
@@ -133,7 +135,31 @@ class BuildMatrices:
 
     def set_matrices(self, ny, Re, alpha, beta, bsfl, map): # here I pas ny
         """
-        This function builds the stability matrices for the incompressible Navier-Stokes equations
+        This function builds the stability matrices for the incompressible stability equations
+        a1 = [iU   0   0   i;
+              0    iU  0   0;
+              0    0   iU  0;
+              i    0   0   0 ]
+
+        a2 = [1/Re  0     0   0;
+              0    1/Re   0   0;
+              0     0    1/Re 0;
+              0     0     0   0 ]
+
+        b1 = [iW   0   0   0;
+              0    iW  0   0;
+              0    0   iW  i;
+              0    0   i   0 ]
+
+        b2 = [1/Re  0     0   0;
+              0    1/Re   0   0;
+              0     0    1/Re 0;
+              0     0     0   0 ]
+
+        d1 = [-D2/Re   U'      0   0;
+                 0   -D2/Re    0   D;
+                 0     W'   -D2/Re 0;
+                 0     D       0   0 ]
         """
         nt  = 4*ny
 
