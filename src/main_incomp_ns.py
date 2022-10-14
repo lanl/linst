@@ -1,5 +1,6 @@
 import sys
 import math
+import warnings
 import numpy as np
 #from scipy import linalg
 import class_gauss_lobatto as mgl
@@ -24,7 +25,7 @@ str_vars = np.array(['u-velocity', 'v-velocity', 'w-velocity', 'pressure'])
 ###################################
 
 # Number of discretization points
-ny = 200
+ny = 201
 
 # Reynolds number
 Re = 1e50
@@ -70,7 +71,7 @@ yi = cheb.xc
 # Create instance for class Mapping
 map = mma.Mapping(ny)
 
-yinf = 80.
+yinf = 80
 lmap = 2 # cannot be = 0; close to zero: extreme stretching
 map.map_shear_layer(yinf, yi, lmap, cheb.DM)
 
@@ -108,7 +109,113 @@ if ( found1 == True and found2 == True ):
     found = True
     print("Both target eigenvalues have been found")
 
-# Plot and Write out eigenvalues
+# Plot eigenvectors
 if plot_eigvcts == 1:
-    mod_util.plot_eigvcts(ny, eigvcts, target1, idx_tar1, idx_tar2, alpha, map, bsfl)
+    ueig, veig, peig = mod_util.plot_eigvcts(ny, eigvcts, target1, idx_tar1, idx_tar2, alpha, map, bsfl)
 
+phase_u = np.arctan2(ueig.imag, ueig.real)
+phase_v = np.arctan2(veig.imag, veig.real)
+phase_p = np.arctan2(peig.imag, peig.real)
+
+amp_u   = np.abs(ueig)
+amp_v   = np.abs(veig)
+amp_p   = np.abs(peig)
+
+phase_u_uwrap = np.unwrap(phase_u)
+phase_v_uwrap = np.unwrap(phase_v)
+phase_p_uwrap = np.unwrap(phase_p)
+
+if (ny % 2) != 0:
+    mid_idx = int( (ny-1)/2 )
+else:
+    warnings.warn("When ny is even, there is no mid-index")
+    mid_idx = int ( ny/2 )
+    
+print("mid_idx = ", mid_idx)
+
+# When I take phase_ref as phase_v_uwrap ==> I get u and v symmetric/anti-symmetric
+# When I take phase_ref as phase_u_uwrap ==> v is not symmetric/anti-symmetric
+phase_ref     = phase_u_uwrap[mid_idx]
+
+phase_u_uwrap = phase_u_uwrap - phase_ref
+phase_v_uwrap = phase_v_uwrap - phase_ref
+phase_p_uwrap = phase_p_uwrap - phase_ref
+
+#print("exp(1j*phase) = ", np.exp(1j*phase_u))
+#print("exp(1j*phase_unwrapped) = ", np.exp(1j*phase_u_uwrap))
+
+print("np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
+
+# print("phase_u = ", phase_u)
+# print("")
+# print("phase_v = ", phase_v)
+# print("")
+# print("phase_p = ", phase_p)
+
+ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
+veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
+peig_ps = amp_p*np.exp(1j*phase_p_uwrap)
+
+amp_u_ps = np.abs(ueig_ps)
+amp_v_ps = np.abs(veig_ps)
+amp_p_ps = np.abs(peig_ps)
+
+ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
+
+#print("np.abs(ueig*veig)=",np.abs(ueig*veig))
+#print("np.abs(ueig_ps*veig_ps)=",np.abs(ueig_ps*veig_ps))
+
+fa = plt.figure(1001)
+plt.plot(phase_u_uwrap, map.y, 'ks', label="Phase")
+plt.xlabel('Phase')
+plt.ylabel('y')
+plt.title('Phase')
+plt.legend(loc="upper left")
+fa.show()
+
+fa = plt.figure(1002)
+plt.plot(ueig_ps.real, map.y, 'k', label="real(u)")
+plt.plot(ueig_from_continuity.real, map.y, 'g--', label="real(u) from continuity")
+plt.xlabel('real(u)')
+plt.ylabel('y')
+#plt.title('Phase')
+plt.legend(loc="upper right")
+fa.show()
+
+fa = plt.figure(1003)
+plt.plot(ueig_ps.imag, map.y, 'k', label="imag(u)")
+plt.plot(ueig_from_continuity.imag, map.y, 'g--', label="imag(u) from continuity")
+plt.xlabel('imag(u)')
+plt.ylabel('y')
+#plt.title('Phase')
+plt.legend(loc="upper right")
+fa.show()
+
+# fa = plt.figure(1004)
+# plt.plot(amp_u_ps, map.y, 'k', label="amp(u) (phase shifted)")
+# plt.plot(amp_u, map.y, 'g--', label="amp(u)")
+# plt.xlabel('amp(u)')
+# plt.ylabel('y')
+# #plt.title('Phase')
+# plt.legend(loc="upper right")
+# fa.show()
+
+fa = plt.figure(1005)
+plt.plot(veig_ps.real, map.y, 'k', label="real(v)")
+plt.xlabel('real(v)')
+plt.ylabel('y')
+#plt.title('Phase')
+plt.legend(loc="upper right")
+fa.show()
+
+fa = plt.figure(1006)
+plt.plot(veig_ps.imag, map.y, 'k', label="imag(v)")
+plt.xlabel('imag(v)')
+plt.ylabel('y')
+#plt.title('Phase')
+plt.legend(loc="upper right")
+fa.show()
+
+
+
+input("Press any key to continue.........")

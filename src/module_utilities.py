@@ -1,4 +1,5 @@
 
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -170,8 +171,13 @@ def plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl):
     fbbb.show()
     
     # Compute phase for v-eignefunction
-    nloc = ny+1
-    mid_idx = int(nloc/2-1)
+    if (ny % 2) != 0:
+        mid_idx = int( (ny-1)/2 )
+    else:
+        warnings.warn("When ny is even, there is no mid-index")
+        mid_idx = int ( ny/2 )
+
+    print("mid_idx = ", mid_idx)
 
     phase_vvel = np.arctan2( veig_vec.imag, veig_vec.real)    
     phase_vvel = phase_vvel - phase_vvel[mid_idx]
@@ -317,9 +323,9 @@ def plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl):
     plt.ylim([0, 1.2])
     ff.show()
 
-    input("Press any key to continue")
+    #input("Press any key to continue")
 
-
+    return ueig_vec, veig_vec, peig_vec
 
 
 

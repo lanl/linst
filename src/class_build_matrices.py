@@ -2,6 +2,8 @@
 #from termios import N_TTY
 import numpy as np
 
+import warnings
+
 dp  = np.dtype('d')        # double precision
 dpc = np.dtype(np.cdouble) # double precision complex
 
@@ -110,8 +112,11 @@ class BuildMatrices:
 
         if set_sym_bc == 1:
 
-            nloc = ny+1
-            mid_idx = int(nloc/2-1)
+            if (ny % 2) != 0:
+                mid_idx = int( (ny-1)/2 )
+            else:
+                warnings.warn("When ny is even, there is no mid-index")
+                mid_idx = int ( ny/2 )
 
             print("mid_idx=",mid_idx)
             
