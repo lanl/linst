@@ -21,35 +21,72 @@ i8  = np.dtype('i8') # integer 8
 str_vars = np.array(['u-velocity', 'v-velocity', 'w-velocity', 'pressure'])
 
 ###################################
-#    REQUIRED INPUT PARAMETERS    #
+#   Reference data from Michalke  #
 ###################################
 
-# Number of discretization points
+alp_m = np.array([0., 0.1, 0.2, 0.3, 0.4, 0.4446, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=float)
+ome_m = np.array([0.0, 0.04184, 0.06975, 0.08654, 0.09410, 0.09485, 0.09376, 0.08650, 0.07305, 0.05388, 0.02942, 0.0], dtype=float)
+
+print("alp_m, ome_m = ", alp_m, ome_m)
+
+###################################
+#         Read input file         #
+###################################
+
+Local = False
+#### ny, Re, alpha, beta, target1 = mod_util.read_input_file()             
+
+# Number of discretization points in wall-normal direction
 ny = 201
 
 # Reynolds number
 Re = 1e50
 
 # Longitudinal and spanwise wavenumbers: alpha and beta
-alpha = 0.4
+alp_min = 0.4446 #0.0001
+alp_max = 0.4446 #0.9999
+npts_alp = 51
+
+if (alp_min == alp_max): npts_alp = 1
+    
+alpha = np.linspace(alp_min, alp_max, npts_alp)
 beta  = 0.
 
 # Target eigenvalue to find corresponding eigenvector
 target1 = 2.00000000000e-01 +1j*9.40901411190e-02
+target1 = 5.00000000089e-04 +1j*4.91847937625e-04 # for alpha = 0.001
+target1 = 2.22300000000e-01 +1j*9.48510128415e-02 # for 0.4446
 
 # Plotting flags
 plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
+plot_eigvcts = 0 # set to 1 to plot eigenvectors
 plot_eigvals = 1 # set to 1 to plot eigenvalues
-plot_eigvcts = 1 # set to 1 to plot eigenvectors
 
 #################################
 #     EXECUTABLE STATEMENTS     #
 #################################
 
-abs_target1 = np.abs(target1)
+print("")
+print("Case parameters  ")
+print("=================")
+print("ny     = ", ny)
+print("Re     = ", Re)
+print("alpha  = ", alpha)
+print("beta   = ", beta)
+print("target = ", target1)
+print("")
 
 print("Eigenfunction will be extracted for mode with eigenvalue omega = ", target1)
-print("abs_target=",abs_target1)
+print("")
+
+mid_idx = mod_util.get_mid_idx(ny)
+
+if (npts_alp > 1):
+    Tracking = True
+else:
+    Tracking = False
+
+abs_target1 = np.abs(target1)
 
 target2 = np.conj(target1)
 abs_target2 = np.abs(target2)
@@ -85,33 +122,38 @@ if plot_grid_bsfl == 1:
 # Create instance for Class BuildMatrices
 mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny
 
-# Build main stability matrices
-mob.set_matrices(ny, Re, alpha, beta, bsfl, map)
+if Tracking: print("Multiple alpha's ==> tracking solution")
 
-# Set boundary conditions
-mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
+# Build main stability matrices
+mob.set_matrices(ny, Re, beta, bsfl, map)
 
 # Create instance for Class SolveGeneralizedEVP
 solve = msg.SolveGeneralizedEVP(4*ny) # System matrices are 4*ny by 4*ny
-eigvals, eigvcts = solve.solve_eigenvalue_problem(mob.mat_lhs, mob.mat_rhs)
+
+omega_all = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local)
+
+print("omega_all = ", omega_all)
+
+if (npts_alp > 1):
+    mod_util.plot_imag_omega_vs_alpha(omega_all, "omega", alpha, alp_m, ome_m)
 
 # Plot and Write out eigenvalues
 if plot_eigvals == 1:
-    mod_util.plot_eigvals(eigvals)
+    mod_util.plot_eigvals(solve.EigVal)
     
-mod_util.write_out_eigenvalues(eigvals, ny)
+mod_util.write_out_eigenvalues(solve.EigVal, ny)
 
 # Find index of target eigenvalue to extract eigenvector
-idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(eigvals, abs_target1, target1)
-idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(eigvals, abs_target2, target2)
+idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target1, target1)
+idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target2, target2)
 
 if ( found1 == True and found2 == True ):
     found = True
     print("Both target eigenvalues have been found")
+    print("")
 
-# Plot eigenvectors
-if plot_eigvcts == 1:
-    ueig, veig, peig = mod_util.plot_eigvcts(ny, eigvcts, target1, idx_tar1, idx_tar2, alpha, map, bsfl)
+# Get and Plot eigenvectors
+ueig, veig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
 
 phase_u = np.arctan2(ueig.imag, ueig.real)
 phase_v = np.arctan2(veig.imag, veig.real)
@@ -125,14 +167,6 @@ phase_u_uwrap = np.unwrap(phase_u)
 phase_v_uwrap = np.unwrap(phase_v)
 phase_p_uwrap = np.unwrap(phase_p)
 
-if (ny % 2) != 0:
-    mid_idx = int( (ny-1)/2 )
-else:
-    warnings.warn("When ny is even, there is no mid-index")
-    mid_idx = int ( ny/2 )
-    
-print("mid_idx = ", mid_idx)
-
 # When I take phase_ref as phase_v_uwrap ==> I get u and v symmetric/anti-symmetric
 # When I take phase_ref as phase_u_uwrap ==> v is not symmetric/anti-symmetric
 phase_ref     = phase_u_uwrap[mid_idx]
@@ -144,13 +178,8 @@ phase_p_uwrap = phase_p_uwrap - phase_ref
 #print("exp(1j*phase) = ", np.exp(1j*phase_u))
 #print("exp(1j*phase_unwrapped) = ", np.exp(1j*phase_u_uwrap))
 
-print("np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
-
-# print("phase_u = ", phase_u)
-# print("")
-# print("phase_v = ", phase_v)
-# print("")
-# print("phase_p = ", phase_p)
+print("np.max( np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
+print("np.max( np.abs( np.exp(1j*phase_u)) - np.abs( np.exp(1j*phase_u_uwrap )) ) = ", np.max( np.abs( np.exp(1j*phase_u) ) - np.abs( np.exp(1j*phase_u_uwrap ) ) ) )
 
 ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
 veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
@@ -165,57 +194,46 @@ ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
 #print("np.abs(ueig*veig)=",np.abs(ueig*veig))
 #print("np.abs(ueig_ps*veig_ps)=",np.abs(ueig_ps*veig_ps))
 
-fa = plt.figure(1001)
-plt.plot(phase_u_uwrap, map.y, 'ks', label="Phase")
-plt.xlabel('Phase')
-plt.ylabel('y')
-plt.title('Phase')
-plt.legend(loc="upper left")
-fa.show()
+# Plot some results
+mod_util.plot_phase(phase_u_uwrap, "phase_u_uwrap,", map.y)
 
-fa = plt.figure(1002)
-plt.plot(ueig_ps.real, map.y, 'k', label="real(u)")
-plt.plot(ueig_from_continuity.real, map.y, 'g--', label="real(u) from continuity")
-plt.xlabel('real(u)')
-plt.ylabel('y')
-#plt.title('Phase')
-plt.legend(loc="upper right")
-fa.show()
+mod_util.plot_real_imag_part(ueig_ps, "u", map.y)
+#mod_util.plot_real_imag_part(ueig_ps, "ueig_from_continuity", map.y)
 
-fa = plt.figure(1003)
-plt.plot(ueig_ps.imag, map.y, 'k', label="imag(u)")
-plt.plot(ueig_from_continuity.imag, map.y, 'g--', label="imag(u) from continuity")
-plt.xlabel('imag(u)')
-plt.ylabel('y')
-#plt.title('Phase')
-plt.legend(loc="upper right")
-fa.show()
+mod_util.plot_real_imag_part(veig_ps, "v", map.y)
+mod_util.plot_real_imag_part(peig_ps, "p", map.y)
 
-# fa = plt.figure(1004)
-# plt.plot(amp_u_ps, map.y, 'k', label="amp(u) (phase shifted)")
-# plt.plot(amp_u, map.y, 'g--', label="amp(u)")
-# plt.xlabel('amp(u)')
-# plt.ylabel('y')
-# #plt.title('Phase')
-# plt.legend(loc="upper right")
-# fa.show()
+mod_util.plot_amplitude(ueig_ps, "u", map.y)
+mod_util.plot_amplitude(peig_ps, "p", map.y)
 
-fa = plt.figure(1005)
-plt.plot(veig_ps.real, map.y, 'k', label="real(v)")
-plt.xlabel('real(v)')
-plt.ylabel('y')
-#plt.title('Phase')
-plt.legend(loc="upper right")
-fa.show()
+### CRASHES THE COMPUTER plt.close('all')
 
-fa = plt.figure(1006)
-plt.plot(veig_ps.imag, map.y, 'k', label="imag(v)")
-plt.xlabel('imag(v)')
-plt.ylabel('y')
-#plt.title('Phase')
-plt.legend(loc="upper right")
-fa.show()
+# Verify that continuity equation is satisfied
+dupdx   = 1j*alpha*ueig_ps
+dvpdy   = np.matmul(map.D1, veig_ps)
 
-
+print("Continuity check:", np.max(np.abs(dupdx+dvpdy)))
 
 input("Press any key to continue.........")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# print("phase_u = ", phase_u)
+# print("")
+# print("phase_v = ", phase_v)
+# print("")
+# print("phase_p = ", phase_p)
+

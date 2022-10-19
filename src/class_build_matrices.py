@@ -1,5 +1,6 @@
 
 #from termios import N_TTY
+import module_utilities as mod_util
 import numpy as np
 
 import warnings
@@ -22,8 +23,16 @@ class BuildMatrices:
         """
         self.size = size
         # Initialize arrays
+        self.mat_a1 = np.zeros((size,size), dpc)
+        self.mat_a2 = np.zeros((size,size), dpc)
+        self.mat_b1 = np.zeros((size,size), dpc)
+        self.mat_b2 = np.zeros((size,size), dpc)
+        self.mat_d1 = np.zeros((size,size), dpc)
+        
         self.mat_lhs = np.zeros((size,size), dpc)
         self.mat_rhs = np.zeros((size,size), dpc)
+
+        self.vec_rhs = np.zeros(size, dpc)
 
     def set_bc_shear_layer(self, lhs, rhs, ny, map):
         """
@@ -112,14 +121,8 @@ class BuildMatrices:
 
         if set_sym_bc == 1:
 
-            if (ny % 2) != 0:
-                mid_idx = int( (ny-1)/2 )
-            else:
-                warnings.warn("When ny is even, there is no mid-index")
-                mid_idx = int ( ny/2 )
-
-            print("mid_idx=",mid_idx)
-            
+            mid_idx = mod_util.get_mid_idx(ny)
+                        
             idx_u_y0 = mid_idx
             idx_v_y0 = mid_idx + ny
             idx_w_y0 = mid_idx + 2*ny
@@ -138,7 +141,7 @@ class BuildMatrices:
             rhs[idx_v_y0, :] = 0.0
             rhs[idx_w_y0, :] = 0.0        
 
-    def set_matrices(self, ny, Re, alpha, beta, bsfl, map): # here I pas ny
+    def set_matrices(self, ny, Re, beta, bsfl, map): # here I pas ny
         """
         This function builds the stability matrices for the incompressible stability equations
         a1 = [iU   0   0   i;
@@ -199,60 +202,52 @@ class BuildMatrices:
 
         # input('hello from here')
 
-        mat_a1 = np.zeros((nt, nt), dpc)
-        mat_a2 = np.zeros((nt, nt), dpc)
-    
-        mat_b1 = np.zeros((nt, nt), dpc)
-        mat_b2 = np.zeros((nt, nt), dpc)
-
-        mat_d1 = np.zeros((nt, nt), dpc)
-
         # 1st block indices
         imin = 0
         imax = ny
 
-        mat_a1[imin:imax, imin:imax]           = 1j*dU
-        mat_a1[imin:imax, imin+3*ny:imax+3*ny] = 1j*id
+        self.mat_a1[imin:imax, imin:imax]           = 1j*dU
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = 1j*id
 
-        mat_a2[imin:imax, imin:imax]           = id_r_re
+        self.mat_a2[imin:imax, imin:imax]           = id_r_re
 
-        mat_b1[imin:imax, imin:imax]           = 1j*dW
-        mat_b2[imin:imax, imin:imax]           = id_r_re
+        self.mat_b1[imin:imax, imin:imax]           = 1j*dW
+        self.mat_b2[imin:imax, imin:imax]           = id_r_re
 
-        mat_d1[imin:imax, imin:imax]           = -map.D2/Re
-        mat_d1[imin:imax, imin+ny:imax+ny]     = dUp
+        self.mat_d1[imin:imax, imin:imax]           = -map.D2/Re
+        self.mat_d1[imin:imax, imin+ny:imax+ny]     = dUp
 
-        self.mat_rhs[imin:imax, imin:imax]     = 1j*id
+        self.mat_rhs[imin:imax, imin:imax]          = 1j*id
 
         # 2nd block indices
         imin = imin + ny
         imax = imax + ny
 
-        mat_a1[imin:imax, imin:imax]           = 1j*dU
-        mat_a2[imin:imax, imin:imax]           = id_r_re
+        self.mat_a1[imin:imax, imin:imax]           = 1j*dU
+        self.mat_a2[imin:imax, imin:imax]           = id_r_re
 
-        mat_b1[imin:imax, imin:imax]           = 1j*dW
-        mat_b2[imin:imax, imin:imax]           = id_r_re
+        self.mat_b1[imin:imax, imin:imax]           = 1j*dW
+        self.mat_b2[imin:imax, imin:imax]           = id_r_re
 
-        mat_d1[imin:imax, imin:imax]           = -map.D2/Re
-        mat_d1[imin:imax, imin+2*ny:imax+2*ny] = map.D1
+        self.mat_d1[imin:imax, imin:imax]           = -map.D2/Re
+        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = map.D1
 
-        self.mat_rhs[imin:imax, imin:imax]     = 1j*id
+        self.mat_rhs[imin:imax, imin:imax]          = 1j*id
 
         # 3rd block indices
         imin = imin + ny
         imax = imax + ny
 
-        mat_a1[imin:imax, imin:imax]       = 1j*dU
-        mat_a2[imin:imax, imin:imax]       = id_r_re
+        self.mat_a1[imin:imax, imin:imax]       = 1j*dU
+        self.mat_a2[imin:imax, imin:imax]       = id_r_re
 
-        mat_b1[imin:imax, imin:imax]       = 1j*dW
-        mat_b1[imin:imax, imin+ny:imax+ny] = 1j*id
+        self.mat_b1[imin:imax, imin:imax]       = 1j*dW
+        self.mat_b1[imin:imax, imin+ny:imax+ny] = 1j*id
 
-        mat_b2[imin:imax, imin:imax]       = id_r_re
+        self.mat_b2[imin:imax, imin:imax]       = id_r_re
 
-        mat_d1[imin:imax, imin:imax]       = -map.D2/Re
-        mat_d1[imin:imax, imin-ny:imax-ny] = dWp
+        self.mat_d1[imin:imax, imin:imax]       = -map.D2/Re
+        self.mat_d1[imin:imax, imin-ny:imax-ny] = dWp
 
         #print("imin = ", imin)
         #print("mat_d1[imin,:] = ",mat_d1[imin,:])
@@ -265,16 +260,95 @@ class BuildMatrices:
         imin = imin + ny
         imax = imax + ny
 
-        mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
 
-        mat_b1[imin:imax, imin-ny:imax-ny]     = 1j*id
+        self.mat_b1[imin:imax, imin-ny:imax-ny]     = 1j*id
 
-        mat_d1[imin:imax, imin-2*ny:imax-2*ny] = map.D1  
+        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = map.D1  
     
         #print("")
         #print("self.mat_rhs = ", self.mat_rhs)
 
-        self.mat_lhs = alpha*mat_a1 + alpha**2.*mat_a2 + beta*mat_b1 + beta**2.*mat_b2 + mat_d1
+        #self.mat_lhs = alpha*mat_a1 + alpha**2.*mat_a2 + beta*mat_b1 + beta**2.*mat_b2 + mat_d1
     
+    def assemble_mat_lhs(self, alpha, beta, omega, Tracking, Local):
+        """
+        This function assemble the lhs matrix mat_lhs
+        """
+        self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
+        
+        if (Tracking and Local):
+            self.mat_lhs = self.mat_lhs - omega*self.mat_rhs
+            
+        #print("np.shape(self.mat_lhs)=", np.shape(self.mat_lhs))
+        #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
 
-    
+
+    def set_bc_shear_layer_secant(self, lhs, rhs, ny, map):
+        """
+        This function sets the boundary conditions for the free shear layer test case:
+        SECANT METHOD!!!!!!!!!!!!!!!!!
+        """
+        ######################################
+        # (1) FREESTREAM BOUNDARY-CONDITIONS #
+        ######################################
+        
+        ##################
+        # u-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny # replace this by p=1 at midplane
+        idx_u_ymax = 1*ny-1
+
+        # ymin
+        #lhs[idx_u_ymin,:] = 0.0
+        #self.vec_rhs[idx_u_ymin,:] = 0.0        
+        #lhs[idx_u_ymin, idx_u_ymin] = 1.0
+
+        # ymax
+        lhs[idx_u_ymax,:] = 0.0
+        rhs[idx_u_ymax  ] = 0.0
+        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        
+        ##################
+        # v-velocity BCs #
+        ##################
+        idx_v_ymin = 1*ny
+        idx_v_ymax = 2*ny-1
+
+        # ymin
+        lhs[idx_v_ymin,:] = 0.0
+        rhs[idx_v_ymin  ] = 0.0        
+        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+
+        # ymax
+        lhs[idx_v_ymax,:] = 0.0
+        rhs[idx_v_ymax  ] = 0.0
+        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+
+        ##################
+        # w-velocity BCs #
+        ##################
+        idx_w_ymin = 2*ny
+        idx_w_ymax = 3*ny-1
+
+        # ymin
+        lhs[idx_w_ymin,:] = 0.0
+        rhs[idx_w_ymin  ] = 0.0        
+        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+
+        # ymax
+        lhs[idx_w_ymax,:] = 0.0
+        rhs[idx_w_ymax  ] = 0.0
+        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+        ##################
+        # pressure BCs #
+        ##################
+
+        mid_idx = mod_util.get_mid_idx(ny)
+        lhs[idx_u_ymin, 3*ny+mid_idx-1] = 1.0
+        rhs[idx_u_ymin] = 1.0
+        
+
+
+        
