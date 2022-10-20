@@ -16,19 +16,9 @@ class Baseflow:
         self.Up   = np.zeros(size, dp)
         self.Wp   = np.zeros(size, dp)
 
-    #def hyp_tan(self, y):
-    #    """
-    #    This routine computes a hyperbolic tangent (shear layer) baseflow and its wall-normal derivative:
-    #    U(y)     = tanh(y)
-    #    dU(y)/dy = d/dy( tanh(y) ) = 1.0 -tanh(y)**2.
-    #    This is a two-dimensional baseflow and therefore W and its derivative Wp are set to zero 
-    #    """
-    #    self.U  = np.tanh(y)
-    #    self.Up = 1.0 - np.tanh(y)**2.
-
 class HypTan(Baseflow):
     """
-    This child class of class Baseflow define the hyperbolic tangent baseflow for shear-layer applications
+    This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
     """
     def __init__(self, size, y): # here I pass ny
         self.size = size
@@ -37,6 +27,18 @@ class HypTan(Baseflow):
 
         #self.U    = np.tanh(y)
         #self.Up   = ( 1.0 - np.tanh(y)**2. )
+
+        self.W    = np.zeros(size, dp)
+        self.Wp   = np.zeros(size, dp)
+
+class PlanePoiseuille(Baseflow):
+    """
+    This child class of class Baseflow defines the plane Poiseuille baseflow
+    """
+    def __init__(self, size, y): # here I pass ny
+        self.size = size
+        self.U    = 1.0 - y**2.
+        self.Up   = -2.0*y
 
         self.W    = np.zeros(size, dp)
         self.Wp   = np.zeros(size, dp)

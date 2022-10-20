@@ -237,6 +237,46 @@ def plot_amplitude(eig_fct, str_var, y):
     plt.ylim([-mv, mv])
     f1.show()
 
+
+def plot_two_vars_amplitude(eig_fct1, eig_fct2, str_var1, str_var2, y):
+
+    ptn = plt.gcf().number + 1
+
+    mv = 20
+
+    f1 = plt.figure(ptn)
+    # First variable
+    plt.plot(np.abs(eig_fct1), y, 'k', linewidth=1.5)
+    if str_var1 == "u":
+        plt.xlabel(r'$|\hat{u}|$', fontsize=20)
+    elif str_var1 == "v":
+        plt.xlabel(r'$|\hat{v}|$', fontsize=20)
+    elif str_var1 == "w":
+        plt.xlabel(r'$|\hat{w}|$', fontsize=20)
+    elif str_var1 == "p":
+        plt.xlabel(r'$|\hat{p}|$', fontsize=20)
+    else:
+        print("Not an expected string!!!!!")
+    # Second variable
+    plt.plot(np.abs(eig_fct2), y, 'b--', linewidth=1.5)
+    if str_var2 == "u":
+        plt.xlabel(r'$|\hat{u}|$', fontsize=20)
+    elif str_var2 == "v":
+        plt.xlabel(r'$|\hat{v}|$', fontsize=20)
+    elif str_var2 == "w":
+        plt.xlabel(r'$|\hat{w}|$', fontsize=20)
+    elif str_var2 == "p":
+        plt.xlabel(r'$|\hat{p}|$', fontsize=20)
+    else:
+        print("Not an expected string!!!!!")
+
+    plt.ylabel('y', fontsize=20)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    #plt.xlim([-1, 1])
+    #plt.ylim([-mv, mv])
+    f1.show()
+    
 def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
 
     ptn = plt.gcf().number + 1
@@ -440,77 +480,87 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl
     return ueig_vec, veig_vec, peig_vec
 
 
-def read_input_file():
+def read_input_file(inFile):
 
-    with open('input.dat') as f:
+    with open(inFile) as f:
         lines = f.readlines()
 
     nlines  = len(lines)
     #print("nlines=",nlines)
 
-    # ny
+    # baseflowT: 1 -> hyperbolic-tangent baseflow, 2 -> plane Poiseuille baseflow
     i=0
+    tmp = lines[i].split("#")[0]
+    baseflowT = int(tmp)
+
+    # ny
+    i=i+1
     
-    tmp = lines[i].split()
-    ny  = int(tmp[0])
+    tmp = lines[i].split("#")[0]
+    ny  = int(tmp)
 
     # Re
     i=i+1
 
-    tmp = lines[i].split()
-    Re  = float(tmp[0])
+    tmp = lines[i].split("#")[0]
+    Re  = float(tmp)
 
-    # alpha
+    # alpha_min, alpha_max and npts_alpha
     i=i+1
 
-    tmp = lines[i].split()
-    alpha  = float(tmp[0])
+    tmp = lines[i].split("#")[0]
+    tmp = tmp.split(",")
+    
+    alpha_min = float(tmp[0])
+    alpha_max = float(tmp[1])
+    npts_alp  = int(tmp[2])
+
+    if (alpha_min == alpha_max): npts_alp = 1
+
+    alpha = np.linspace(alpha_min, alpha_max, npts_alp)
     
     # beta
     i=i+1
 
-    tmp = lines[i].split()
-    beta  = float(tmp[0])
+    tmp = lines[i].split("#")[0]
+    beta  = float(tmp)
 
+    # yinf
+    i=i+1
+
+    tmp = lines[i].split("#")[0]
+    yinf  = float(tmp)
+
+    # lmap
+    i=i+1
+
+    tmp = lines[i].split("#")[0]
+    lmap  = float(tmp)
+    
     # target
     i=i+1
 
-    tmp = lines[i].split()
-    #tmp = tmp.split()
+    tmp = lines[i].split("#")[0]
+    tmp = tmp.split(",")
 
-    listToStr = ''.join(c for c in tmp if c.isdigit())
-    #listToStr = ' '.join([str(x) for x in tmp])
-
-    print("listToStr = ",listToStr)
-    tmp_val   = listToStr.split(',')
+    target = float(tmp[0]) + 1j*float(tmp[1])
     
-    #print(listToStr.split(','))
-    #print("type(tmp_val)",type(tmp_val))
-
-    print("tmp_val = ", tmp_val)
-    print("type(tmp_val)",type(tmp_val))
-    
-    print("float(tmp_val[0]), float(tmp_val[1])",float(tmp_val[0]), float(tmp_val[1]))
-    print("tmp_val[0], tmp_val[1]",tmp_val[0], tmp_val[1])
-    target = float(tmp_val[0]) + 1j*float(tmp_val[1])
-    
-
-    # print("listToStr = ",listToStr)
-    # print("listToStr[0] = ",listToStr[0])
-    # print("listToStr[1] = ",listToStr[1])
-    #print("listToStr[2] = ",listToStr[2])
-
     print("")
     print("Reading input file")
     print("==================")
-    print("ny     = ", ny)
-    print("Re     = ", Re)
-    print("alpha  = ", alpha)
-    print("beta   = ", beta)
-    print("target = ", target)
+    print("baseflowT = ", baseflowT)
+    print("ny        = ", ny)
+    print("Re        = ", Re)
+    print("alpha_min = ", alpha_min)
+    print("alpha_max = ", alpha_max)
+    print("npts_alp  = ", npts_alp)
+    print("beta      = ", beta)
+    print("yinf      = ", yinf)
+    print("lmap      = ", lmap)
+    print("target    = ", target)
     print("")
 
-    return ny, Re, alpha, beta, target
+    return baseflowT, ny, Re, alpha_min, alpha_max, npts_alp, alpha, beta, yinf, lmap, target
 
 
 

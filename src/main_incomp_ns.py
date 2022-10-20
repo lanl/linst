@@ -18,64 +18,42 @@ dpc = np.dtype(np.cdouble) # double precision complex
 i4  = np.dtype('i4') # integer 4
 i8  = np.dtype('i8') # integer 8
 
+###################################
+#   Flags and reference strings   #
+###################################
+
+# Currently not working: keep to False
+Local     = False
+
+# Plotting flags
+plot_grid_bsfl = 1 # set to 1 to plot grid distribution and baseflow profiles
+plot_eigvcts = 0 # set to 1 to plot eigenvectors
+plot_eigvals = 1 # set to 1 to plot eigenvalues
+
 str_vars = np.array(['u-velocity', 'v-velocity', 'w-velocity', 'pressure'])
 
 ###################################
 #   Reference data from Michalke  #
 ###################################
 
-alp_m = np.array([0., 0.1, 0.2, 0.3, 0.4, 0.4446, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=float)
-ome_m = np.array([0.0, 0.04184, 0.06975, 0.08654, 0.09410, 0.09485, 0.09376, 0.08650, 0.07305, 0.05388, 0.02942, 0.0], dtype=float)
+alp_mich = np.array([0., 0.1, 0.2, 0.3, 0.4, 0.4446, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=float)
+ome_mich = np.array([0.0, 0.04184, 0.06975, 0.08654, 0.09410, 0.09485, 0.09376, 0.08650, 0.07305, 0.05388, 0.02942, 0.0], dtype=float)
 
-print("alp_m, ome_m = ", alp_m, ome_m)
+#print("alp_mich, ome_mich = ", alp_mich, ome_mich)
 
 ###################################
 #         Read input file         #
 ###################################
 
-Local = False
-#### ny, Re, alpha, beta, target1 = mod_util.read_input_file()             
+inFile = sys.argv[1]
 
-# Number of discretization points in wall-normal direction
-ny = 201
-
-# Reynolds number
-Re = 1e50
-
-# Longitudinal and spanwise wavenumbers: alpha and beta
-alp_min = 0.4446 #0.0001
-alp_max = 0.4446 #0.9999
-npts_alp = 51
-
-if (alp_min == alp_max): npts_alp = 1
-    
-alpha = np.linspace(alp_min, alp_max, npts_alp)
-beta  = 0.
-
-# Target eigenvalue to find corresponding eigenvector
-target1 = 2.00000000000e-01 +1j*9.40901411190e-02
-target1 = 5.00000000089e-04 +1j*4.91847937625e-04 # for alpha = 0.001
-target1 = 2.22300000000e-01 +1j*9.48510128415e-02 # for 0.4446
-
-# Plotting flags
-plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
-plot_eigvcts = 0 # set to 1 to plot eigenvectors
-plot_eigvals = 1 # set to 1 to plot eigenvalues
+baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1 = mod_util.read_input_file(inFile)             
 
 #################################
 #     EXECUTABLE STATEMENTS     #
 #################################
 
 print("")
-print("Case parameters  ")
-print("=================")
-print("ny     = ", ny)
-print("Re     = ", Re)
-print("alpha  = ", alpha)
-print("beta   = ", beta)
-print("target = ", target1)
-print("")
-
 print("Eigenfunction will be extracted for mode with eigenvalue omega = ", target1)
 print("")
 
@@ -108,14 +86,23 @@ yi = cheb.xc
 # Create instance for class Mapping
 map = mma.Mapping(ny)
 
-yinf = 80
-lmap = 2 # cannot be = 0; close to zero: extreme stretching
 map.map_shear_layer(yinf, yi, lmap, cheb.DM)
 
 # Create instance for Class Baseflow
 #bsfl = mbf.Baseflow(ny)
-bsfl = mbf.HypTan(ny, map.y)
-
+if ( baseflowT == 1 ):
+    print("")
+    print("Hyperbolic-tangent baseflow")
+    print("")
+    bsfl = mbf.HypTan(ny, map.y)
+elif ( baseflowT == 2 ):
+    print("")
+    print("Plane Poiseuille baseflow")
+    print("")
+    bsfl = mbf.PlanePoiseuille(ny, map.y)
+else:
+    sys.exit("Not a proper value for flag baseflowT")
+    
 if plot_grid_bsfl == 1:
     mod_util.plot_cheb_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up)
     
@@ -130,16 +117,17 @@ mob.set_matrices(ny, Re, beta, bsfl, map)
 # Create instance for Class SolveGeneralizedEVP
 solve = msg.SolveGeneralizedEVP(4*ny) # System matrices are 4*ny by 4*ny
 
-omega_all = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local)
+omega_all, eigvals_filtered = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local)
 
 print("omega_all = ", omega_all)
 
 if (npts_alp > 1):
-    mod_util.plot_imag_omega_vs_alpha(omega_all, "omega", alpha, alp_m, ome_m)
+    mod_util.plot_imag_omega_vs_alpha(omega_all, "omega", alpha, alp_mich, ome_mich)
 
 # Plot and Write out eigenvalues
 if plot_eigvals == 1:
-    mod_util.plot_eigvals(solve.EigVal)
+    #mod_util.plot_eigvals(solve.EigVal)
+    mod_util.plot_eigvals(eigvals_filtered)
     
 mod_util.write_out_eigenvalues(solve.EigVal, ny)
 
@@ -204,7 +192,9 @@ mod_util.plot_real_imag_part(veig_ps, "v", map.y)
 mod_util.plot_real_imag_part(peig_ps, "p", map.y)
 
 mod_util.plot_amplitude(ueig_ps, "u", map.y)
+mod_util.plot_amplitude(veig_ps, "v", map.y)
 mod_util.plot_amplitude(peig_ps, "p", map.y)
+mod_util.plot_two_vars_amplitude(peig_ps, ueig_ps, "p", "u", map.y)
 
 ### CRASHES THE COMPUTER plt.close('all')
 
@@ -225,7 +215,30 @@ input("Press any key to continue.........")
 
 
 
+# # Number of discretization points in wall-normal direction
+# ny = 201
 
+# # Reynolds number
+# Re = 10000 #1e50
+
+# # Longitudinal and spanwise wavenumbers: alpha and beta
+# alp_min = 1.0 #0.4446 #0.0001
+# alp_max = 1.0 #0.4446 #0.9999
+# npts_alp = 51
+    
+# alpha = np.linspace(alp_min, alp_max, npts_alp)
+# beta  = 0.
+
+# # Mapping parameters: yinf defines the domain extent in y and lmap the point clustering
+# yinf = 1.0 #80
+# lmap = 2 # cannot be = 0; close to zero: extreme stretching
+
+# # Target eigenvalue to find corresponding eigenvector
+# target1 = 2.00000000000e-01 +1j*9.40901411190e-02
+# target1 = 5.00000000089e-04 +1j*4.91847937625e-04 # for alpha = 0.001
+# target1 = 2.22300000000e-01 +1j*9.48510128415e-02 # for 0.4446
+
+# target1 = 2.37526421071e-01 +1j*3.73971254580e-03 # for plane Poiseuille flow
 
 
 
@@ -237,3 +250,16 @@ input("Press any key to continue.........")
 # print("")
 # print("phase_p = ", phase_p)
 
+
+
+
+
+
+# print("")
+# print("Case parameters  ")
+# print("=================")
+# print("ny     = ", ny)
+# print("Re     = ", Re)
+# print("alpha  = ", alpha)
+# print("beta   = ", beta)
+# print("target = ", target1)

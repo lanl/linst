@@ -59,7 +59,7 @@ class SolveGeneralizedEVP:
 
                 omega_all[i] = omega
 
-        return omega_all
+        return omega_all, eigvals_filtered
 
     def solve_eigenvalue_problem(self, lhs, rhs):
         """
