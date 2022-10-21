@@ -48,6 +48,10 @@ class SolveGeneralizedEVP:
             else:
                 mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
                 mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
+
+                #mob.mat_lhs = np.conj(mob.mat_lhs)
+                #mob.mat_rhs = np.conj(mob.mat_rhs)
+                
                 self.solve_eigenvalue_problem(mob.mat_lhs, mob.mat_rhs)
 
                 eigvals_filtered = self.EigVal[ np.abs(self.EigVal) < 10000. ]

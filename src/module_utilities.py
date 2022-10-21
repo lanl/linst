@@ -1,10 +1,15 @@
 
+import sys
+import math
 import warnings
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import module_utilities as mod_util
 
+from collections import Counter
+
+# Set automatically font size to 14 and font to "serif"
 plt.rcParams['font.size'] = '14'
 plt.rc('font', family='serif')
 
@@ -46,25 +51,58 @@ def get_idx_of_closest_eigenvalue(eigvals, abs_target, target):
     """
     This function finds the index in the eigenvalues array closest to a target eigenvalue
     """
-    abs_eigs   = np.abs(eigvals)
-    diff_array = np.abs(abs_eigs-abs_target) # calculate the difference array
-    
-    sort_index = np.argsort(diff_array)
 
-    tol = 1.0e-10
     found = False
     
-    for i in range(0, 5):
-        val = np.abs(target.imag-eigvals[sort_index[i]].imag)
-        #print("val, tol: ", val, tol)
-        if val < tol:
-            found = True
-            idx_found = sort_index[i]
-            break
-        else:
-            if i == 4:
-                print("No reliable value found for idx_found ==> setting idx_found to 1")
-                idx_found = 1
+    indx_imag = -666
+    indx_real = -777
+    indx_abs  = -888
+
+    diff_array_imag = np.abs( eigvals.imag - target.imag )
+    diff_array_real = np.abs( eigvals.real - target.real )
+    diff_array_abs  = np.abs( eigvals - target )
+
+    sort_index_imag = np.argsort(diff_array_imag)
+    sort_index_real = np.argsort(diff_array_real)
+    sort_index_abs  = np.argsort(diff_array_abs)
+
+    idx_i = sort_index_imag[0]
+    idx_r = sort_index_real[0]
+    idx_a = sort_index_abs[0]
+
+    List = [idx_i, idx_r, idx_a]
+
+    if ( idx_i != idx_r and idx_i != idx_a and idx_r != idx_a ):
+        warnings.warn("Ambiguous situation ==> no eigenvalue close to target!!!!!")
+        print("No reliable value found for idx_found ==> setting idx_found to 1")
+        idx_found = 1
+    else:
+        found = True
+        idx_found = most_frequent(List)
+
+    #print("type(idx_found) = ", type(idx_found))
+        
+    #print("most_frequent(List) = ", most_frequent(List))
+    #print("idx_i, idx_r, idx_a = ",idx_i, idx_r, idx_a)
+    
+    # abs_eigs   = np.abs(eigvals)
+    # diff_array = np.abs(abs_eigs-abs_target) # calculate the difference array
+    
+    # sort_index = np.argsort(diff_array)
+
+    # tol = 1.0e-10
+    
+    # for i in range(0, 5):
+    #     val = np.abs(target.imag-eigvals[sort_index[i]].imag)
+    #     #print("val, tol: ", val, tol)
+    #     if val < tol:
+    #         found = True
+    #         idx_found = sort_index[i]
+    #         break
+    #     else:
+    #         if i == 4:
+    #             print("No reliable value found for idx_found ==> setting idx_found to 1")
+    #             idx_found = 1
 
     if found == True:
         print("Closest eigenvalue to target:", eigvals[idx_found])
@@ -75,6 +113,9 @@ def get_idx_of_closest_eigenvalue(eigvals, abs_target, target):
 
     return idx_found, found
 
+def most_frequent(List):
+    occurence_count = Counter(List)
+    return occurence_count.most_common(1)[0][0]
     
 def write_out_eigenvalues(eigvals, ny):
 
@@ -119,7 +160,8 @@ def plot_cheb_baseflow(ny, y, yi, U, Up):
     f = plt.figure(ptn)
     plt.plot(U, y, 'k', markerfacecolor='none', label="U [-]", linewidth=1.5)
     plt.xlabel(r'$\bar{U}$', fontsize=20)
-    plt.ylim([-10, 10])
+    plt.xlim([0, 1])
+    #plt.ylim([-10, 10])
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.13)
@@ -132,13 +174,16 @@ def plot_cheb_baseflow(ny, y, yi, U, Up):
     f = plt.figure(ptn)
     plt.plot(Up, y, 'k', markerfacecolor='none', label="U' [-]", linewidth=1.5)
     plt.xlabel(r"$\bar{U}$'", fontsize=20)
-    plt.ylim([-10, 10])    
+    plt.xlim([-2, 2])
+    #plt.ylim([-10, 10])    
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.13)
     #plt.title("Baseflow U' profile")
     #plt.legend(loc="upper right")
     f.show()
+
+    input()
 
 def plot_eigvals(eigvals):
 
@@ -185,6 +230,7 @@ def plot_real_imag_part(eig_fct, str_var, y):
     elif str_var == "p":
         plt.xlabel(r'$\hat{p}_r$', fontsize=20)
     else:
+        plt.xlabel("real(" +str_var + ")", fontsize=20)
         print("Not an expected string!!!!!")
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
@@ -204,6 +250,7 @@ def plot_real_imag_part(eig_fct, str_var, y):
     elif str_var == "p":
         plt.xlabel(r'$\hat{p}_i$', fontsize=20)
     else:
+        plt.xlabel("imag(" +str_var + ")", fontsize=20)
         print("Not an expected string!!!!!")
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
@@ -229,6 +276,7 @@ def plot_amplitude(eig_fct, str_var, y):
     elif str_var == "p":
         plt.xlabel(r'$|\hat{p}|$', fontsize=20)
     else:
+        plt.xlabel("|" +str_var + "|", fontsize=20)
         print("Not an expected string!!!!!")
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
@@ -256,6 +304,7 @@ def plot_two_vars_amplitude(eig_fct1, eig_fct2, str_var1, str_var2, y):
     elif str_var1 == "p":
         plt.xlabel(r'$|\hat{p}|$', fontsize=20)
     else:
+        plt.xlabel("|" +str_var + "|", fontsize=20)
         print("Not an expected string!!!!!")
     # Second variable
     plt.plot(np.abs(eig_fct2), y, 'b--', linewidth=1.5)
@@ -268,6 +317,7 @@ def plot_two_vars_amplitude(eig_fct1, eig_fct2, str_var1, str_var2, y):
     elif str_var2 == "p":
         plt.xlabel(r'$|\hat{p}|$', fontsize=20)
     else:
+        plt.xlabel("|" +str_var + "|", fontsize=20)
         print("Not an expected string!!!!!")
 
     plt.ylabel('y', fontsize=20)
@@ -276,6 +326,43 @@ def plot_two_vars_amplitude(eig_fct1, eig_fct2, str_var1, str_var2, y):
     #plt.xlim([-1, 1])
     #plt.ylim([-mv, mv])
     f1.show()
+
+
+def plot_four_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, str_var1, str_var2, str_var3, str_var4, y):
+
+    ptn = plt.gcf().number + 1
+
+    mv = 20
+
+    f1 = plt.figure(ptn)
+    ax = f1.add_subplot(111)
+    # First variable
+    plt.plot(np.abs(eig_fct1), y, 'k-', linewidth=1.5, label="|u|")
+
+    # Second variable
+    plt.plot(np.abs(eig_fct2), y, 'k--', linewidth=1.5, label="|v|")
+
+    # Third variable
+    plt.plot(np.abs(eig_fct3), y, 'k:', linewidth=1.5, label="|w|")
+
+    # Fourth variable
+    plt.plot(np.abs(eig_fct4), y, 'k-.', linewidth=1.5, label="|p|")
+
+    plt.ylabel('y', fontsize=20)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    #plt.xlim([-1, 1])
+    #plt.ylim([-mv, mv])
+    f1.show()
+
+    plt.legend(loc="center right")
+
+    ratio = 1.0
+    xleft, xright = ax.get_xlim()
+    ybottom, ytop = ax.get_ylim()
+    ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
+
+    plt.savefig("Plane_Poiseuille_Current",bbox_inches='tight')
     
 def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
 
@@ -304,10 +391,12 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl
     
     ueig_vec    = eigvects[0*ny:1*ny, idx_tar1]
     veig_vec    = eigvects[1*ny:2*ny, idx_tar1]
+    weig_vec    = eigvects[2*ny:3*ny, idx_tar1]
     peig_vec    = eigvects[3*ny:4*ny, idx_tar1]
 
     ueig_conj_vec = eigvects[0*ny:1*ny, idx_tar2]
     veig_conj_vec = eigvects[1*ny:2*ny, idx_tar2]
+    weig_conj_vec = eigvects[2*ny:3*ny, idx_tar2]
     peig_conj_vec = eigvects[3*ny:4*ny, idx_tar2]
 
     # normalizing u and v by max(abs(u))
@@ -316,10 +405,12 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl
     
     ueig_vec = ueig_vec/norm_u
     veig_vec = veig_vec/norm_u
+    weig_vec = weig_vec/norm_u
     peig_vec = peig_vec/norm_u
 
     ueig_conj_vec = ueig_conj_vec/norm_u_conj 
-    veig_conj_vec = veig_conj_vec/norm_u_conj 
+    veig_conj_vec = veig_conj_vec/norm_u_conj
+    weig_conj_vec = weig_conj_vec/norm_u_conj 
     peig_conj_vec = peig_conj_vec/norm_u_conj
 
     #ueig_real = 0.5*( ueig_vec + ueig_conj_vec )
@@ -477,7 +568,7 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl
         
         #input("Press any key to continue")
 
-    return ueig_vec, veig_vec, peig_vec
+    return ueig_vec, veig_vec, weig_vec, peig_vec
 
 
 def read_input_file(inFile):
@@ -564,18 +655,245 @@ def read_input_file(inFile):
 
 
 
+def compute_stream_function_check(ueig, veig, alpha, D1, y, ny):
+    """
+    This function compute the stream function from w-eigenfunction, then computes the u-eigenfunction from:
+    u_eigenfct = D1*Phi_eigenfunction
+    """
+
+    Phi_eigfct = -veig/(1j*alpha)
+    
+    phase_Phi  = np.arctan2(Phi_eigfct.imag, Phi_eigfct.real)
+    amp_Phi    = np.abs(Phi_eigfct)
+
+    phase_Phi_uwrap = np.unwrap(phase_Phi)
+
+    mid_idx   = mod_util.get_mid_idx(ny)
+    phase_ref = phase_Phi_uwrap[mid_idx]
+
+    #print("phase_Phi_uwrap = ", phase_Phi_uwrap)
+    #print("")
+    #print("phase_ref = ", phase_ref)
+
+    #plot_phase(phase_Phi_uwrap, "Phi before shift", y)
+    phase_Phi_uwrap = phase_Phi_uwrap - phase_ref
+    #plot_phase(phase_Phi_uwrap, "Phi after shift", y)
+
+    Shift_Phi = 1
+    if Shift_Phi == 1:
+        Phi_eig = amp_Phi*np.exp(1j*phase_Phi_uwrap)
+    else:
+        Phi_eig = Phi_eigfct
+
+    plot_real_imag_part(Phi_eig, "Phi", y)
+
+    # Remember Thomas (1953): "the stability of plane Poiseuille flow"
+    # Thomas uses the ansatz Psi = Phi(y)*exp[-i(alpha*x-omega*t)]
+    # he uses -i instead of the more common i
+    # Therefore:
+    # ---> His eigenvalues will be complex conjugate of my eigenvalues
+    # ---> His eigenvectors will be complex conjugate of my eigenvectors
+
+    Phi_eig_cc = np.conj(Phi_eig)
+
+    max_r = np.max(Phi_eig_cc.real)
+    max_i = np.max(Phi_eig_cc.imag)
+
+    ptn = plt.gcf().number + 1
+    
+    f1 = plt.figure(ptn)
+    plt.plot(y, Phi_eig_cc.real, 'k', linewidth=1.5)
+    plt.xlabel('y', fontsize=20)
+    plt.ylabel(r'$\hat{\phi}_{cc, r}$', fontsize=20)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1.02*max_r])
+    #plt.gca().invert_xaxis()
+    f1.show()
+
+    ptn = ptn + 1
+    
+    f2 = plt.figure(ptn)
+    plt.plot(y, Phi_eig_cc.imag, 'k', linewidth=1.5)
+    plt.xlabel('y', fontsize=20)
+    plt.ylabel(r'$\hat{\phi}_{cc, i}$', fontsize=20)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1.02*max_i])
+    #plt.gca().invert_xaxis()
+    f2.show()
+
+    Phiprime = np.matmul(D1, Phi_eig)
+
+    # From Stuart paper 1957: "On the non-linear mechanics of hydrodynamic stability"
+    Re_stress = 2.0*( Phi_eig.imag*Phiprime.real - Phi_eig.real*Phiprime.imag )
+
+    # Here I am using u*v + uv*, where a star denotes complex conjugation
+    Re_stress_222 = np.multiply(np.conj(ueig), veig ) + np.multiply(ueig, np.conj(veig) ) 
+
+    ptn = ptn + 1
+    
+    f3 = plt.figure(ptn)
+    plt.plot(y, Re_stress, 'k', linewidth=1.5, label="Stuart (1957) formula")
+    plt.plot(y, Re_stress, 'r--', linewidth=1.5, label=r'$u^*v + uv^*$')
+    plt.xlabel('y', fontsize=20)
+    plt.ylabel("Reynolds stress", fontsize=20)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    plt.xlim([0, 1])
+    plt.ylim([0, 0.04])
+    plt.legend(loc="upper right")
+    #plt.gca().invert_xaxis()
+    f3.show()
+
+    #ueig_fct_check = np.matmul(D1, Phi_eig)
+    
+    #plot_real_imag_part(ueig, "u", y)
+    #plot_real_imag_part(ueig_fct_check, "u (indirectly from Phi)", y)
+
+    #mod_util.plot_amplitude(ueig, "u", y)
+    #mod_util.plot_amplitude(ueig_fct_check, "u (indirectly from Phi)", y)
+
+    return Phi_eig_cc
 
 
 
+def read_thomas_data(Phi_eig_cc, y_in, D1):
+
+    # Number of header lines
+    skip_header = 2
+
+    with open("../data/Thomas_data.dat") as f:
+        lines = f.readlines()
+
+    nlines  = len(lines)-skip_header
+    
+    print("Thomas data (1953), number of lines in file :",nlines)
+
+    # Wall-normla coordinate
+    y = np.zeros(nlines, dp)
+
+    # Stream-function eigenfunction
+    phi = np.zeros(nlines, dpc)
+
+    for i in range(0, nlines):
+        tmp = lines[i+skip_header].split(",")
+        y[i] = float(tmp[0])
+        phi[i] = float(tmp[1]) + 1j*float(tmp[2])
+
+    ptn = plt.gcf().number + 1
+
+    Phi_eig_cc = Phi_eig_cc/np.max(Phi_eig_cc.real)
+
+    # create figure and axis objects with subplots()
+    fig,ax = plt.subplots()
+
+    # make a plot
+    ax.plot(y, phi.real, 'k', label=r"$\hat{\phi}_r$ (Thomas, 1953)")
+    ax.plot(y_in, Phi_eig_cc.real, 'r', linestyle='--', dashes=(5, 5), label=r"$\hat{\phi}_r$ (Current)")
+    # set x-axis label
+    ax.set_xlabel("y", fontsize=20)
+    # set y-axis label
+    ax.set_ylabel(r"$\hat{\phi}_r$", fontsize = 20)
+    # set axis limits
+    ax.axis(xmin=0.,xmax=1.)
+    ax.axis(ymin=0.,ymax=1.)
+
+    # twin object for two different y-axis on the sample plot
+    ax2=ax.twinx()
+    # second plot
+    ax2.plot(y, phi.imag, 'b', label=r"$\hat{\phi}_i$ (Thomas, 1953)")
+    ax2.plot(y_in, Phi_eig_cc.imag, 'm', linestyle='--', dashes=(5, 5), label=r"$\hat{\phi}_i$ (Current)")
+    # set x-axis label
+    ax2.set_xlabel("y", fontsize=20)
+    # set y-axis label
+    ax2.set_ylabel(r"$\hat{\phi}_i$", fontsize = 20)
+    # set axis limits
+    ax2.axis(xmin=0.,xmax=1.)
+    ax2.axis(ymin=0.,ymax=0.025)
+
+    # ratio = 1.0
+    # xleft, xright = ax2.get_xlim()
+    # ybottom, ytop = ax2.get_ylim()
+    # ax2.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
 
 
+    #ax2.legend(loc="upper right")
+
+    plt.gcf().subplots_adjust(left=0.15)
+    plt.gcf().subplots_adjust(right=0.80)
+    plt.gcf().subplots_adjust(bottom=0.14)
+
+    x_leg=0.18
+    y_leg=0.25
+    fig.legend(loc=(x_leg, y_leg))
+
+    fig.show()
+    plt.savefig("Phi_comparison_with_Thomas_data",bbox_inches='tight')
 
 
+    # compute derivatives and Reynolds stress on Thomas data
+    # Computing the Reynods stress from Thomas data using Stuart formula
+    # Thomas (1953): "The stability of plane Poiseuille flow"
+    # Stuart (1957): "On the non-linear mechanics of hydrodynamic stability"
+
+    dphi_rdy = np.zeros(nlines, dp)
+    dphi_idy = np.zeros(nlines, dp)
+    
+    c1 = -3./2.
+    c2 = 2.
+    c3 = -0.5
+
+    dy = y[1]-y[0]
+    
+    dphi_rdy[0] = ( c1*phi[0].real + c2*phi[1].real + c3*phi[2].real )/dy
+    dphi_idy[0] = ( c1*phi[0].imag + c2*phi[1].imag + c3*phi[2].imag )/dy
+
+    dphi_rdy[-1] = ( c1*phi[nlines-1].real + c2*phi[nlines-2].real + c3*phi[nlines-3].real )/dy
+    dphi_idy[-1] = ( c1*phi[nlines-1].imag + c2*phi[nlines-2].imag + c3*phi[nlines-3].imag )/dy
+    
+    for i in range(1, nlines-1):
+        dphi_rdy[i] = ( phi[i+1].real - phi[i-1].real )/(2.*dy)
+        dphi_idy[i] = ( phi[i+1].imag - phi[i-1].imag )/(2.*dy)
+
+    # I added a minus here
+    Re_stress_thomas_stuart = -2.0*( np.multiply(phi.imag, dphi_rdy) - np.multiply(phi.real, dphi_idy) )
+
+    # compute derivatives and Reynolds stress on my data
+    dPhi_eig_cc_rdy = np.matmul(D1, Phi_eig_cc.real) 
+    dPhi_eig_cc_idy = np.matmul(D1, Phi_eig_cc.imag)
+
+    # I added a minus here
+    Re_stress       = -2.0*( np.multiply(Phi_eig_cc.imag, dPhi_eig_cc_rdy) - np.multiply(Phi_eig_cc.real, dPhi_eig_cc_idy) )
+
+    f = plt.figure()
+    ax = f.add_subplot(111)
+    # I am p[lotting minus here for now =======> check
+    plt.plot(y, Re_stress_thomas_stuart, 'k', label="Stuart (1957)")
+    plt.plot(y_in, Re_stress, 'r', linestyle='--', dashes=(5, 5), label="Current")
+    plt.xlabel('y', fontsize=18)
+    plt.ylabel('Reynolds stress', fontsize=18)
+    plt.legend(loc="upper left")
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.xlim([0, 1])
+    plt.ylim([0, 0.2])    
+    f.show()
+
+    ratio = 0.70
+    xleft, xright = ax.get_xlim()
+    ybottom, ytop = ax.get_ylim()
+    ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
+
+    plt.savefig("Reynolds_stress_comparison",bbox_inches='tight')
+    
+
+    
 
 
-
-
-
+    
 
 #input("Press any key to terminate the program")
 #sys.exit("debug!!!!!!")

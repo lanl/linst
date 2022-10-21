@@ -26,7 +26,7 @@ i8  = np.dtype('i8') # integer 8
 Local     = False
 
 # Plotting flags
-plot_grid_bsfl = 1 # set to 1 to plot grid distribution and baseflow profiles
+plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
 plot_eigvcts = 0 # set to 1 to plot eigenvectors
 plot_eigvals = 1 # set to 1 to plot eigenvalues
 
@@ -141,18 +141,21 @@ if ( found1 == True and found2 == True ):
     print("")
 
 # Get and Plot eigenvectors
-ueig, veig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
+ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
 
 phase_u = np.arctan2(ueig.imag, ueig.real)
 phase_v = np.arctan2(veig.imag, veig.real)
+phase_w = np.arctan2(weig.imag, weig.real)
 phase_p = np.arctan2(peig.imag, peig.real)
 
 amp_u   = np.abs(ueig)
 amp_v   = np.abs(veig)
+amp_w   = np.abs(weig)
 amp_p   = np.abs(peig)
 
 phase_u_uwrap = np.unwrap(phase_u)
 phase_v_uwrap = np.unwrap(phase_v)
+phase_w_uwrap = np.unwrap(phase_w)
 phase_p_uwrap = np.unwrap(phase_p)
 
 # When I take phase_ref as phase_v_uwrap ==> I get u and v symmetric/anti-symmetric
@@ -161,6 +164,7 @@ phase_ref     = phase_u_uwrap[mid_idx]
 
 phase_u_uwrap = phase_u_uwrap - phase_ref
 phase_v_uwrap = phase_v_uwrap - phase_ref
+phase_w_uwrap = phase_w_uwrap - phase_ref
 phase_p_uwrap = phase_p_uwrap - phase_ref
 
 #print("exp(1j*phase) = ", np.exp(1j*phase_u))
@@ -169,12 +173,22 @@ phase_p_uwrap = phase_p_uwrap - phase_ref
 print("np.max( np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
 print("np.max( np.abs( np.exp(1j*phase_u)) - np.abs( np.exp(1j*phase_u_uwrap )) ) = ", np.max( np.abs( np.exp(1j*phase_u) ) - np.abs( np.exp(1j*phase_u_uwrap ) ) ) )
 
-ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
-veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
-peig_ps = amp_p*np.exp(1j*phase_p_uwrap)
+Shift = 1
+
+if Shift == 1:
+    ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
+    veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
+    weig_ps = amp_w*np.exp(1j*phase_w_uwrap)
+    peig_ps = amp_p*np.exp(1j*phase_p_uwrap)
+else:
+    ueig_ps = ueig
+    veig_ps = veig
+    weig_ps = weig
+    peig_ps = peig
 
 amp_u_ps = np.abs(ueig_ps)
 amp_v_ps = np.abs(veig_ps)
+amp_w_ps = np.abs(weig_ps)
 amp_p_ps = np.abs(peig_ps)
 
 ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
@@ -185,16 +199,19 @@ ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
 # Plot some results
 mod_util.plot_phase(phase_u_uwrap, "phase_u_uwrap,", map.y)
 
-mod_util.plot_real_imag_part(ueig_ps, "u", map.y)
+#mod_util.plot_real_imag_part(ueig_ps, "u", map.y)
 #mod_util.plot_real_imag_part(ueig_ps, "ueig_from_continuity", map.y)
 
-mod_util.plot_real_imag_part(veig_ps, "v", map.y)
-mod_util.plot_real_imag_part(peig_ps, "p", map.y)
+#mod_util.plot_real_imag_part(veig_ps, "v", map.y)
+#mod_util.plot_real_imag_part(peig_ps, "p", map.y)
 
-mod_util.plot_amplitude(ueig_ps, "u", map.y)
-mod_util.plot_amplitude(veig_ps, "v", map.y)
-mod_util.plot_amplitude(peig_ps, "p", map.y)
-mod_util.plot_two_vars_amplitude(peig_ps, ueig_ps, "p", "u", map.y)
+#mod_util.plot_amplitude(ueig_ps, "u", map.y)
+#mod_util.plot_amplitude(veig_ps, "v", map.y)
+#mod_util.plot_amplitude(peig_ps, "p", map.y)
+#mod_util.plot_two_vars_amplitude(peig_ps, ueig_ps, "p", "u", map.y)
+
+mod_util.plot_four_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, "u", "v", "w", "p", map.y)
+
 
 ### CRASHES THE COMPUTER plt.close('all')
 
@@ -204,10 +221,19 @@ dvpdy   = np.matmul(map.D1, veig_ps)
 
 print("Continuity check:", np.max(np.abs(dupdx+dvpdy)))
 
+# Compute stream function check
+Phi_eig_cc = mod_util.compute_stream_function_check(ueig_ps, veig_ps, alpha[0], map.D1, map.y, ny)
+
+# Read eigenfunction data from Thomas (1953): "The stability of plane Poiseuille flow"
+mod_util.read_thomas_data(Phi_eig_cc, map.y, map.D1)
+
+
 input("Press any key to continue.........")
 
 
 
+#for i in range(1, 10):
+#    plt.close(i)
 
 
 
