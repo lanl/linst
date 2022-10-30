@@ -24,7 +24,7 @@ class SolveGeneralizedEVP:
         self.EigVal = np.zeros(size*size, dpc)
         self.EigVec = np.zeros((size, size), dpc)
 
-    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local):
+    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag):
         """
         Function...
         """        
@@ -47,7 +47,10 @@ class SolveGeneralizedEVP:
                 print("omega = ", omega)
             else:
                 mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
-                mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
+                if (rt_flag):
+                    mob.set_bc_rayleigh_taylor(mob.mat_lhs, mob.mat_rhs, ny, map)
+                else:
+                    mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
 
                 #mob.mat_lhs = np.conj(mob.mat_lhs)
                 #mob.mat_rhs = np.conj(mob.mat_rhs)

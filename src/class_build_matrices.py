@@ -17,7 +17,7 @@ class BuildMatrices:
     This class builds the main matrices A (mat_lhs) and B (mat_rhs) 
     required to form the temporal generalized eigenvalue problem A*q = omega*B*q
     """
-    def __init__(self, size): # here I pass 4*ny
+    def __init__(self, size): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
         """
         Constructor for class BuilMatrices
         """
@@ -141,7 +141,7 @@ class BuildMatrices:
             rhs[idx_v_y0, :] = 0.0
             rhs[idx_w_y0, :] = 0.0        
 
-    def set_matrices(self, ny, Re, beta, bsfl, map): # here I pas ny
+    def set_matrices(self, ny, Re, bsfl, map): # here I pas ny
         """
         This function builds the stability matrices for the incompressible stability equations
         a1 = [iU   0   0   i;
@@ -350,5 +350,147 @@ class BuildMatrices:
         rhs[idx_u_ymin] = 1.0
         
 
+    def set_matrices_rayleigh_taylor(self, ny, bsfl, map): # here I pas ny
+        """
+        """
+        # Identity matrix id
+        id      = np.identity(ny)
 
+        # Create diagonal matrices from baseflow vectors
+        dMu     = np.diag(bsfl.Mu)
+        dRho    = np.diag(bsfl.Rho)
+
+        dMup    = np.diag(bsfl.Mup)
+        dRhop   = np.diag(bsfl.Rhop)
+
+        Lder    = np.matmul(dMup, map.D1)
+        Lder2   = np.matmul(dMu, map.D2)
+
+        grav = 9.81
+
+        # 1st block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = 1j*dMup
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu
+
+        self.mat_b2[imin:imax, imin:imax]           = -dMu
+
+        self.mat_d1[imin:imax, imin:imax]           = Lder2 + Lder
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 2nd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu
+
+        self.mat_b1[imin:imax, imin+1*ny:imax+1*ny] = 1j*dMup
+        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
+                
+        self.mat_b2[imin:imax, imin:imax]           = -dMu
+
+        self.mat_d1[imin:imax, imin:imax]           = Lder2 + Lder
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 3rd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu
+
+        self.mat_b2[imin:imax, imin:imax]           = -dMu
+
+        self.mat_d1[imin:imax, imin:imax]           = Lder2 + Lder
+        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -map.D1 
+        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id 
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 4th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+
+        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
+
+        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = map.D1
+
+        # 5th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        
+    def set_bc_rayleigh_taylor(self, lhs, rhs, ny, map):
+        """
+        """
+        ######################################
+        # (1) FREESTREAM BOUNDARY-CONDITIONS #
+        ######################################
+        
+        ##################
+        # u-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny
+        idx_u_ymax = 1*ny-1
+
+        # ymin
+        lhs[idx_u_ymin,:] = 0.0
+        rhs[idx_u_ymin,:] = 0.0        
+        lhs[idx_u_ymin, idx_u_ymin] = 1.0
+
+        # ymax
+        lhs[idx_u_ymax,:] = 0.0
+        rhs[idx_u_ymax,:] = 0.0
+        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        
+        ##################
+        # v-velocity BCs #
+        ##################
+        idx_v_ymin = 1*ny
+        idx_v_ymax = 2*ny-1
+
+        # ymin
+        lhs[idx_v_ymin,:] = 0.0
+        rhs[idx_v_ymin,:] = 0.0        
+        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+
+        # ymax
+        lhs[idx_v_ymax,:] = 0.0
+        rhs[idx_v_ymax,:] = 0.0
+        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+
+        ##################
+        # w-velocity BCs #
+        ##################
+        idx_w_ymin = 2*ny
+        idx_w_ymax = 3*ny-1
+
+        # ymin
+        lhs[idx_w_ymin,:] = 0.0
+        rhs[idx_w_ymin,:] = 0.0        
+        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+
+        # ymax
+        lhs[idx_w_ymax,:] = 0.0
+        rhs[idx_w_ymax,:] = 0.0
+        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+        ##################
+        # pressure BCs #
+        ##################
+
+        ##################
+        # density BCs #
+        ##################
         

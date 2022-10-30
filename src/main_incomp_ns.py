@@ -22,6 +22,10 @@ i8  = np.dtype('i8') # integer 8
 #   Flags and reference strings   #
 ###################################
 
+# rt_flag == True: "Rayleigh-Taylor" stability equations (from Chandrasekhar, see pp. 429 -> ...);
+# rt_flag == False: Incompressible stability equations (Shear-layer and Poiseuille baseflows)
+rt_flag   = True
+
 # Currently not working: keep to False
 Local     = False
 
@@ -110,17 +114,26 @@ if plot_grid_bsfl == 1:
     mod_util.plot_cheb_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up)
     
 # Create instance for Class BuildMatrices
-mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny
+if (rt_flag == True):
+    mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
+else:
+    mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny (variables: u, v, w , p)
 
 if Tracking: print("Multiple alpha's ==> tracking solution")
 
 # Build main stability matrices
-mob.set_matrices(ny, Re, beta, bsfl, map)
+if (rt_flag == True):
+    mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+else:
+    mob.set_matrices(ny, Re, bsfl, map)
 
 # Create instance for Class SolveGeneralizedEVP
-solve = msg.SolveGeneralizedEVP(4*ny) # System matrices are 4*ny by 4*ny
+if (rt_flag == True):
+    solve = msg.SolveGeneralizedEVP(5*ny) 
+else:
+    solve = msg.SolveGeneralizedEVP(4*ny)
 
-omega_all, eigvals_filtered = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local)
+omega_all, eigvals_filtered = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag)
 
 print("omega_all = ", omega_all)
 
