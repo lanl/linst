@@ -53,6 +53,9 @@ baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1 
 #     EXECUTABLE STATEMENTS     #
 #################################
 
+found1 = False
+found2 = False
+
 print("")
 print("Eigenfunction will be extracted for mode with eigenvalue omega = ", target1)
 print("")
@@ -66,8 +69,8 @@ else:
 
 abs_target1 = np.abs(target1)
 
-target2 = np.conj(target1)
-abs_target2 = np.abs(target2)
+#target2 = np.conj(target1)
+#abs_target2 = np.abs(target2)
 
 #if (ny % 2) == 0:
     #sys.exit("ny needs to be odd")
@@ -86,19 +89,19 @@ yi = cheb.xc
 # Create instance for class Mapping
 map = mma.Mapping(ny)
 
-map.map_shear_layer(yinf, yi, lmap, cheb.DM)
-
 # Create instance for Class Baseflow
 #bsfl = mbf.Baseflow(ny)
 if ( baseflowT == 1 ):
     print("")
     print("Hyperbolic-tangent baseflow")
     print("")
+    map.map_shear_layer(yinf, yi, lmap, cheb.DM)
     bsfl = mbf.HypTan(ny, map.y)
 elif ( baseflowT == 2 ):
     print("")
     print("Plane Poiseuille baseflow")
     print("")
+    map.map_void(yi, cheb.DM)
     bsfl = mbf.PlanePoiseuille(ny, map.y)
 else:
     sys.exit("Not a proper value for flag baseflowT")
@@ -133,7 +136,7 @@ mod_util.write_out_eigenvalues(solve.EigVal, ny)
 
 # Find index of target eigenvalue to extract eigenvector
 idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target1, target1)
-idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target2, target2)
+#idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target2, target2)
 
 if ( found1 == True and found2 == True ):
     found = True
@@ -141,7 +144,8 @@ if ( found1 == True and found2 == True ):
     print("")
 
 # Get and Plot eigenvectors
-ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
+ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts)
+#ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
 
 phase_u = np.arctan2(ueig.imag, ueig.real)
 phase_v = np.arctan2(veig.imag, veig.real)
@@ -226,6 +230,10 @@ Phi_eig_cc = mod_util.compute_stream_function_check(ueig_ps, veig_ps, alpha[0], 
 
 # Read eigenfunction data from Thomas (1953): "The stability of plane Poiseuille flow"
 mod_util.read_thomas_data(Phi_eig_cc, map.y, map.D1)
+
+
+# Energy balance computations
+mod_util.compute_growth_rate_from_energy_balance(ueig, veig, peig, bsfl.U, bsfl.Up, map.D1, map.y, alpha, Re)
 
 
 input("Press any key to continue.........")

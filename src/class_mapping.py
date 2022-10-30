@@ -40,3 +40,15 @@ class Mapping:
         self.D2 = np.matmul(np.diag(d2yidy2), DM[:,:,0]) + np.matmul(np.diag(dyidy**2.), DM[:,:,1])
 
         return self.y, self.D1, self.D2
+
+
+    def map_void(self, yi, DM): # void mapping keep matrices and y as is
+        """
+        Mapping for Poiseuille flow ==> no mapping
+        """
+        self.y  = yi 
+        #Scale the differentiation matrix (due to the use of algebraic mapping)
+        self.D1 = DM[:,:,0]
+        self.D2 = DM[:,:,1]
+
+        return self.y, self.D1, self.D2

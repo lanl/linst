@@ -22,7 +22,7 @@ class HypTan(Baseflow):
     """
     def __init__(self, size, y): # here I pass ny
         self.size = size
-        self.U    = 0.5*( 1. + np.tanh(y) ) #np.tanh(y)
+        self.U    = 0.5*( 1. + np.tanh(y) )
         self.Up   = 0.5*( 1.0 - np.tanh(y)**2. )
 
         #self.U    = np.tanh(y)

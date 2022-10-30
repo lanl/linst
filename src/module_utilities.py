@@ -1,4 +1,3 @@
-
 import sys
 import math
 import warnings
@@ -37,6 +36,7 @@ def get_idx_of_max(eigvals):
     """
     xxxxx
     """
+    idx = -666
     max_tmp = 0.
     
     for i in range(0, len(eigvals)):
@@ -44,6 +44,10 @@ def get_idx_of_max(eigvals):
             max_tmp = eigvals[i].imag
             idx = i
 
+    if (idx==-666):
+        warnings.warn("idx could not be determined in get_idx_of_max!!!!!!!")
+        idx = 1
+        
     return idx
 
 
@@ -58,6 +62,8 @@ def get_idx_of_closest_eigenvalue(eigvals, abs_target, target):
     indx_real = -777
     indx_abs  = -888
 
+    print("")
+
     diff_array_imag = np.abs( eigvals.imag - target.imag )
     diff_array_real = np.abs( eigvals.real - target.real )
     diff_array_abs  = np.abs( eigvals - target )
@@ -70,11 +76,21 @@ def get_idx_of_closest_eigenvalue(eigvals, abs_target, target):
     idx_r = sort_index_real[0]
     idx_a = sort_index_abs[0]
 
+    # print("np.sort(diff_array_imag) = ", np.sort(diff_array_imag))
+    # print("np.sort(diff_array_real) = ", np.sort(diff_array_real))
+    # print("np.sort(diff_array_abs) = ", np.sort(diff_array_abs))
+
+    # print("idx_i, idx_r, idx_a = ", idx_i, idx_r, idx_a)
+
+    # input("1111111")
+
+
     List = [idx_i, idx_r, idx_a]
 
     if ( idx_i != idx_r and idx_i != idx_a and idx_r != idx_a ):
         warnings.warn("Ambiguous situation ==> no eigenvalue close to target!!!!!")
         print("No reliable value found for idx_found ==> setting idx_found to 1")
+        print("idx_i, idx_r, idx_a = ", idx_i, idx_r, idx_a)
         idx_found = 1
     else:
         found = True
@@ -384,7 +400,8 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
 
     input("debug all omega")
 
-def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts):
+#def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts):
+def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts):
 
     y  = map.y
     D1 = map.D1
@@ -394,24 +411,24 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl
     weig_vec    = eigvects[2*ny:3*ny, idx_tar1]
     peig_vec    = eigvects[3*ny:4*ny, idx_tar1]
 
-    ueig_conj_vec = eigvects[0*ny:1*ny, idx_tar2]
-    veig_conj_vec = eigvects[1*ny:2*ny, idx_tar2]
-    weig_conj_vec = eigvects[2*ny:3*ny, idx_tar2]
-    peig_conj_vec = eigvects[3*ny:4*ny, idx_tar2]
+    # ueig_conj_vec = eigvects[0*ny:1*ny, idx_tar2]
+    # veig_conj_vec = eigvects[1*ny:2*ny, idx_tar2]
+    # weig_conj_vec = eigvects[2*ny:3*ny, idx_tar2]
+    # peig_conj_vec = eigvects[3*ny:4*ny, idx_tar2]
 
     # normalizing u and v by max(abs(u))
     norm_u      = np.max(np.abs(ueig_vec))
-    norm_u_conj = np.max(np.abs(ueig_conj_vec))
+    #norm_u_conj = np.max(np.abs(ueig_conj_vec))
     
     ueig_vec = ueig_vec/norm_u
     veig_vec = veig_vec/norm_u
     weig_vec = weig_vec/norm_u
     peig_vec = peig_vec/norm_u
 
-    ueig_conj_vec = ueig_conj_vec/norm_u_conj 
-    veig_conj_vec = veig_conj_vec/norm_u_conj
-    weig_conj_vec = weig_conj_vec/norm_u_conj 
-    peig_conj_vec = peig_conj_vec/norm_u_conj
+    #ueig_conj_vec = ueig_conj_vec/norm_u_conj 
+    #veig_conj_vec = veig_conj_vec/norm_u_conj
+    #weig_conj_vec = weig_conj_vec/norm_u_conj 
+    #peig_conj_vec = peig_conj_vec/norm_u_conj
 
     #ueig_real = 0.5*( ueig_vec + ueig_conj_vec )
     #ueig_imag = 0.5*( ueig_vec - ueig_conj_vec )
@@ -890,10 +907,281 @@ def read_thomas_data(Phi_eig_cc, y_in, D1):
     plt.savefig("Reynolds_stress_comparison",bbox_inches='tight')
     
 
+def compute_growth_rate_from_energy_balance(ueig, veig, peig, U, Uy, D1, y, alpha, Re):
+
+    # Disturbance kinetic energy
+    uu = compute_inner_prod(ueig, ueig)
+    vv = compute_inner_prod(veig, veig)
+    Et_integrand = 0.5*( uu + vv )
+    Et = trapezoid_integration(Et_integrand, y)
+
+    # Baseflow terms
+    Et_Baseflow = 0.5*( np.multiply(U, U) )
+    Dissip_baseflow = 1/Re*( np.multiply(Uy, Uy) )
+
+    # Production
+    uv = compute_inner_prod(ueig, veig)
+    Production_integrand = -np.multiply(uv, Uy)
+
+    #print("Production_integrand", Production_integrand)
+    Production = trapezoid_integration(Production_integrand, y)
+
+    # Dissipation
+    term1 = compute_inner_prod(np.matmul(D1, ueig), np.matmul(D1, ueig))
+    term2 = compute_inner_prod(1j*alpha*veig, 1j*alpha*veig)
+    term3 = compute_inner_prod(np.matmul(D1, ueig), 1j*alpha*veig)
     
+    Dissipation_integrand = -1/Re*( term1 + term2 - 2.0*term3 )
+    Dissipation = trapezoid_integration(Dissipation_integrand, y)
+
+    # Dissipation ----- Other way
+    term1_other = 2.*compute_inner_prod(1j*alpha*ueig, 1j*alpha*ueig)
+    term2_other = 2.*compute_inner_prod(np.matmul(D1, veig), np.matmul(D1, veig))
+    term3_other = compute_inner_prod(np.matmul(D1, ueig), np.matmul(D1, ueig))
+    term4_other = compute_inner_prod(1j*alpha*veig, 1j*alpha*veig)
+    term5_other = 2.*compute_inner_prod(np.matmul(D1, ueig), 1j*alpha*veig)
+    
+    Dissipation_integrand_other = -1/Re*( term1_other + term2_other + term3_other + term4_other + term5_other )
+    Dissipation_other = trapezoid_integration(Dissipation_integrand_other, y)
+
+    # Dissipation ----- Other way 333
+    term1_other333 = compute_inner_prod(1j*alpha*ueig, 1j*alpha*ueig)
+    term2_other333 = compute_inner_prod(np.matmul(D1, ueig), np.matmul(D1, ueig))
+    term3_other333 = compute_inner_prod(1j*alpha*veig, 1j*alpha*veig)
+    term4_other333 = compute_inner_prod(np.matmul(D1, veig), np.matmul(D1, veig))
+
+    Dissipation_integrand_other333 = -1/Re*( term1_other333 + term2_other333 + term3_other333 + term4_other333 )
+    Dissipation_other333 = trapezoid_integration(Dissipation_integrand_other333, y)
+
+    print("Dissipation, Dissipation_other, Dissipation_other333 = ",Dissipation, Dissipation_other, Dissipation_other333)
+
+    omega_i = Production/(2.*Et) + Dissipation/(2.*Et)
+    omega_i333 = Production/(2.*Et) + Dissipation_other333/(2.*Et)
+
+    print("Production, Dissipation = ", Production, Dissipation)
+    print("omega_i = ", omega_i)
+    print("omega_i333 = ", omega_i333)
+
+    if ( np.max(np.abs(Production_integrand.imag)) > 0.0 or np.max(np.abs(Dissipation_integrand.imag)) > 0.0 ):
+        sys.exit("Production_integrand and/or Dissipation_integrand are not real!!!!!")
+
+    # Compute pressure transport term
+    Pres_trans_integrand = - ( compute_inner_prod(ueig, 1j*alpha*peig) + compute_inner_prod(veig, np.matmul(D1, peig)) )
+
+    # Model term
+    Cmu = 0.09
+    # I need a minus I think because in eqution it is LHS = Production - Dissipation with dissipation > 0 and here above I used minus sign
+    Mod_term = -Cmu*np.divide(np.multiply(Et_integrand, Et_integrand), Dissipation_integrand_other333)*np.multiply(Uy, Uy)
 
 
+    #Et_Baseflow = 0.5*( np.multiply(U, U) )
+    #Dissip_baseflow = 1/Re*( np.multiply(Uy, Uy) )
+
+    eps_min = 1.e-8
+    Uy2 = np.multiply(Uy, Uy) + eps_min
+
+    k2_bsfl = np.multiply(Et_Baseflow, Et_Baseflow)
+    eps2_bsfl = np.multiply(Dissip_baseflow, Dissip_baseflow) + eps_min
+
+    Dissip_baseflow = Dissip_baseflow + 1.0e-8
+    coef_prod = np.multiply(2.0*np.divide(Et_Baseflow, Dissip_baseflow), Uy2)
+    coef_diss = np.multiply(np.divide(k2_bsfl, eps2_bsfl), Uy2)
+
+    Mod_term_alt = Cmu*np.multiply(coef_prod, Et_integrand) - Cmu*np.multiply(coef_diss, Dissipation_integrand_other)
+
+    #print("Dissip_baseflow = ", Dissip_baseflow)
+    #print("Mod_term_alt = ", Mod_term_alt)
+    #print("Mod_term_alt[0:5] = ", Mod_term_alt[0:5])
+    #print("Mod_term_alt[-1] = ", Mod_term_alt[-1])
+    #print("max(Mod_term_alt) = ", np.max(np.abs(Mod_term_alt)))
+
+    # Plot production/dissipation integrand
+    plot_production_dissipation(np.real(Production_integrand), np.real(Dissipation_integrand_other333), np.real(Pres_trans_integrand), np.real(Et_integrand), np.real(Mod_term), np.real(Mod_term_alt), y)
+
+    plot_dissipation_only(np.real(Dissipation_integrand), np.real(Dissipation_integrand_other), np.real(Dissipation_integrand_other333), y)
     
+def compute_inner_prod(f, g):
+
+    inner_prod = 0.5*( np.multiply(np.conj(f), g) + np.multiply(f, np.conj(g)) )
+
+    return inner_prod
+
+    
+def trapezoid_integration(fct, y):
+
+    nn = len(y)
+    wt = np.zeros(nn-1, dpc)
+    
+    integral = 0.0 
+
+    for i in range(0, nn-1):
+       wt[i]  = ( y[i+1]-y[i] )/2.0 
+       integral = integral + wt[i]*( fct[i] + fct[i+1] )
+
+    return integral
+
+
+def plot_production_dissipation(prod, dissip, pres_trans, Et, Mod_term, Mod_term_alt, y):
+
+    ymin = -10
+    ymax = 10
+
+    max_Mod_term = np.max(np.abs(Mod_term))
+    max_prod = np.max(np.abs(prod))
+
+    scaling = max_prod/max_Mod_term
+    
+    Mod_term = Mod_term*scaling
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    plt.plot(prod, y, 'k', linewidth=1.5)#, label="Production integrand")
+    plt.xlabel(r"Production integrand: $-\left<\hat{u},\hat{v} \right> \bar{U}'$", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+    f.show()    
+
+    ptn = ptn + 1
+    
+    f1 = plt.figure(ptn)
+    plt.plot(dissip, y, 'k', linewidth=1.5)#, label="Dissipation integrand")
+    plt.xlabel(r"Dissipation integrand: $-\frac{1}{Re}\left( \left<\mathcal{D}\hat{u},\mathcal{D}\hat{u}\right> + \left<i \alpha \hat{v}, i \alpha \hat{v}\right> - 2 \left< \mathcal{D}\hat{u}, i \alpha \hat{v} \right> \right)$", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+    f1.show()    
+
+    ptn = ptn + 1
+    
+    f2 = plt.figure(ptn)
+    plt.plot(pres_trans, y, 'k', linewidth=1.5)#, label="Dissipation integrand")
+    plt.xlabel(r"Pressure transport integrand: $-\left( \left< \hat{u}, i \alpha \hat{p} \right> +  \left< \hat{v}, \mathcal{D}\hat{p}\right> \right)$", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+    f2.show()    
+
+    ptn = ptn + 1
+    
+    f3 = plt.figure(ptn)
+    plt.plot(prod, y, 'k', linewidth=1.5, label="Production")
+    plt.plot(dissip, y, 'r', linewidth=1.5, label="Dissipation")
+    plt.plot(pres_trans, y, 'b', linewidth=1.5, label="Pressure Transport")
+    
+    label11 = "Model production ( scaling = %s )" % str('{:.2e}'.format(scaling))
+    plt.plot(Mod_term, y, 'g', linewidth=1.5, label=label11)
+    
+    plt.xlabel("Kinetic energy balance equation terms", fontsize=16)
+    plt.ylabel('y', fontsize=16)
+    
+    #plt.legend(loc="best")
+    plt.legend(bbox_to_anchor=(0.5, 0.98), loc='center', borderaxespad=0)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+    plt.xlim([-0.4, 0.8])
+    #plt.xlim([-0.14, 0.04])
+    
+    f3.show()
+
+
+def plot_dissipation_only(dissip1, dissip2, dissip3, y):
+
+    ymin = -10
+    ymax = 10
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    plt.plot(dissip1, y, 'k', linewidth=1.5, label="Dissipation (1)")
+    plt.plot(dissip2, y, 'r', linewidth=1.5, label="Dissipation (2)")
+    plt.plot(dissip3, y, 'b--', linewidth=1.5, label="Dissipation (3)")
+    plt.xlabel(r"Dissipation integrand", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.legend(loc="best")
+    plt.ylim([ymin, ymax])
+    f.show()    
+
+    input('Various dissipation functions')
+
+# using Test
+# using Plots
+# using LinearAlgebra: norm
+
+# function dmin_series(lim,x,y,nsamples)
+#     dmin = +Inf
+#     for _ in 1:nsamples
+#         isample = rand(1:length(x))
+#         d = norm(lim .- (x[isample],y[isample]))
+#         if d < dmin
+#             dmin = d
+#         end
+#     end
+#     return dmin
+# end
+
+# function find_best_legend_position(plt;nsamples=50)
+#     ylims = Plots.ylims(plt)
+#     xlims = Plots.xlims(plt)
+#     dmin_max = 0.
+#     ibest = 0
+#     i = 0
+#     for lim in Iterators.product(xlims,ylims)
+#         i += 1
+#         for series in plt.series_list
+#             x = series[:x]
+#             y = series[:y]
+#             dmin = dmin_series(lim,x,y,nsamples)
+#             if dmin > dmin_max
+#                 dmin_max = dmin
+#                 ibest = i
+#             end
+#         end
+#     end
+#     ibest == 1 && return :bottomleft
+#     ibest == 2 && return :bottomright
+#     ibest == 3 && return :topleft
+#     return :topright
+# end
+
+# function test()
+
+#     x = 0:0.01:2;
+#     plt = plot(x,x,label="linear")
+#     plt = plot!(x,x.^2,label="quadratic")
+#     plt = plot!(x,x.^3,label="cubic")
+#     @test find_best_legend_position(plt) == :topleft
+
+#     x = 0:0.01:2;
+#     plt = plot(x,-x,label="linear")
+#     plt = plot!(x,-x.^2,label="quadratic")
+#     plt = plot!(x,-x.^3,label="cubic")
+#     @test find_best_legend_position(plt) == :bottomleft
+
+#     x = [0,1,0,1]
+#     y = [0,0,1,1]
+#     plt = scatter(x,y,xlims=[0.0,1.3],ylims=[0.0,1.3],label="test")
+#     @test find_best_legend_position(plt) == :topright
+    
+#     plt = scatter(x,y,xlims=[-0.3,1.0],ylims=[-0.3,1.0],label="test")
+#     @test find_best_legend_position(plt) == :bottomleft
+
+#     plt = scatter(x,y,xlims=[0.0,1.3],ylims=[-0.3,1.0],label="test")
+#     @test find_best_legend_position(plt) == :bottomright
+
+#     plt = scatter(x,y,xlims=[-0.3,1.0],ylims=[0.0,1.3],label="test")
+#     @test find_best_legend_position(plt) == :topleft
+
+#     true
+# end
+
 
 #input("Press any key to terminate the program")
 #sys.exit("debug!!!!!!")
