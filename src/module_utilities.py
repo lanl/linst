@@ -401,7 +401,7 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
     input("debug all omega")
 
 #def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts):
-def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts):
+def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts, rt_flag):
 
     y  = map.y
     D1 = map.D1
@@ -446,8 +446,9 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
     dpeig_vec_dx = 1j*alpha*peig_vec 
     dpeig_vec_dy = np.matmul(D1, peig_vec)
 
-    v_from_pres = dpeig_vec_dy/( 1j*target1 -1j*alpha*bsfl.U )
-    u_from_pres = -( 1j*alpha*peig_vec + bsfl.Up*v_from_pres )/( 1j*alpha*bsfl.U - 1j*target1 )
+    if (not rt_flag):
+        v_from_pres = dpeig_vec_dy/( 1j*target1 -1j*alpha*bsfl.U )
+        u_from_pres = -( 1j*alpha*peig_vec + bsfl.Up*v_from_pres )/( 1j*alpha*bsfl.U - 1j*target1 )
 
     updppdx = ueig_vec + dpeig_vec_dx
     vpdppdy = veig_vec + dpeig_vec_dy
@@ -482,8 +483,9 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
     uv_eig      = ueig_vec*veig_vec
     uv_eig_new  = ueig_vec_new*veig_vec_new
 
-    Re_stress     = uv_eig.real*bsfl.Up
-    Re_stress_new = uv_eig_new.real*bsfl.Up
+    if (not rt_flag):
+        Re_stress     = uv_eig.real*bsfl.Up
+        Re_stress_new = uv_eig_new.real*bsfl.Up
 
     ## Renormalize to match Michalke
     Phi_vec_new  = Phi_vec_new/Phi_vec_new[mid_idx]

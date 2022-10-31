@@ -95,20 +95,29 @@ map = mma.Mapping(ny)
 
 # Create instance for Class Baseflow
 #bsfl = mbf.Baseflow(ny)
-if ( baseflowT == 1 ):
+
+if (rt_flag):
     print("")
-    print("Hyperbolic-tangent baseflow")
+    print("Rayleigh-Taylor Instability Computation")
     print("")
     map.map_shear_layer(yinf, yi, lmap, cheb.DM)
-    bsfl = mbf.HypTan(ny, map.y)
-elif ( baseflowT == 2 ):
-    print("")
-    print("Plane Poiseuille baseflow")
-    print("")
-    map.map_void(yi, cheb.DM)
-    bsfl = mbf.PlanePoiseuille(ny, map.y)
+    bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map)
+
 else:
-    sys.exit("Not a proper value for flag baseflowT")
+    if ( baseflowT == 1 ):
+        print("")
+        print("Hyperbolic-tangent baseflow")
+        print("")
+        map.map_shear_layer(yinf, yi, lmap, cheb.DM)
+        bsfl = mbf.HypTan(ny, map.y)
+    elif ( baseflowT == 2 ):
+        print("")
+        print("Plane Poiseuille baseflow")
+        print("")
+        map.map_void(yi, cheb.DM)
+        bsfl = mbf.PlanePoiseuille(ny, map.y)
+    else:
+        sys.exit("Not a proper value for flag baseflowT")
     
 if plot_grid_bsfl == 1:
     mod_util.plot_cheb_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up)
@@ -157,7 +166,7 @@ if ( found1 == True and found2 == True ):
     print("")
 
 # Get and Plot eigenvectors
-ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts)
+ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts, rt_flag)
 #ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
 
 phase_u = np.arctan2(ueig.imag, ueig.real)
@@ -246,7 +255,7 @@ mod_util.read_thomas_data(Phi_eig_cc, map.y, map.D1)
 
 
 # Energy balance computations
-mod_util.compute_growth_rate_from_energy_balance(ueig, veig, peig, bsfl.U, bsfl.Up, map.D1, map.y, alpha, Re)
+#mod_util.compute_growth_rate_from_energy_balance(ueig, veig, peig, bsfl.U, bsfl.Up, map.D1, map.y, alpha, Re)
 
 
 input("Press any key to continue.........")
