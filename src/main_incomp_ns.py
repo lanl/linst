@@ -22,9 +22,17 @@ i8  = np.dtype('i8') # integer 8
 #   Flags and reference strings   #
 ###################################
 
+# Gravity
+grav = 9.81
+
 # rt_flag == True: "Rayleigh-Taylor" stability equations (from Chandrasekhar, see pp. 429 -> ...);
 # rt_flag == False: Incompressible stability equations (Shear-layer and Poiseuille baseflows)
 rt_flag   = True
+
+# only used if rt_flag is True.
+# prim_form = 1: RT problem with primitive variable formulation,
+# prim_form = 0: inviscid RT with w-equation only (see Chandrasekhar page 433) 
+prim_form = 1
 
 # Currently not working: keep to False
 Local     = False
@@ -56,6 +64,9 @@ baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1 
 #################################
 #     EXECUTABLE STATEMENTS     #
 #################################
+
+if (rt_flag==False):
+    prim_form = 1
 
 found1 = False
 found2 = False
@@ -97,11 +108,12 @@ map = mma.Mapping(ny)
 #bsfl = mbf.Baseflow(ny)
 
 if (rt_flag):
+    k = np.sqrt(alpha[0]**2. + beta**2.)
     print("")
     print("Rayleigh-Taylor Instability Computation")
     print("")
     map.map_shear_layer(yinf, yi, lmap, cheb.DM)
-    bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map)
+    bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, Re, grav, k)
 
 else:
     if ( baseflowT == 1 ):
@@ -124,7 +136,10 @@ if plot_grid_bsfl == 1:
     
 # Create instance for Class BuildMatrices
 if (rt_flag == True):
-    mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
+    if (prim_form==1):
+        mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
+    else:
+        mob = mbm.BuildMatrices(ny) # Inviscid system matrix for RT based on w-equation only (see Chandrasekhar page 433)
 else:
     mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny (variables: u, v, w , p)
 
@@ -132,17 +147,23 @@ if Tracking: print("Multiple alpha's ==> tracking solution")
 
 # Build main stability matrices
 if (rt_flag == True):
-    mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+    if (prim_form==1):
+        mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+    else:
+        mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
 else:
     mob.set_matrices(ny, Re, bsfl, map)
 
 # Create instance for Class SolveGeneralizedEVP
 if (rt_flag == True):
-    solve = msg.SolveGeneralizedEVP(5*ny) 
+    if (prim_form==1):
+        solve = msg.SolveGeneralizedEVP(5*ny)
+    else:
+        solve = msg.SolveGeneralizedEVP(ny)
 else:
     solve = msg.SolveGeneralizedEVP(4*ny)
 
-omega_all, eigvals_filtered = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag)
+omega_all, eigvals_filtered = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form)
 
 print("omega_all = ", omega_all)
 
@@ -164,34 +185,38 @@ if ( found1 == True and found2 == True ):
     found = True
     print("Both target eigenvalues have been found")
     print("")
-
+    
 # Get and Plot eigenvectors
-ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts, rt_flag)
+ueig, veig, weig, peig, reig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts, rt_flag)
 #ueig, veig, weig, peig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts)
 
 phase_u = np.arctan2(ueig.imag, ueig.real)
 phase_v = np.arctan2(veig.imag, veig.real)
 phase_w = np.arctan2(weig.imag, weig.real)
 phase_p = np.arctan2(peig.imag, peig.real)
+phase_r = np.arctan2(reig.imag, reig.real)
 
 amp_u   = np.abs(ueig)
 amp_v   = np.abs(veig)
 amp_w   = np.abs(weig)
 amp_p   = np.abs(peig)
+amp_r   = np.abs(reig)
 
 phase_u_uwrap = np.unwrap(phase_u)
 phase_v_uwrap = np.unwrap(phase_v)
 phase_w_uwrap = np.unwrap(phase_w)
 phase_p_uwrap = np.unwrap(phase_p)
+phase_r_uwrap = np.unwrap(phase_r)
 
 # When I take phase_ref as phase_v_uwrap ==> I get u and v symmetric/anti-symmetric
 # When I take phase_ref as phase_u_uwrap ==> v is not symmetric/anti-symmetric
-phase_ref     = phase_u_uwrap[mid_idx]
+phase_ref     = phase_r_uwrap[mid_idx]
 
 phase_u_uwrap = phase_u_uwrap - phase_ref
 phase_v_uwrap = phase_v_uwrap - phase_ref
 phase_w_uwrap = phase_w_uwrap - phase_ref
 phase_p_uwrap = phase_p_uwrap - phase_ref
+phase_r_uwrap = phase_r_uwrap - phase_ref
 
 #print("exp(1j*phase) = ", np.exp(1j*phase_u))
 #print("exp(1j*phase_unwrapped) = ", np.exp(1j*phase_u_uwrap))
@@ -206,16 +231,19 @@ if Shift == 1:
     veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
     weig_ps = amp_w*np.exp(1j*phase_w_uwrap)
     peig_ps = amp_p*np.exp(1j*phase_p_uwrap)
+    reig_ps = amp_r*np.exp(1j*phase_r_uwrap)
 else:
     ueig_ps = ueig
     veig_ps = veig
     weig_ps = weig
     peig_ps = peig
+    reig_ps = reig
 
 amp_u_ps = np.abs(ueig_ps)
 amp_v_ps = np.abs(veig_ps)
 amp_w_ps = np.abs(weig_ps)
 amp_p_ps = np.abs(peig_ps)
+amp_r_ps = np.abs(reig_ps)
 
 ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
 
@@ -236,8 +264,8 @@ mod_util.plot_phase(phase_u_uwrap, "phase_u_uwrap,", map.y)
 #mod_util.plot_amplitude(peig_ps, "p", map.y)
 #mod_util.plot_two_vars_amplitude(peig_ps, ueig_ps, "p", "u", map.y)
 
-mod_util.plot_four_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, "u", "v", "w", "p", map.y)
-
+#mod_util.plot_four_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, "u", "v", "w", "p", map.y)
+mod_util.plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
 
 ### CRASHES THE COMPUTER plt.close('all')
 

@@ -366,7 +366,7 @@ class BuildMatrices:
         Lder    = np.matmul(dMup, map.D1)
         Lder2   = np.matmul(dMu, map.D2)
 
-        grav = 9.81
+        grav    = 9.81
 
         # 1st block indices
         imin = 0
@@ -493,4 +493,75 @@ class BuildMatrices:
         ##################
         # density BCs #
         ##################
+        
+
+    def set_matrices_rayleigh_taylor_inviscid_w_equation(self, ny, bsfl, map):
+        """
+        Hello
+        """
+        # Identity matrix id
+        id      = np.identity(ny)
+
+        # Create diagonal matrices from baseflow vectors
+        dMu     = np.diag(bsfl.Mu)
+        dRho    = np.diag(bsfl.Rho)
+
+        dMup    = np.diag(bsfl.Mup)
+        dRhop   = np.diag(bsfl.Rhop)
+
+        grav    = 9.81
+
+        # 1st and only block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a2[imin:imax, imin:imax]  = -dRho
+
+        self.mat_d1[imin:imax, imin:imax]  = np.matmul(dRhop, map.D1) + np.matmul(dRho, map.D2)
+
+        self.mat_rhs[imin:imax, imin:imax] = -grav*dRhop
+
+
+    def assemble_mat_lhs_rt_inviscid(self, alpha, beta, omega, Tracking, Local):
+        """
+        This function assemble the lhs matrix mat_lhs
+        """
+
+        k2 = alpha**2. + beta**2.
+        
+        self.mat_lhs = k2*self.mat_a2 + self.mat_d1        
+
+        self.mat_rhs = self.mat_rhs*k2 
+
+    def set_bc_rayleigh_taylor_inviscid(self, lhs, rhs, ny, map):
+        """
+        """
+
+        # BCs: w=0 at wall and Dw=0 (from continuity)
+        ##################
+        # w-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny
+        idx_u_ymax = 1*ny-1
+
+        # ymin ==> w=0
+        lhs[0,:]  = 0.0
+        rhs[0,:]  = 0.0        
+        lhs[0, 0] = 1.0
+
+        # ymin ==> Dw=0
+        lhs[1,:] = 0.0
+        rhs[1,:] = 0.0        
+        lhs[1, 0:ny] = map.D1[0,:]
+
+        # ymax ==> w=0
+        lhs[ny-1,:] = 0.0
+        rhs[ny-1,:] = 0.0
+        lhs[ny-1, ny-1] = 1.0
+
+        # ymax ==> Dw=0
+        lhs[ny-2,:] = 0.0
+        rhs[ny-2,:] = 0.0
+        lhs[ny-2, 0:ny] = map.D1[-1,:]
+
         

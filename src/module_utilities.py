@@ -212,7 +212,7 @@ def plot_eigvals(eigvals):
     plt.gcf().subplots_adjust(left=0.18)
     plt.gcf().subplots_adjust(bottom=0.13)
     #plt.title('Eigenvalue spectrum')
-    #plt.xlim([-1, 1])
+    plt.xlim([-10, 10])
     #plt.ylim([-1, 1])
     f.show()
 
@@ -298,7 +298,7 @@ def plot_amplitude(eig_fct, str_var, y):
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.16)
     #plt.xlim([-1, 1])
-    plt.ylim([-mv, mv])
+    #plt.ylim([-mv, mv])
     f1.show()
 
 
@@ -379,7 +379,46 @@ def plot_four_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, str_var1, s
     ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
 
     plt.savefig("Plane_Poiseuille_Current",bbox_inches='tight')
-    
+
+def plot_five_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, eig_fct5, str_var1, str_var2, str_var3, str_var4, str_var5, y):
+
+    ptn = plt.gcf().number + 1
+
+    mv = 20
+
+    f1 = plt.figure(ptn)
+    ax = f1.add_subplot(111)
+    # First variable
+    plt.plot(np.abs(eig_fct1), y, 'k-', linewidth=1.5, label="|u|")
+
+    # Second variable
+    plt.plot(np.abs(eig_fct2), y, 'k--', linewidth=1.5, label="|v|")
+
+    # Third variable
+    plt.plot(np.abs(eig_fct3), y, 'k:', linewidth=1.5, label="|w|")
+
+    # Fourth variable
+    plt.plot(np.abs(eig_fct4), y, 'k-.', linewidth=1.5, label="|p|")
+
+    # Fifth variable
+    plt.plot(np.abs(eig_fct5), y, 'r-', linewidth=1.5, label="|r|")
+
+    plt.ylabel('y', fontsize=20)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    plt.xlim([-0.01, 1])
+    plt.ylim([-0.01, 0.01])
+    f1.show()
+
+    plt.legend(loc="upper right")
+
+    #ratio = 1.0
+    #xleft, xright = ax.get_xlim()
+    #ybottom, ytop = ax.get_ylim()
+    #ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
+
+    #plt.savefig("Plane_Poiseuille_Current",bbox_inches='tight')
+
 def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
 
     ptn = plt.gcf().number + 1
@@ -411,24 +450,64 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
     weig_vec    = eigvects[2*ny:3*ny, idx_tar1]
     peig_vec    = eigvects[3*ny:4*ny, idx_tar1]
 
+    if (rt_flag):
+        reig_vec    = eigvects[4*ny:5*ny, idx_tar1]
+    else:
+        reig_vec    = 0.0*ueig_vec
+
     # ueig_conj_vec = eigvects[0*ny:1*ny, idx_tar2]
     # veig_conj_vec = eigvects[1*ny:2*ny, idx_tar2]
     # weig_conj_vec = eigvects[2*ny:3*ny, idx_tar2]
     # peig_conj_vec = eigvects[3*ny:4*ny, idx_tar2]
 
-    # normalizing u and v by max(abs(u))
-    norm_u      = np.max(np.abs(ueig_vec))
-    #norm_u_conj = np.max(np.abs(ueig_conj_vec))
-    
-    ueig_vec = ueig_vec/norm_u
-    veig_vec = veig_vec/norm_u
-    weig_vec = weig_vec/norm_u
-    peig_vec = peig_vec/norm_u
+    max_array = np.zeros(5, dp)
 
-    #ueig_conj_vec = ueig_conj_vec/norm_u_conj 
-    #veig_conj_vec = veig_conj_vec/norm_u_conj
-    #weig_conj_vec = weig_conj_vec/norm_u_conj 
-    #peig_conj_vec = peig_conj_vec/norm_u_conj
+    max_array[0] = np.max(np.abs(ueig_vec))
+    max_array[1] = np.max(np.abs(veig_vec))
+    max_array[2] = np.max(np.abs(weig_vec))
+    max_array[3] = np.max(np.abs(peig_vec))
+    max_array[4] = np.max(np.abs(reig_vec))
+
+    idx_array = np.argsort(max_array)
+    idx_max   = idx_array[-1] # because it sorts in ascending order
+
+    if   (idx_max==0):
+        print("Scaling eigenfunctions with max. of u-vel")
+        norm_s      = np.max(np.abs(ueig_vec))
+    elif (idx_max==1):
+        print("Scaling eigenfunctions with max. of v-vel")
+        norm_s      = np.max(np.abs(veig_vec))
+    elif (idx_max==2):
+        print("Scaling eigenfunctions with max. of w-vel")
+        norm_s      = np.max(np.abs(weig_vec))
+    elif (idx_max==3):
+        print("Scaling eigenfunctions with max. of pressure")
+        norm_s      = np.max(np.abs(peig_vec))
+    elif (idx_max==4):
+        print("Scaling eigenfunctions with max. of density")
+        norm_s      = np.max(np.abs(reig_vec))
+
+    print("norm_s = ", norm_s)
+    #print("max_array = ", max_array)
+    #print("idx_max = ", idx_max)
+    #input("debug")
+    
+    # normalizing u and v by max(abs(u))
+    #norm_s      = np.max(np.abs(ueig_vec))
+    #norm_s_conj = np.max(np.abs(ueig_conj_vec))
+    
+    ueig_vec = ueig_vec/norm_s
+    veig_vec = veig_vec/norm_s
+    weig_vec = weig_vec/norm_s
+    peig_vec = peig_vec/norm_s
+
+    if (rt_flag):
+        reig_vec    = reig_vec/norm_s
+
+    #ueig_conj_vec = ueig_conj_vec/norm_s_conj 
+    #veig_conj_vec = veig_conj_vec/norm_s_conj
+    #weig_conj_vec = weig_conj_vec/norm_s_conj 
+    #peig_conj_vec = peig_conj_vec/norm_s_conj
 
     #ueig_real = 0.5*( ueig_vec + ueig_conj_vec )
     #ueig_imag = 0.5*( ueig_vec - ueig_conj_vec )
@@ -587,7 +666,7 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
         
         #input("Press any key to continue")
 
-    return ueig_vec, veig_vec, weig_vec, peig_vec
+    return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
 
 
 def read_input_file(inFile):
@@ -1075,19 +1154,19 @@ def plot_production_dissipation(prod, dissip, pres_trans, Et, Mod_term, Mod_term
     plt.plot(dissip, y, 'r', linewidth=1.5, label="Dissipation")
     plt.plot(pres_trans, y, 'b', linewidth=1.5, label="Pressure Transport")
     
-    label11 = "Model production ( scaling = %s )" % str('{:.2e}'.format(scaling))
-    plt.plot(Mod_term, y, 'g', linewidth=1.5, label=label11)
+    #label11 = "Model production ( scaling = %s )" % str('{:.2e}'.format(scaling))
+    #plt.plot(Mod_term, y, 'g', linewidth=1.5, label=label11)
     
     plt.xlabel("Kinetic energy balance equation terms", fontsize=16)
     plt.ylabel('y', fontsize=16)
     
-    #plt.legend(loc="best")
-    plt.legend(bbox_to_anchor=(0.5, 0.98), loc='center', borderaxespad=0)
+    plt.legend(loc="best")
+    #plt.legend(bbox_to_anchor=(0.5, 0.98), loc='center', borderaxespad=0)
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.15)
-    plt.ylim([ymin, ymax])
-    plt.xlim([-0.4, 0.8])
-    #plt.xlim([-0.14, 0.04])
+    #plt.ylim([ymin, ymax])
+    #plt.xlim([-0.4, 0.8])
+    plt.xlim([-0.14, 0.04])
     
     f3.show()
 

@@ -24,7 +24,7 @@ class SolveGeneralizedEVP:
         self.EigVal = np.zeros(size*size, dpc)
         self.EigVec = np.zeros((size, size), dpc)
 
-    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag):
+    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form):
         """
         Function...
         """        
@@ -46,9 +46,16 @@ class SolveGeneralizedEVP:
                 omega = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-8, alpha[i], beta, Re, mob, map, Tracking, bsfl)
                 print("omega = ", omega)
             else:
-                mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
+                if (prim_form==1):
+                    mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
+                else:
+                    mob.assemble_mat_lhs_rt_inviscid(alpha[i], beta, omega, Tracking , Local)
+                    
                 if (rt_flag):
-                    mob.set_bc_rayleigh_taylor(mob.mat_lhs, mob.mat_rhs, ny, map)
+                    if (prim_form==1):
+                        mob.set_bc_rayleigh_taylor(mob.mat_lhs, mob.mat_rhs, ny, map)
+                    else:
+                        mob.set_bc_rayleigh_taylor_inviscid(mob.mat_lhs, mob.mat_rhs, ny, map)
                 else:
                     mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
 
@@ -59,11 +66,18 @@ class SolveGeneralizedEVP:
 
                 eigvals_filtered = self.EigVal[ np.abs(self.EigVal) < 10000. ]
 
+                if (rt_flag==True and prim_form==0):
+                    neigs = len(eigvals_filtered)
+                    eigvals_filtered_tmp = eigvals_filtered
+                    eigvals_filtered = np.zeros(2*neigs, dpc)
+                    eigvals_filtered[0:neigs] = 1j/np.sqrt(eigvals_filtered_tmp) # I set it to the complex part because growth rate
+                    eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
+
                 idx = mod_util.get_idx_of_max(eigvals_filtered)
-
-                omega = eigvals_filtered[idx]
-                print("omega = ", omega)
-
+                if (rt_flag):
+                    omega = eigvals_filtered[idx]*bsfl.Tscale
+                else:
+                    omega = eigvals_filtered[idx]
                 omega_all[i] = omega
 
         return omega_all, eigvals_filtered
