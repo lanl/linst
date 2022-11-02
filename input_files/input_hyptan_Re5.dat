@@ -1,0 +1,8 @@
+1					# baseflowT: 1 -> hyperbolic-tangent baseflow, 2 -> plane Poiseuille baseflow
+401					# ny: number of points in wall-normal direction
+5					# Re: Reynolds number
+0.4446, 0.4446, 51			# alpha: wavenumber in x-direction -> alpha_min, alpha_max and number of points
+0.0					# beta: wavenumber in z-direction
+80.0					# yinf: extent of domain in y
+2.0					# lmap: mapping parameter to map from Chebyshev [1, -1] to [-yinf, yinf]
+2.22300000000e-01, -3.80849379972e-02	# target eigenvalue to extract eigenvector 2.22300000000e-01, 9.48510128415e-02
