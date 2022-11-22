@@ -9,7 +9,7 @@ import module_utilities as mod_util
 from collections import Counter
 
 # Set automatically font size to 14 and font to "serif"
-plt.rcParams['font.size'] = '14'
+plt.rcParams['font.size'] = '15'
 plt.rc('font', family='serif')
 
 #matplotlib.rcParams['text.usetex'] = True
@@ -152,54 +152,59 @@ def write_out_eigenvalues(eigvals, ny):
     eigvals_imag = eigvals_.imag
 
     data_out = np.column_stack([eigvals_real, eigvals_imag])
-    datafile_path = "./eigenvalues_ny" + str(ny) + ".dat" 
+    datafile_path = "./eigenvalues_ny" + str(ny) + ".txt" 
     np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e'])
 
-def plot_cheb_baseflow(ny, y, yi, U, Up):
+def plot_baseflow(ny, y, yi, U, Up, D1):
 
     ptn = plt.gcf().number
     
     #plt.rc('text', usetex=True)
     #plt.rcParams["mathtext.fontset"]
     
-    f = plt.figure(ptn)
-    plt.plot(np.zeros(ny), y, 'bs', markerfacecolor='none', label="Grid pts")
-    plt.plot(np.zeros(ny), yi, 'r+', label=" Chebyshev pts")
-    plt.xlabel('')
-    plt.ylabel('y/yi')
-    plt.title('Points distributions')
-    plt.legend(loc="upper right")
-    f.show()
+    # f = plt.figure(ptn)
+    # plt.plot(np.zeros(ny), y, 'bs', markerfacecolor='none', label="Grid pts")
+    # plt.plot(np.zeros(ny), yi, 'r+', label=" Chebyshev pts")
+    # plt.xlabel('')
+    # plt.ylabel('y/yi')
+    # plt.title('Points distributions')
+    # plt.legend(loc="upper right")
+    # f.show()
 
-    ptn=ptn+1
+    # ptn=ptn+1
+
+    delta = 1
     
     f = plt.figure(ptn)
-    plt.plot(U, y, 'k', markerfacecolor='none', label="U [-]", linewidth=1.5)
+    plt.plot(U, y*delta, 'ks', markerfacecolor='none', label="U [-]", linewidth=1.5)
     plt.xlabel(r'$\bar{U}$', fontsize=20)
-    plt.xlim([0, 1])
+    #plt.xlim([-0.1, 1.1])
     #plt.ylim([-10, 10])
     plt.ylabel('y', fontsize=20)
-    plt.gcf().subplots_adjust(left=0.16)
-    plt.gcf().subplots_adjust(bottom=0.13)
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
     #plt.title('Baseflow U-velocity profile')
     #plt.legend(loc="upper right")
     f.show()
 
     ptn=ptn+1
 
+    Up_num = np.matmul(D1, U)
+
     f = plt.figure(ptn)
-    plt.plot(Up, y, 'k', markerfacecolor='none', label="U' [-]", linewidth=1.5)
-    plt.xlabel(r"$\bar{U}$'", fontsize=20)
-    plt.xlim([-2, 2])
+    plt.plot(Up, y, 'k', markerfacecolor='none', label=r"$\frac{d\bar{U}}{dy}$ (Analytic)", linewidth=1.5)
+    plt.plot(Up_num, y, 'r--', markerfacecolor='none', label=r"$\frac{d\bar{U}}{dy}$ (Numerical)", linewidth=1.5)
+    plt.xlabel(r"$d\bar{U}/dy$", fontsize=20)
+    #plt.xlim([-0.1, 0.5])
     #plt.ylim([-10, 10])    
     plt.ylabel('y', fontsize=20)
-    plt.gcf().subplots_adjust(left=0.16)
-    plt.gcf().subplots_adjust(bottom=0.13)
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
     #plt.title("Baseflow U' profile")
-    #plt.legend(loc="upper right")
+    plt.legend(loc="upper right")
     f.show()
 
-    input()
+    #input("Checking baseflow")
 
 def plot_eigvals(eigvals):
 
@@ -221,7 +226,7 @@ def plot_phase(phase, str_var, y):
     ptn = plt.gcf().number + 1
     
     f1 = plt.figure(ptn)
-    plt.plot(phase, y, 'b')
+    plt.plot(phase, y, 'bs-')
     plt.xlabel('phase(' + str_var + ')')
     plt.ylabel('y')
     plt.gcf().subplots_adjust(left=0.16)
@@ -373,41 +378,60 @@ def plot_four_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, str_var1, s
 
     plt.legend(loc="center right")
 
-    ratio = 1.0
-    xleft, xright = ax.get_xlim()
-    ybottom, ytop = ax.get_ylim()
-    ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
+    # ratio = 1.0
+    # xleft, xright = ax.get_xlim()
+    # ybottom, ytop = ax.get_ylim()
+    # ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
 
-    plt.savefig("Plane_Poiseuille_Current",bbox_inches='tight')
+    # plt.savefig("Plane_Poiseuille_Current",bbox_inches='tight')
 
 def plot_five_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, eig_fct5, str_var1, str_var2, str_var3, str_var4, str_var5, y):
 
+    zmin = -10#-0.2
+    zmax = -zmin
+    
     ptn = plt.gcf().number + 1
 
     mv = 20
 
     f1 = plt.figure(ptn)
     ax = f1.add_subplot(111)
+
+    fac_u = 1/np.max(np.abs(np.real(eig_fct1)))
+
+    fac_w = 1/np.max(np.abs(np.real(eig_fct3)))
+    fac_p = 1/np.max(np.abs(np.real(eig_fct4)))
+
+    fac_r = 1/np.max(np.abs(np.real(eig_fct5)))
+
+    print("fac_u = ", fac_u)
+    print("fac_w = ", fac_w)
+    print("fac_p = ", fac_p)
+    
     # First variable
-    plt.plot(np.abs(eig_fct1), y, 'k-', linewidth=1.5, label="|u|")
+    labelu = "|u| ( scaling = %s )" % str('{:.2e}'.format(fac_u)) 
+    plt.plot(np.real(eig_fct1)*fac_u, y, 'k-', linewidth=1.5, label=labelu)
 
     # Second variable
-    plt.plot(np.abs(eig_fct2), y, 'k--', linewidth=1.5, label="|v|")
+    #labelv = "|v| ( scaling = %s )" % str('{:.2e}'.format(fac_v)) 
+    #plt.plot(np.real(eig_fct2)*fac_v, y, 'k--', linewidth=1.5, label=labelv)
 
     # Third variable
-    plt.plot(np.abs(eig_fct3), y, 'k:', linewidth=1.5, label="|w|")
+    labelw = "|w| ( scaling = %s )" % str('{:.2e}'.format(fac_w)) 
+    plt.plot(np.real(eig_fct3)*fac_w, y, 'k:', linewidth=1.5, label=labelw)
 
     # Fourth variable
-    plt.plot(np.abs(eig_fct4), y, 'k-.', linewidth=1.5, label="|p|")
+    labelp = "|p| ( scaling = %s )" % str('{:.2e}'.format(fac_p)) 
+    plt.plot(np.real(eig_fct4)*fac_p, y, 'k-.', linewidth=1.5, label=labelp)
 
     # Fifth variable
-    plt.plot(np.abs(eig_fct5), y, 'r-', linewidth=1.5, label="|r|")
+    plt.plot(np.real(eig_fct5)*fac_r, y, 'r-', linewidth=1.5, label="|r|")
 
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.16)
-    plt.xlim([-0.01, 1])
-    plt.ylim([-0.01, 0.01])
+    plt.xlim([-1, 1])
+    plt.ylim([zmin, zmax])
     f1.show()
 
     plt.legend(loc="upper right")
@@ -495,14 +519,17 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
     # normalizing u and v by max(abs(u))
     #norm_s      = np.max(np.abs(ueig_vec))
     #norm_s_conj = np.max(np.abs(ueig_conj_vec))
-    
-    ueig_vec = ueig_vec/norm_s
-    veig_vec = veig_vec/norm_s
-    weig_vec = weig_vec/norm_s
-    peig_vec = peig_vec/norm_s
 
-    if (rt_flag):
-        reig_vec    = reig_vec/norm_s
+    normalize = 1
+
+    if (normalize==1):
+        ueig_vec = ueig_vec/norm_s
+        veig_vec = veig_vec/norm_s
+        weig_vec = weig_vec/norm_s
+        peig_vec = peig_vec/norm_s
+
+        if (rt_flag):
+            reig_vec    = reig_vec/norm_s
 
     #ueig_conj_vec = ueig_conj_vec/norm_s_conj 
     #veig_conj_vec = veig_conj_vec/norm_s_conj
@@ -675,10 +702,15 @@ def read_input_file(inFile):
         lines = f.readlines()
 
     nlines  = len(lines)
-    #print("nlines=",nlines)
 
-    # baseflowT: 1 -> hyperbolic-tangent baseflow, 2 -> plane Poiseuille baseflow
+    # Solver type: 1 -> Rayleigh-Taylor, 2 -> Mixing-layer/Poiseuille solver
     i=0
+    tmp = lines[i].split("#")[0]
+    SolverT = int(tmp)
+    
+    # baseflowT: 1 -> hyperbolic-tangent baseflow, 2 -> plane Poiseuille baseflow
+    i=i+1
+    
     tmp = lines[i].split("#")[0]
     baseflowT = int(tmp)
 
@@ -688,11 +720,19 @@ def read_input_file(inFile):
     tmp = lines[i].split("#")[0]
     ny  = int(tmp)
 
-    # Re
+    # Re_min, Re_max, npts_re
     i=i+1
 
     tmp = lines[i].split("#")[0]
-    Re  = float(tmp)
+    tmp = tmp.split(",")
+
+    Re_min = float(tmp[0])
+    Re_max = float(tmp[1])
+    npts_re  = int(tmp[2])
+
+    if (Re_min == Re_max): npts_re = 1
+
+    #Re  = float(tmp)
 
     # alpha_min, alpha_max and npts_alpha
     i=i+1
@@ -737,9 +777,12 @@ def read_input_file(inFile):
     print("")
     print("Reading input file")
     print("==================")
+    print("SolverT   = ", SolverT)
     print("baseflowT = ", baseflowT)
     print("ny        = ", ny)
-    print("Re        = ", Re)
+    print("Re_min    = ", Re_min)
+    print("Re_max    = ", Re_max)
+    print("npts_re   = ", npts_re)
     print("alpha_min = ", alpha_min)
     print("alpha_max = ", alpha_max)
     print("npts_alp  = ", npts_alp)
@@ -749,7 +792,17 @@ def read_input_file(inFile):
     print("target    = ", target)
     print("")
 
-    return baseflowT, ny, Re, alpha_min, alpha_max, npts_alp, alpha, beta, yinf, lmap, target
+    rt_flag = False
+
+    if (SolverT==1):
+        print("Rayleigh-Taylor Eigenvalue Solver")
+        rt_flag = True
+    elif (SolverT==2):
+        print("Mixing-Layer/Poiseuille Eigenvalue Solver")
+    else:
+        sys.exit("Not a proper value for flag SolverT!!!!")
+        
+    return rt_flag, SolverT, baseflowT, ny, Re_min, Re_max, npts_re, alpha_min, alpha_max, npts_alp, alpha, beta, yinf, lmap, target
 
 
 
@@ -1192,6 +1245,68 @@ def plot_dissipation_only(dissip1, dissip2, dissip3, y):
 
     input('Various dissipation functions')
 
+
+def write_eigvects_out(q, y, i, ny):
+
+    npts = q.shape[0]
+
+    idx_u = np.zeros(ny, i4)
+    idx_v = np.zeros(ny, i4)
+    idx_w = np.zeros(ny, i4)
+    idx_p = np.zeros(ny, i4)
+
+    for ii in range(0, ny):
+        idx_u[ii] = ii
+
+    idx_v = idx_u + 1*ny
+    idx_w = idx_u + 2*ny
+    idx_p = idx_u + 3*ny
+
+    # scaling factor
+    sf = np.max(np.abs(q[idx_u]))
+
+    q = q/sf
+
+    # variables are u, v, w, p
+    data_out = np.column_stack([ y, np.abs(q[idx_u]), np.abs(q[idx_v]), np.abs(q[idx_w]), np.abs(q[idx_p]), \
+                                 q[idx_u].real, q[idx_v].real, q[idx_w].real, q[idx_p].real, \
+                                 q[idx_u].imag, q[idx_v].imag, q[idx_w].imag, q[idx_p].imag                  ])
+    if (i==-666):
+        datafile_path = "./Eigenfunctions_Global_Solution.txt"
+    else:
+        datafile_path = "./Eigenfunctions_Local_Solution_" + str(i) + ".txt"
+    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+
+
+
+
+def set_local_flag_display_sizes(npts_alp, npts_re):
+
+    if ( npts_alp == 1 and npts_re == 1 ):
+        print("Single alpha, single Reynolds ==> Global solution")
+        Local = False
+    else:
+        Local = True
+        if ( npts_alp > 1 ):
+            if npts_re > 1:
+                print("Mulitple alpha's and Re's")
+            else:
+                print("Mulitple alpha's, single Re")
+        else:
+            if npts_re > 1:
+                print("Single alpha, multiple Re's")
+            else:
+                print("Single alpha, single Re")
+            
+    return Local
+
+
+
+
+
+
+
+    
 # using Test
 # using Plots
 # using LinearAlgebra: norm

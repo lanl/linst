@@ -5,11 +5,15 @@ import numpy as np
 from scipy.special import erf
 import matplotlib
 import matplotlib.pyplot as plt
-
+from matplotlib.ticker import FormatStrFormatter
 
 dp = np.dtype('d')  # double precision
 i4 = np.dtype('i4') # integer 4
 i8 = np.dtype('i8') # integer 8
+
+# Set automatically font size to 14 and font to "serif"
+plt.rcParams['font.size'] = '14'
+plt.rc('font', family='serif')
 
 class Baseflow:
     """
@@ -28,9 +32,31 @@ class HypTan(Baseflow):
     """
     def __init__(self, size, y): # here I pass ny
         self.size = size
-        self.U    = 0.5*( 1. + np.tanh(y) )
-        self.Up   = 0.5*( 1.0 - np.tanh(y)**2. )
-        
+
+        # I used that to see that as fac goes to zero, perturbation frequency decreases
+        # In the limit of no baseflow velocity, the perturbations should be steady
+        fac       = 1.0 # 0.001
+
+        hyptan    = 1
+
+        if   (hyptan==1):
+            print("")
+            print("Using hyperbolic tangent in mixing-layer test case")
+            print("")
+            self.U    = fac*0.5*( 1. + np.tanh(y) )
+            self.Up   = fac*0.5*( 1.0 - np.tanh(y)**2. )
+        elif (hyptan==0):
+            # Using erf function instead of hyperbolic tangent
+            print("")
+            print("Using error function (erf) in mixing-layer test case")
+            print("")
+            pi      = math.pi
+            delta   = 1.0
+            self.U  = 0.5*( 1.0 + erf(y/delta) )
+            self.Up = 0.5*( 2.0*np.exp(-y**2./delta**2.)/( math.sqrt(pi)*delta ) )
+        else:
+            sys.exit("Not a proper value for flag hyptan")
+
         #self.U    = np.tanh(y)
         #self.Up   = ( 1.0 - np.tanh(y)**2. )
         
@@ -128,45 +154,69 @@ class RayleighTaylorBaseflow(Baseflow):
             self.Mup  = 0.0*self.Mup
 
         if (plot):
+
+            zmin = -0.01
+            zmax = 0.01
             
             ptn = plt.gcf().number + 1
             
             f = plt.figure(ptn)
-            plt.plot(self.Rho, z, 'bs', markerfacecolor='none', label="density")
-            plt.xlabel('density')
-            plt.ylabel('z')
-            plt.legend(loc="upper right")
+            plt.plot(self.Rho, z, 'k', markerfacecolor='none', label="density")
+            plt.xlabel(r"$\rho$", fontsize=20)
+            plt.ylabel('z', fontsize=20)
+            #plt.legend(loc="upper right")
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            plt.ylim([zmin, zmax])
+            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             f.show()
 
             ptn = ptn+1
             
             f = plt.figure(ptn)
-            plt.plot(self.Rhop, z, 'b', markerfacecolor='none', label="drho/dz (analytical)")
-            plt.plot(Rhop_num, z, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
-            plt.xlabel('viscosity')
-            plt.ylabel('z')
-            plt.legend(loc="upper right")
+            plt.plot(self.Rhop, z, 'k', markerfacecolor='none', label="drho/dz (analytical)")
+            #plt.plot(Rhop_num, z, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
+            plt.xlabel(r"$d\rho/dz$", fontsize=20)
+            plt.ylabel('z', fontsize=20)
+            #plt.legend(loc="upper right")
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            plt.ylim([zmin, zmax])
+            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             f.show()
 
             ptn = ptn+1
             
             f = plt.figure(ptn)
-            plt.plot(self.Mu, z, 'bs', markerfacecolor='none', label="viscosity")
-            plt.xlabel('viscosity')
-            plt.ylabel('z')
-            plt.legend(loc="upper right")
+            plt.plot(self.Mu, z, 'k', markerfacecolor='none', label="viscosity")
+            plt.xlabel(r"$\mu$", fontsize=20)
+            plt.ylabel('z', fontsize=20)
+            #plt.legend(loc="upper right")
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            plt.ylim([zmin, zmax])
+            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             f.show()
 
             ptn = ptn+1
-            
-            f = plt.figure(ptn)
-            plt.plot(self.Mup, z, 'b', markerfacecolor='none', label="dmudz (analytical)")
-            plt.plot(Mup_num, z, 'r--', markerfacecolor='none', label="dmudz (numerical)")
-            plt.xlabel('viscosity')
-            plt.ylabel('z')
-            plt.legend(loc="upper right")
+
+            f, ax = plt.subplots()
+            plt.plot(self.Mup, z, 'k', markerfacecolor='none', label="dmudz (analytical)")
+            #plt.plot(Mup_num, z, 'r--', markerfacecolor='none', label="dmudz (numerical)")
+            plt.xlabel(r"$d\mu/dz$", fontsize=20)
+            plt.ylabel('z', fontsize=20)
+            #plt.legend(loc="upper right")
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            plt.ylim([zmin, zmax])
+
+            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             f.show()
 
             #input('RT baseflow')
 
             #sys.exit("Debug RT baseflow")
+
+
+
+

@@ -24,17 +24,17 @@ class SolveGeneralizedEVP:
         self.EigVal = np.zeros(size*size, dpc)
         self.EigVec = np.zeros((size, size), dpc)
 
-    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form):
+    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire):
         """
         Function...
         """        
-        ct = 0
+        #ct = 0
         npts = len(alpha)
 
         omega_all = np.zeros(npts, dpc)
         
         for i in range(0, npts):
-            ct = ct + 1
+            #ct = ct + 1
             print("")
             print("Solving for alpha = ", alpha[i])
             print("------------------------------")
@@ -42,9 +42,17 @@ class SolveGeneralizedEVP:
 
             if Tracking and Local:
                 mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny
-                mob.set_matrices(ny, Re, beta, bsfl, map)
-                omega = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-8, alpha[i], beta, Re, mob, map, Tracking, bsfl)
-                print("omega = ", omega)
+                mob.set_matrices(ny, Re, bsfl, map)
+                omega, q_eigenvects = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-8, alpha[i], beta, Re, mob, map, Tracking, bsfl, Local, baseflowT)
+
+                print("omega that is written to omega_array = ", omega)
+                print("phase speed cr = ", omega.real/alpha[i])
+                iarr.omega_array[ire, i] = omega
+
+                # Only tracking a single mode here!!!!!
+                eigvals_filtered = 0.0
+
+                #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
             else:
                 if (prim_form==1):
                     mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
@@ -65,6 +73,7 @@ class SolveGeneralizedEVP:
                 self.solve_eigenvalue_problem(mob.mat_lhs, mob.mat_rhs)
 
                 eigvals_filtered = self.EigVal[ np.abs(self.EigVal) < 10000. ]
+                q_eigenvects     = self.EigVec
 
                 if (rt_flag==True and prim_form==0):
                     neigs = len(eigvals_filtered)
@@ -78,7 +87,8 @@ class SolveGeneralizedEVP:
                     omega = eigvals_filtered[idx]*bsfl.Tscale
                 else:
                     omega = eigvals_filtered[idx]
-                omega_all[i] = omega
+                    
+            omega_all[i] = omega
 
         return omega_all, eigvals_filtered
 
@@ -92,18 +102,23 @@ class SolveGeneralizedEVP:
         #evalue, evect = linalg.eig(lhs, rhs)
         #return evalue, evect
 
-    def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, Re, mob, map, Tracking, bsfl):
+    def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, Re, mob, map, Tracking, bsfl, Local, baseflowT):
         """
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
-        tol  = 1.0e-7
-        
-        u0   = 10 + 1j*0.0
+        if baseflowT == 1:
+            tol  = 1.0e-12
+        elif baseflowT == 2:
+            tol  = 1.0e-5
+        else:
+            sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
+            
+        u0   = 10 + 1j*10.0
         
         iter = 0
         maxiter = 100
-        
-        jxu  = 1 # u0 is at j=1
+
+        jxu  = 0
 
         #
         # Compute u00
@@ -111,10 +126,17 @@ class SolveGeneralizedEVP:
 
         # Set Local Operators
         print("alpha_in, beta_in, omega00 = ",alpha_in, beta_in, omega00)
-        mob.set_matrices(ny, Re, beta_in, bsfl, map)
+        mob.set_matrices(ny, Re, bsfl, map)
+
         mob.assemble_mat_lhs(alpha_in, beta_in, omega00, Tracking, Local)
-        mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map)
-    
+        if baseflowT == 1:
+            mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+        elif baseflowT == 2:
+            #print("plane poiseuille")
+            mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+        else:
+            sys.exit("No function associated with that value")
+            
         # Solve Linear System
         SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
 
@@ -123,6 +145,7 @@ class SolveGeneralizedEVP:
             sys.exit("Not a properly converged solution.......")
     
         #Extract boundary condition
+        mid_idx = mod_util.get_mid_idx(ny)
         u00 = SOL[jxu]
         
         #
@@ -134,9 +157,18 @@ class SolveGeneralizedEVP:
             iter=iter+1
 
             # Set Local Operators
-            mob.set_matrices(ny, Re, beta_in, bsfl, map)
+            mob.set_matrices(ny, Re, bsfl, map)
             mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking, Local)
-            mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map)
+
+            if baseflowT == 1:
+                mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            elif baseflowT == 2:
+                #print("plane poiseuille")
+                mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            else:
+                sys.exit("No function associated with that value -----  22222222")
+
+            #mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
 
             #Solve Linear System
             SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
@@ -152,6 +184,7 @@ class SolveGeneralizedEVP:
        
                 # Extract boundary condition
                 u0  = SOL[jxu]
+
                 q   = SOL
                 
                 #
@@ -167,15 +200,73 @@ class SolveGeneralizedEVP:
                 u00      = u0
 
                 #print('The value of pi is approximately %5.3f.' % math.pi)
-                print("Iteration %2d: abs(u0) = %5.5e" % (iter, np.abs(u0)))
+                print("Iteration %2d: abs(u0) = %10.5e, omega = %21.11e, %21.11e" % (iter, np.abs(u0), omega0.real, omega0.imag))
                 #write(fileID,'(1X,A,I4,A,F25.15,A,F25.15,A,F25.15)') 'Iteration #', iter,', abs(u0) = ',abs(u0),', alpha0 = ',dble(alpha0),' + i',dimag(alpha0)
 
-        print("Converged omega = ", omega0)
+        #print("Converged omega = ", omega0)
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
-        mod_util.plot_real_imag_part(q[0:ny], "ueig_ps", map.y)
+        #mod_util.plot_real_imag_part(q[0:ny], "ueig_ps", map.y)
+        #mod_util.plot_four_vars_amplitude(q[0:ny], q[ny:2*ny], q[2*ny:3*ny], q[3*ny:4*ny], "u", "v", "w", "p", map.y)
 
-        input()
+        #print("alpha_in = ", alpha_in)
+        #input("Debugguing right here!!!")
         
-        return omega0
+        return omega0, q
 
+
+
+
+
+        #u00 = np.matmul(map.D1, SOL[0:ny])
+        #u00 = u00[mid_idx] 
+
+        #print("mid_idx = ", mid_idx)
+        #u00 = np.matmul(map.D1, SOL[ny:2*ny])
+        #u00 = u00[mid_idx]
+
+        # Using pressure for now
+        # I checked from shifted eigenfunctions from global solver:
+        # imaginary part of pressure has a max at y=0 and therefore
+        # derivative should be zero dp_i/dy(y=0)=0.
+        # On the other hand real part of pressure is zero at y=0 but
+        # dp_r/dy(y=0) ~= 0 (is not zero) so cannot use here
+
+        #u00 = np.matmul(map.D1, SOL[3*ny:4*ny].imag)
+        #u00 = u00[mid_idx]
+
+        #u00 = np.matmul(map.D1, SOL[1*ny:2*ny])
+        #u00 = u00[mid_idx] #+ 1j*alpha_in*(-1)
+
+        #print("u00 = ", u00)
+        
+
+
+
+                #u0 = np.matmul(map.D1, SOL[0:ny])
+                #u0 = u0[mid_idx]
+
+                #u0 = np.matmul(map.D1, SOL[ny:2*ny])
+                #u0 = u0[mid_idx]
+
+                # Using pressure for now
+                # I checked from shifted eigenfunctions from global solver:
+                # imaginary part of pressure has a max at y=0 and therefore
+                # derivative should be zero dp_i/dy(y=0)=0.
+                # On the other hand real part of pressure is zero at y=0 but
+                # dp_r/dy(y=0) ~= 0 (is not zero) so cannot use here
+                
+                #u0 = np.matmul(map.D1, SOL[3*ny:4*ny].imag)
+                #u0 = u0[mid_idx]
+
+                # Make sure dv/dy has right value 
+                #u0 = np.matmul(map.D1, SOL[1*ny:2*ny])
+                #u0 = u0[mid_idx] + 1j*alpha_in*(-1)
+
+                #print("u0 = ", u0)
+
+                #print("-1j*alpha_in*(-1) = ",-1j*alpha_in*(-1))
+
+
+
+        
