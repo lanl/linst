@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 from scipy.special import erf
 import numpy as np
 
+# Set automatically font size to 14 and font to "serif"
+plt.rcParams['font.size'] = '14'
+plt.rc('font', family='serif')
+
+
 rho1  = 1.0
 rho2  = 3.*rho1 # that way I get Atw = 0.5
 
@@ -54,15 +59,19 @@ ptn = plt.gcf().number
 f = plt.figure(ptn)
 plt.plot(k_sorted, n_sorted, 'b-', markerfacecolor='none', label="Chandrasekhar")
 plt.plot(k_solver, n_solver, 'rs', markerfacecolor='none', label="Current")
-plt.xlabel('k')
-plt.ylabel('n')
+plt.xlabel('k', fontsize=20)
+plt.ylabel('n', fontsize=20)
 plt.legend(loc="best")
 f.show()
 plt.xlim([0, 2])
 plt.ylim([0, 0.5])
+
+plt.gcf().subplots_adjust(left=0.16)
+plt.gcf().subplots_adjust(bottom=0.13)
+
 input("")
 
 data_out = np.column_stack([k_sorted, n_sorted])
-datafile_path = "./Chandrasekhar_exact_rayleigh_taylor.txt" #+ str(ny) + ".dat" 
+datafile_path = "./Chandrasekhar_exact_rayleigh_taylor_ratio2.txt" #+ str(ny) + ".dat" 
 np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e'])
 
