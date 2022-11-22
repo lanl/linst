@@ -1,0 +1,9 @@
+2					# SolverT: 1 -> Rayleigh-Taylor, 2 -> Mixing-layer/Poiseuille solver
+2					# baseflowT: 1 -> hyperbolic-tangent baseflow, 2 -> plane Poiseuille baseflow
+201					# ny: number of points in wall-normal direction
+5000.,10000.,11				# Re: Reynolds number
+0.75, 1.2, 11				# alpha: wavenumber in x-direction -> alpha_min, alpha_max and number of points
+0.0					# beta: wavenumber in z-direction
+1.0					# yinf: extent of domain in y
+2.0					# lmap: mapping parameter to map from Chebyshev [1, -1] to [-yinf, yinf]
+0.1739, -0.0134				# target eigenvalue to extract eigenvector
