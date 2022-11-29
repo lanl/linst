@@ -546,13 +546,44 @@ class BuildMatrices:
         rhs[idx_w_ymax,:] = 0.0
         lhs[idx_w_ymax, idx_w_ymax] = 1.0
 
+
         ##################
         # pressure BCs #
         ##################
+        set_pres = 1
+
+        if (set_pres==1):
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0        
+            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            
+            # ymax
+            lhs[idx_p_ymax,:] = 0.0
+            rhs[idx_p_ymax  ] = 0.0
+            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
 
         ##################
         # density BCs #
         ##################
+        set_dens = 1
+
+        if (set_dens==1):
+            idx_r_ymin = 4*ny
+            idx_r_ymax = 5*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0        
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
         
 
     def set_matrices_rayleigh_taylor_inviscid_w_equation(self, ny, bsfl, map):
@@ -683,3 +714,112 @@ class BuildMatrices:
         lhs[idx_w_ymax,:] = 0.0
         rhs[idx_w_ymax  ] = 0.0
         lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+
+    def set_bc_rayleigh_taylor_secant(self, lhs, rhs, ny, map, alpha, beta):
+        """
+        """
+        ######################################
+        # (1) FREESTREAM BOUNDARY-CONDITIONS #
+        ######################################
+        
+        ##################
+        # u-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny # replace this by rho=1 at midplane
+        idx_u_ymax = 1*ny-1
+
+        # ymin
+        #lhs[idx_u_ymin,:] = 0.0
+        #rhs[idx_u_ymin,:] = 0.0        
+        #lhs[idx_u_ymin, idx_u_ymin] = 1.0
+
+        mid_idx = mod_util.get_mid_idx(ny)
+
+        # I checked from eigenfunctions from global solver:
+        # at y = 0, the real and imaginary parts of density are nonzero, that is why I am setting rho = 1 + 1j
+        lhs[idx_u_ymin,:] = 0.0
+        rhs[idx_u_ymin  ] = 1.0 + 1.0*1j
+        lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
+
+        #lhs[4*ny+mid_idx,:] = 0.0
+        #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j
+        #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+
+        
+        # ymax
+        lhs[idx_u_ymax,:] = 0.0
+        rhs[idx_u_ymax  ] = 0.0
+        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        
+        ##################
+        # v-velocity BCs #
+        ##################
+        idx_v_ymin = 1*ny
+        idx_v_ymax = 2*ny-1
+
+        # ymin
+        lhs[idx_v_ymin,:] = 0.0
+        rhs[idx_v_ymin  ] = 0.0        
+        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+
+        # ymax
+        lhs[idx_v_ymax,:] = 0.0
+        rhs[idx_v_ymax  ] = 0.0
+        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+
+        ##################
+        # w-velocity BCs #
+        ##################
+        idx_w_ymin = 2*ny
+        idx_w_ymax = 3*ny-1
+
+        # ymin
+        lhs[idx_w_ymin,:] = 0.0
+        rhs[idx_w_ymin  ] = 0.0        
+        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+
+        # ymax
+        lhs[idx_w_ymax,:] = 0.0
+        rhs[idx_w_ymax  ] = 0.0
+        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+        ##################
+        # pressure BCs #
+        ##################
+        set_pres = 1
+
+        if (set_pres==1):
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0        
+            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            
+            # ymax
+            lhs[idx_p_ymax,:] = 0.0
+            rhs[idx_p_ymax  ] = 0.0
+            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+
+        ##################
+        # density BCs #
+        ##################
+        set_dens = 1
+
+        if (set_dens==1):
+            idx_r_ymin = 4*ny
+            idx_r_ymax = 5*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0        
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
+            
+        

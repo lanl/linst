@@ -23,5 +23,5 @@ class MainArrays:
         """
         # Initialize arrays
         self.omega_array = np.zeros((n_re, n_alp), dpc)
-
+        self.re_array = np.zeros(n_re, dp)
 

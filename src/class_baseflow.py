@@ -120,8 +120,6 @@ class RayleighTaylorBaseflow(Baseflow):
 
             Atw = (rho2-rho1)/(rho2+rho1)
             Amu = (mu2-mu1)/(mu2+mu1)
-
-            print("Atw, Amu = ", Atw, Amu)
             
             self.Rho = rho0*( 1. + Atw*erf(z/delta) )
             self.Mu  = mu0*( 1. + Amu*erf(z/delta) )
@@ -134,13 +132,17 @@ class RayleighTaylorBaseflow(Baseflow):
             self.Tscale = (nu0/grav**2.)**(1./3.)
             self.Lscale = (nu0**2./grav)**(1./3.)
 
-            print('The time scale is %21.11f, the length scale is %21.11f' % (self.Tscale, self.Lscale))
+            print("Atwood number (density) Atw    = ", Atw)
+            print("Atwood number (viscosity) Amu  = ", Amu)
+            print("Time scale                     = ", self.Tscale)
+            print("Length scale                   = ", self.Lscale)
+            print
 
             # I want k_nondim = 2
             k_nondim = k*self.Lscale
-            print("k_nondim = ", k_nondim)
-            print("delta_nondim (delta*) = ", delta/self.Lscale)
-
+            print("k_nondim                       = ", k_nondim)
+            print("delta_nondim (delta*)          = ", delta/self.Lscale)
+            print
         else:
             
             sys.exit("Not a proper value for flag opt in RT baseflow")

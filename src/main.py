@@ -17,6 +17,7 @@ import incomp_ns as mod_incomp
 import class_main_arrays as marray
 
 from matplotlib import cm
+from matplotlib import ticker
 
 # Grab Currrent Time Before Running the Code
 start = time.time()
@@ -52,7 +53,7 @@ prim_form = 1
 
 # Plotting flags
 plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
-plot_eigvcts = 0 # set to 1 to plot eigenvectors
+plot_eigvcts = 0 # set to 1 to plot eigenvectors ==> will be set to 1 if only one location and one alpha
 plot_eigvals = 0 # set to 1 to plot eigenvalues
 
 str_vars = np.array(['u-velocity', 'v-velocity', 'w-velocity', 'pressure'])
@@ -76,12 +77,12 @@ rt_flag, SolverT, baseflowT, ny, Re_min, Re_max, npts_re, alp_min, alp_max, npts
 
 Re_range = np.linspace(Re_min, Re_max, npts_re)
 
-Local = mod_util.set_local_flag_display_sizes(npts_alp, npts_re)
-
-print("Local = ", Local)
+Local, plot_eigvcts = mod_util.set_local_flag_display_sizes(npts_alp, npts_re, plot_eigvcts)
 
 # Create instance for main array omega
 iarr = marray.MainArrays(npts_re, npts_alp)
+
+iarr.re_array = Re_range
 
 for i in range(0, npts_re):
 
@@ -90,15 +91,11 @@ for i in range(0, npts_re):
         print("setting target to target = ",target1)
         
     Re = Re_range[i]
-    print
-    print("Solving for Reynolds number Re = ", Re)
-    print("----------------------------------------")
-    print
     mod_incomp.incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, rt_flag, SolverT, \
-                             baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1, alp_mich, ome_mich, npts_re, iarr, i)
+                             baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1, alp_mich, ome_mich, npts_re, iarr, i, grav)
 
 
-if ( Local ):
+if ( Local and npts_alp > 1 and npts_re > 1 ):
     # Contour plot of stability banana
     [X, Y] = np.meshgrid(Re_range, alpha)
     
@@ -124,9 +121,49 @@ if ( Local ):
     fig.subplots_adjust(left=0.15)
     fig.subplots_adjust(bottom=0.16)
     plt.show()
-        
-    #print("X[0,0], X[1,0], X[0,1], X[1,1] = ", X[0,0], X[1,0], X[0,1], X[1,1])
 
+
+if ( Local and npts_alp == 1 and npts_re > 1 ):
+
+    ptn = plt.gcf().number + 1
+    
+    # f = plt.figure(ptn)
+    # plt.plot(Re_range, np.imag(iarr.omega_array), 'k', markerfacecolor='none')
+    # plt.xlabel(r'Reynolds number (Re)', fontsize=18)
+    # plt.ylabel(r'$\omega_i$', fontsize=18)
+    # plt.gcf().subplots_adjust(left=0.17)
+    # plt.gcf().subplots_adjust(bottom=0.16)
+    # #plt.xlim([-10, 10])
+    # #plt.ylim([-1, 1])
+    # f.show()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(Re_range, np.imag(iarr.omega_array), 'k', markerfacecolor='none')
+    
+    #ax.set_title("scientific notation")
+    #ax.set_yticks([0, 50, 100, 150])
+    formatter = ticker.ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((-1,1))
+    ax.yaxis.set_major_formatter(formatter)
+
+    ax.set_xlabel(r'Reynolds number (Re)', fontsize=18)
+    ax.set_ylabel(r'$\omega_i$', fontsize=18)
+    # plt.xlabel(r'Reynolds number (Re)', fontsize=18)
+    # plt.ylabel(r'$\omega_i$', fontsize=18)
+    plt.gcf().subplots_adjust(left=0.15)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    #plt.xlim([0, 500])
+    #plt.ylim([-0.05, 0.1])
+    fig.show()
+
+    input("DDDDDDD")
+
+    
+# Write stability banana
+filename      = "Banana_tec_bottom.dat"
+mod_util.write_stability_banana(npts_alp, npts_re, iarr, alpha, Re_range, filename)
 
 # Grab Currrent Time After Running the Code
 end = time.time()

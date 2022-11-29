@@ -1,3 +1,4 @@
+import os
 import sys
 import math
 import warnings
@@ -204,7 +205,7 @@ def plot_baseflow(ny, y, yi, U, Up, D1):
     plt.legend(loc="upper right")
     f.show()
 
-    #input("Checking baseflow")
+    input("Checking baseflow")
 
 def plot_eigvals(eigvals):
 
@@ -238,7 +239,7 @@ def plot_real_imag_part(eig_fct, str_var, y):
 
     ptn = plt.gcf().number + 1
 
-    mv = 20
+    #mv = 20
     
     f1 = plt.figure(ptn)
     plt.plot(eig_fct.real, y, 'k', linewidth=1.5)
@@ -257,7 +258,7 @@ def plot_real_imag_part(eig_fct, str_var, y):
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.16)
     #plt.xlim([-1, 1])
-    plt.ylim([-mv, mv])
+    #plt.ylim([-mv, mv])
     f1.show()
 
     f2 = plt.figure(ptn+1)
@@ -277,7 +278,7 @@ def plot_real_imag_part(eig_fct, str_var, y):
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.16)
     #plt.xlim([-1, 1])
-    plt.ylim([-mv, mv])
+    #plt.ylim([-mv, mv])
     f2.show()
 
 def plot_amplitude(eig_fct, str_var, y):
@@ -431,7 +432,7 @@ def plot_five_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, eig_fct5, s
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.16)
     plt.xlim([-1, 1])
-    plt.ylim([zmin, zmax])
+    #plt.ylim([zmin, zmax])
     f1.show()
 
     plt.legend(loc="upper right")
@@ -565,38 +566,45 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
 
     #print("Continuity check:", np.max(np.abs(dupdx+dvpdy)))
     #print("dupdx + dvpdy = ", dupdx + dvpdy)
+
+    DoThis = False
+
+    if (DoThis):
+        Phi_vec      = -veig_vec/(1j*alpha)
+        Phi_vec_new  = -veig_vec_polar/(1j*alpha)
         
-    Phi_vec      = -veig_vec/(1j*alpha)
-    Phi_vec_new  = -veig_vec_polar/(1j*alpha)
+        Phi_vec_new  = Phi_vec_new/1j # ADDED otherwise my real part was Michalke imaginary
+        
+        veig_vec_new = -Phi_vec_new*1j*alpha
+        ueig_vec_new = np.matmul(D1, Phi_vec_new)
+        
+        dupdx_new   = 1j*alpha*ueig_vec_new
+        dvpdy_new   = np.matmul(D1, veig_vec_new)
 
-    Phi_vec_new  = Phi_vec_new/1j # ADDED otherwise my real part was Michalke imaginary
-
-    veig_vec_new = -Phi_vec_new*1j*alpha
-    ueig_vec_new = np.matmul(D1, Phi_vec_new)
-
-    dupdx_new   = 1j*alpha*ueig_vec_new
-    dvpdy_new   = np.matmul(D1, veig_vec_new)
-
-    #print("Continuity check new:", np.max(np.abs(dupdx_new+dvpdy_new)))
-    #print("dupdx_new+dvpdy_new = ",dupdx_new+dvpdy_new)
+        #print("Continuity check new:", np.max(np.abs(dupdx_new+dvpdy_new)))
+        #print("dupdx_new+dvpdy_new = ",dupdx_new+dvpdy_new)
     
-    # normalizing u and v by max(abs(u))
-    norm_u_new   = np.max(np.abs(ueig_vec_new))
-    
-    ueig_vec_new = ueig_vec_new/norm_u_new
-    veig_vec_new = veig_vec_new/norm_u_new
+        # normalizing u and v by max(abs(u))
+        norm_u_new   = np.max(np.abs(ueig_vec_new))
+        print("norm_u_new = ", norm_u_new)
+        
+        ueig_vec_new = ueig_vec_new/norm_u_new
+        veig_vec_new = veig_vec_new/norm_u_new
+        
+        uv_eig      = ueig_vec*veig_vec
+        uv_eig_new  = ueig_vec_new*veig_vec_new
 
-    uv_eig      = ueig_vec*veig_vec
-    uv_eig_new  = ueig_vec_new*veig_vec_new
+        ## Renormalize to match Michalke
+        Phi_vec_new  = Phi_vec_new/Phi_vec_new[mid_idx]
 
     if (not rt_flag):
         Re_stress     = uv_eig.real*bsfl.Up
         Re_stress_new = uv_eig_new.real*bsfl.Up
 
-    ## Renormalize to match Michalke
-    Phi_vec_new  = Phi_vec_new/Phi_vec_new[mid_idx]
-
-    if (plot_eigvcts):
+        
+    flag1 = False
+    
+    if (plot_eigvcts and flag1):
 
         ptn = plt.gcf().number + 1
         
@@ -790,15 +798,18 @@ def read_input_file(inFile):
     print("yinf      = ", yinf)
     print("lmap      = ", lmap)
     print("target    = ", target)
+    print("==> Eigenfunction will be extracted for omega = ", target)
+
     print("")
 
     rt_flag = False
 
     if (SolverT==1):
-        print("Rayleigh-Taylor Eigenvalue Solver")
+        #print("Rayleigh-Taylor Eigenvalue Solver")
         rt_flag = True
     elif (SolverT==2):
-        print("Mixing-Layer/Poiseuille Eigenvalue Solver")
+        pass
+        #print("Mixing-Layer/Poiseuille Eigenvalue Solver")
     else:
         sys.exit("Not a proper value for flag SolverT!!!!")
         
@@ -1277,14 +1288,12 @@ def write_eigvects_out(q, y, i, ny):
         datafile_path = "./Eigenfunctions_Local_Solution_" + str(i) + ".txt"
     np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
 
-
-
-
-def set_local_flag_display_sizes(npts_alp, npts_re):
+def set_local_flag_display_sizes(npts_alp, npts_re, plot_eigvcts):
 
     if ( npts_alp == 1 and npts_re == 1 ):
         print("Single alpha, single Reynolds ==> Global solution")
         Local = False
+        plot_eigvcts = 1
     else:
         Local = True
         if ( npts_alp > 1 ):
@@ -1298,10 +1307,81 @@ def set_local_flag_display_sizes(npts_alp, npts_re):
             else:
                 print("Single alpha, single Re")
             
-    return Local
+    return Local, plot_eigvcts
 
 
+def check_lmap_val_reset_if_needed(Var, map, lmap, ny):
 
+    flag_reset = False
+
+    for i in range( ny-1, -1, -1):
+        
+        if ( np.abs(Var[i]) > 1.0e-5 ):
+            #print("map.y[i] = ", map.y[i])
+            #print("bsfl.Up[i] = ", bsfl.Up[i])
+            lmap_tmp = map.y[i]
+            break
+
+    quot = np.abs((lmap-lmap_tmp)/lmap)
+    if ( quot > 0.005 ):
+        warnings.warn("Resetting lmap to: %21.11e" % lmap_tmp)
+        lmap = lmap_tmp
+        flag_reset = True
+
+    return flag_reset
+
+
+def write_stability_banana(npts_alp, npts_re, iarr, alpha, Re_range, filename):
+
+    work_dir      = "/home/aph/incompressible-stability-equations/src"
+    save_path     = work_dir #+ '/' + folder1
+    completeName  = os.path.join(save_path, filename)
+    fileoutFinal  = open(completeName,'w')
+    
+    zname2D       = 'ZONE T="2-D Zone", I = ' + str(npts_re) + ', J = ' + str(npts_alp) + '\n'
+    fileoutFinal.write('TITLE     = "2D DATA"\n')
+    fileoutFinal.write('VARIABLES = "X" "Y" "omega_r" "omega_i"\n')
+    fileoutFinal.write(zname2D)
+    
+    for j in range(0, npts_alp):
+        for i in range(0, npts_re):
+            fileoutFinal.write("%25.15e %25.15e %25.15e %25.15e \n" % ( Re_range[i], alpha[j], iarr.omega_array[i,j].real, iarr.omega_array[i,j].imag ) )
+
+    fileoutFinal.close()
+
+
+def extrapolate_in_alpha(iarr, alpha, i, ire):
+
+    om1   = iarr.omega_array[ire, i-1]
+    om2   = iarr.omega_array[ire, i-2]
+    al1   = alpha[i-1]
+    al2   = alpha[i-2]
+    
+    acoef = ( om1 - om2 )/( al1 - al2 )
+    bcoef = om1 - acoef*al1
+    
+    omega = acoef*alpha[i] + bcoef
+
+    #print("alpha[i] = ",alpha[i])
+    #print("acoef*alpha[i] = ", acoef*alpha[i])
+    #print("om1, om2, al1, al2, acoef, bcoef, omega = ", om1, om2, al1, al2, acoef, bcoef, omega)
+
+    return omega
+
+def extrapolate_in_reynolds(iarr, i, ire):
+
+    print("Reynolds extrapol")
+    om1   = iarr.omega_array[ire-1, i]
+    om2   = iarr.omega_array[ire-2, i]
+    re1   = iarr.re_array[ire-1]
+    re2   = iarr.re_array[ire-2]
+    
+    acoef = ( om1 - om2 )/( re1 - re2 )
+    bcoef = om1 - acoef*re1
+    
+    omega = acoef*iarr.re_array[ire] + bcoef
+
+    return omega
 
 
 

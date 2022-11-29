@@ -24,30 +24,64 @@ class SolveGeneralizedEVP:
         self.EigVal = np.zeros(size*size, dpc)
         self.EigVec = np.zeros((size, size), dpc)
 
-    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire):
+    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
         """
         Function...
         """        
-        #ct = 0
         npts = len(alpha)
 
         omega_all = np.zeros(npts, dpc)
         
         for i in range(0, npts):
-            #ct = ct + 1
+
             print("")
-            print("Solving for alpha = ", alpha[i])
-            print("------------------------------")
+            print("Solving for alpha #%i = %21.11e" % (i, alpha[i]) )
+            print("---------------------------------------------")
             print("")
 
             if Tracking and Local:
-                mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny
-                mob.set_matrices(ny, Re, bsfl, map)
-                omega, q_eigenvects = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-8, alpha[i], beta, Re, mob, map, Tracking, bsfl, Local, baseflowT)
+                print
+                print("Tracking and Local!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print
 
-                print("omega that is written to omega_array = ", omega)
+                if (rt_flag == True):
+                    if (prim_form==1):
+                        mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
+                    else:
+                        sys.exit("Just used for inviscid debugging 123456789")
+                        mob = mbm.BuildMatrices(ny) # Inviscid system matrix for RT based on w-equation only (see Chandrasekhar page 433)
+                else:
+                    mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny (variables: u, v, w , p)
+
+                # Build main stability matrices
+                if (rt_flag == True):
+                    if (prim_form==1):
+                        mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+                    else:
+                        mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
+                else:
+                    mob.set_matrices(ny, Re, bsfl, map)
+
+
+
+                    
+                # Extrapolate omega
+                if (i > 1):
+                    # Extrapolate in alpha space
+                    omega = mod_util.extrapolate_in_alpha(iarr, alpha, i, ire)
+                elif (ire > 1):
+                    # Extrapolate in Reynolds space
+                    omega = mod_util.extrapolate_in_reynolds(iarr, i, ire)
+
+                print("omega here = ", omega)
+                omega, q_eigenvects = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-8, alpha[i], beta, \
+                                                                  Re, mob, map, Tracking, bsfl, Local, baseflowT, rt_flag, prim_form)
+
+                #print("omega that is written to omega_array = ", omega)
                 print("phase speed cr = ", omega.real/alpha[i])
                 iarr.omega_array[ire, i] = omega
+
+                #print("iarr.omega_array[ire, i].real = ", iarr.omega_array[ire, i].real)
 
                 # Only tracking a single mode here!!!!!
                 eigvals_filtered = 0.0
@@ -57,6 +91,7 @@ class SolveGeneralizedEVP:
                 if (prim_form==1):
                     mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
                 else:
+                    sys.exit("Just used for inviscid debugging")
                     mob.assemble_mat_lhs_rt_inviscid(alpha[i], beta, omega, Tracking , Local)
                     
                 if (rt_flag):
@@ -85,6 +120,7 @@ class SolveGeneralizedEVP:
                 idx = mod_util.get_idx_of_max(eigvals_filtered)
                 if (rt_flag):
                     omega = eigvals_filtered[idx]*bsfl.Tscale
+                    print("tp123 omega = ", omega)
                 else:
                     omega = eigvals_filtered[idx]
                     
@@ -102,16 +138,20 @@ class SolveGeneralizedEVP:
         #evalue, evect = linalg.eig(lhs, rhs)
         #return evalue, evect
 
-    def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, Re, mob, map, Tracking, bsfl, Local, baseflowT):
+    def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, \
+                               Re, mob, map, Tracking, bsfl, Local, baseflowT, rt_flag, prim_form):
         """
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
-        if baseflowT == 1:
-            tol  = 1.0e-12
-        elif baseflowT == 2:
-            tol  = 1.0e-5
+        if rt_flag == True:
+            tol  = 1.0e-6
         else:
-            sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
+            if baseflowT == 1:
+                tol  = 1.0e-8
+            elif baseflowT == 2:
+                tol  = 1.0e-8
+            else:
+                sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
             
         u0   = 10 + 1j*10.0
         
@@ -125,17 +165,31 @@ class SolveGeneralizedEVP:
         #
 
         # Set Local Operators
-        print("alpha_in, beta_in, omega00 = ",alpha_in, beta_in, omega00)
-        mob.set_matrices(ny, Re, bsfl, map)
+        #print("alpha_in, beta_in, omega00 = ",alpha_in, beta_in, omega00)
+
+        # Build main stability matrices
+        if (rt_flag == True):
+            if (prim_form==1):
+                mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+            else:
+                mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
+        else:
+            mob.set_matrices(ny, Re, bsfl, map)
+
+        #mob.set_matrices(ny, Re, bsfl, map)
 
         mob.assemble_mat_lhs(alpha_in, beta_in, omega00, Tracking, Local)
-        if baseflowT == 1:
-            mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-        elif baseflowT == 2:
-            #print("plane poiseuille")
-            mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+
+        if (rt_flag == True):
+            mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
         else:
-            sys.exit("No function associated with that value")
+            if baseflowT == 1:
+                mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            elif baseflowT == 2:
+                #print("plane poiseuille")
+                mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            else:
+                sys.exit("No function associated with that value")
             
         # Solve Linear System
         SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
@@ -157,18 +211,37 @@ class SolveGeneralizedEVP:
             iter=iter+1
 
             # Set Local Operators
-            mob.set_matrices(ny, Re, bsfl, map)
+            # Build main stability matrices
+            if (rt_flag == True):
+                if (prim_form==1):
+                    mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+                else:
+                    sys.exit("Not for this.......")
+                    mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
+            else:
+                mob.set_matrices(ny, Re, bsfl, map)
+            
+            #mob.set_matrices(ny, Re, bsfl, map)
             mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking, Local)
 
-            if baseflowT == 1:
-                mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            elif baseflowT == 2:
-                #print("plane poiseuille")
-                mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            if (rt_flag == True):
+                mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
             else:
-                sys.exit("No function associated with that value -----  22222222")
-
-            #mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+                if baseflowT == 1:
+                    mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+                elif baseflowT == 2:
+                    #print("plane poiseuille")
+                    mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+                else:
+                    sys.exit("No function associated with that value -----  22222222")
+            
+            # if baseflowT == 1:
+            #     mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            # elif baseflowT == 2:
+            #     #print("plane poiseuille")
+            #     mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            # else:
+            #     sys.exit("No function associated with that value -----  22222222")
 
             #Solve Linear System
             SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
@@ -270,3 +343,11 @@ class SolveGeneralizedEVP:
 
 
         
+
+
+
+
+                #omega_imag = omega.imag
+                #omega      = alpha[i]/2. + omega_imag*1j
+                #print("omega 112233445566= ", omega)
+
