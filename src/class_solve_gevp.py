@@ -16,15 +16,23 @@ class SolveGeneralizedEVP:
     This class define a solution object and contain the main function that provides the solution 
     to the generalized eigenvalue problem (GEVP)
     """
-    def __init__(self, size):
+    def __init__(self, ny, rt_flag, prim_form):
         """
         Constructor of class SolveGeneralizedEVP
         """
+        if (rt_flag == True):
+            if (prim_form==1):
+                size = 5*ny
+            else:
+                size = ny
+        else:
+            size = 4*ny
+
         self.size = size
         self.EigVal = np.zeros(size*size, dpc)
         self.EigVec = np.zeros((size, size), dpc)
 
-    def solve_stability_problem(self, mob, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
+    def solve_stability_problem(self, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
         """
         Function...
         """        
@@ -44,6 +52,7 @@ class SolveGeneralizedEVP:
                 print("Tracking and Local!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                 print
 
+                # CLEAN UP THIS PART SAME AS BELOW FOR GEVP
                 if (rt_flag == True):
                     if (prim_form==1):
                         mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
@@ -57,13 +66,11 @@ class SolveGeneralizedEVP:
                 if (rt_flag == True):
                     if (prim_form==1):
                         mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+                        #mob.set_matrices_rayleigh_taylor_boussinesq_mixing(ny, bsfl, map, Re)
                     else:
                         mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
                 else:
                     mob.set_matrices(ny, Re, bsfl, map)
-
-
-
                     
                 # Extrapolate omega
                 if (i > 1):
@@ -88,19 +95,21 @@ class SolveGeneralizedEVP:
 
                 #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
             else:
+
+                # Create instance for Class BuildMatrices
+                mob = mbm.BuildMatrices(ny, rt_flag, prim_form)
+                
+                # Build main stability matrices
+                mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, Re, map)
+
+                # Assemble matrices
                 if (prim_form==1):
                     mob.assemble_mat_lhs(alpha[i], beta, omega, Tracking , Local)
                 else:
                     sys.exit("Just used for inviscid debugging")
                     mob.assemble_mat_lhs_rt_inviscid(alpha[i], beta, omega, Tracking , Local)
-                    
-                if (rt_flag):
-                    if (prim_form==1):
-                        mob.set_bc_rayleigh_taylor(mob.mat_lhs, mob.mat_rhs, ny, map)
-                    else:
-                        mob.set_bc_rayleigh_taylor_inviscid(mob.mat_lhs, mob.mat_rhs, ny, map)
-                else:
-                    mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
+
+                mob.call_to_set_bc(rt_flag, prim_form, ny, map)
 
                 #mob.mat_lhs = np.conj(mob.mat_lhs)
                 #mob.mat_rhs = np.conj(mob.mat_rhs)
@@ -119,14 +128,15 @@ class SolveGeneralizedEVP:
 
                 idx = mod_util.get_idx_of_max(eigvals_filtered)
                 if (rt_flag):
-                    omega = eigvals_filtered[idx]*bsfl.Tscale
-                    print("tp123 omega = ", omega)
+                    print("omega (dimensional)     = ", eigvals_filtered[idx])
+                    omega = eigvals_filtered[idx]#*bsfl.Tscale
+                    print("omega (non-dimensional) = ", omega)
                 else:
                     omega = eigvals_filtered[idx]
                     
             omega_all[i] = omega
 
-        return omega_all, eigvals_filtered
+        return omega_all, eigvals_filtered, mob
 
     def solve_eigenvalue_problem(self, lhs, rhs):
         """
@@ -144,7 +154,7 @@ class SolveGeneralizedEVP:
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
         if rt_flag == True:
-            tol  = 1.0e-6
+            tol  = 1.0e-5
         else:
             if baseflowT == 1:
                 tol  = 1.0e-8
@@ -351,3 +361,18 @@ class SolveGeneralizedEVP:
                 #omega      = alpha[i]/2. + omega_imag*1j
                 #print("omega 112233445566= ", omega)
 
+
+
+
+                # if (rt_flag):
+                #     if (prim_form==1):
+                #         mob.set_bc_rayleigh_taylor(mob.mat_lhs, mob.mat_rhs, ny, map)
+                #         #mob.set_matrices_rayleigh_taylor_boussinesq_mixing(ny, bsfl, map, Re)
+                #         print("This form")
+                #     else:
+                #         mob.set_bc_rayleigh_taylor_inviscid(mob.mat_lhs, mob.mat_rhs, ny, map)
+                # else:
+                #     mob.set_bc_shear_layer(mob.mat_lhs, mob.mat_rhs, ny, map)
+
+
+                

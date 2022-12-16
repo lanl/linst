@@ -398,20 +398,21 @@ def plot_five_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, eig_fct5, s
     f1 = plt.figure(ptn)
     ax = f1.add_subplot(111)
 
-    fac_u = 1/np.max(np.abs(np.real(eig_fct1)))
+    fac_u = 1/np.max(np.abs(np.abs(eig_fct1)))
 
-    fac_w = 1/np.max(np.abs(np.real(eig_fct3)))
-    fac_p = 1/np.max(np.abs(np.real(eig_fct4)))
+    fac_w = 1/np.max(np.abs(np.abs(eig_fct3)))
+    fac_p = 1/np.max(np.abs(np.abs(eig_fct4)))
 
-    fac_r = 1/np.max(np.abs(np.real(eig_fct5)))
+    fac_r = 1/np.max(np.abs(np.abs(eig_fct5)))
 
     print("fac_u = ", fac_u)
     print("fac_w = ", fac_w)
     print("fac_p = ", fac_p)
+    print("fac_r = ", fac_r)
     
     # First variable
     labelu = "|u| ( scaling = %s )" % str('{:.2e}'.format(fac_u)) 
-    plt.plot(np.real(eig_fct1)*fac_u, y, 'k-', linewidth=1.5, label=labelu)
+    plt.plot(np.abs(eig_fct1)*fac_u, y, 'k-', linewidth=1.5, label=labelu)
 
     # Second variable
     #labelv = "|v| ( scaling = %s )" % str('{:.2e}'.format(fac_v)) 
@@ -419,14 +420,14 @@ def plot_five_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, eig_fct5, s
 
     # Third variable
     labelw = "|w| ( scaling = %s )" % str('{:.2e}'.format(fac_w)) 
-    plt.plot(np.real(eig_fct3)*fac_w, y, 'k:', linewidth=1.5, label=labelw)
+    plt.plot(np.abs(eig_fct3)*fac_w, y, 'k:', linewidth=1.5, label=labelw)
 
     # Fourth variable
     labelp = "|p| ( scaling = %s )" % str('{:.2e}'.format(fac_p)) 
-    plt.plot(np.real(eig_fct4)*fac_p, y, 'k-.', linewidth=1.5, label=labelp)
+    plt.plot(np.abs(eig_fct4)*fac_p, y, 'k-.', linewidth=1.5, label=labelp)
 
     # Fifth variable
-    plt.plot(np.real(eig_fct5)*fac_r, y, 'r-', linewidth=1.5, label="|r|")
+    plt.plot(np.abs(eig_fct5)*fac_r, y, 'r-', linewidth=1.5, label="|r|")
 
     plt.ylabel('y', fontsize=20)
     plt.gcf().subplots_adjust(left=0.16)
@@ -560,13 +561,6 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
     updppdx = ueig_vec + dpeig_vec_dx
     vpdppdy = veig_vec + dpeig_vec_dy
 
-    # Verify that continuity equation is satisfied
-    dupdx   = 1j*alpha*ueig_vec
-    dvpdy   = np.matmul(D1, veig_vec)
-
-    #print("Continuity check:", np.max(np.abs(dupdx+dvpdy)))
-    #print("dupdx + dvpdy = ", dupdx + dvpdy)
-
     DoThis = False
 
     if (DoThis):
@@ -581,9 +575,6 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
         dupdx_new   = 1j*alpha*ueig_vec_new
         dvpdy_new   = np.matmul(D1, veig_vec_new)
 
-        #print("Continuity check new:", np.max(np.abs(dupdx_new+dvpdy_new)))
-        #print("dupdx_new+dvpdy_new = ",dupdx_new+dvpdy_new)
-    
         # normalizing u and v by max(abs(u))
         norm_u_new   = np.max(np.abs(ueig_vec_new))
         print("norm_u_new = ", norm_u_new)
@@ -1155,7 +1146,7 @@ def compute_inner_prod(f, g):
 def trapezoid_integration(fct, y):
 
     nn = len(y)
-    wt = np.zeros(nn-1, dpc)
+    wt = np.zeros(nn-1, dp)
     
     integral = 0.0 
 
@@ -1384,9 +1375,673 @@ def extrapolate_in_reynolds(iarr, i, ire):
     return omega
 
 
+def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, bsfl, D1, D2, y, alpha, beta, Re, omega_i):
+
+    print("")
+    print("Computing relevant quantities for Rayleigh-Taylor instability")
+    print("-------------------------------------------------------------")
+    print("Fr2 = ", mob.Fr2)
+    print("Re  = ", Re)
+    print("Sc  = ", mob.Sc)
+    print("")
+
+    Sc = mob.Sc
+    
+    ny = len(y)
+
+    if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
+        Rho   = bsfl.Rho_nd
+        Rhop  = bsfl.Rhop_nd
+        Rhopp = bsfl.Rhopp_nd
+
+        rho2    = np.multiply(Rho, Rho)
+        rho3    = np.multiply(rho2, Rho)
+
+        rho_inv  = 1/Rho
+        rho2_inv = 1/rho2
+        rho3_inv = 1/rho3
+
+    elif ( mob.boussinesq == -2 ):
+        Rho  = bsfl.Rho
+        Rhop = bsfl.Rhop
+        Mu   = bsfl.Mu
+        Mup  = bsfl.Mup
+    else:
+        sys.exit("Flag error")
+
+    #print("Rhopp = ", Rhopp)
+    
+    #####################################################################
+    # KINETIC ENERGY EQUATION
+    #####################################################################
+    
+    # Disturbance kinetic energy
+    uu = compute_inner_prod(ueig, ueig)
+    vv = compute_inner_prod(veig, veig)
+    ww = compute_inner_prod(weig, weig)
+    Et_integrand = 0.5*( uu + vv + ww )
+
+    # Velocity pressure correlation
+    vp1 = -compute_inner_prod(ueig, 1j*alpha*peig)
+    vp2 = -compute_inner_prod(veig, 1j*beta*peig)
+    vp3 = -compute_inner_prod(weig, np.matmul(D1, peig))
+
+    VelPres = vp1 + vp2 + vp3
+
+    # Viscous (proportional to mu_baseflow)
+    ia  = ( 1j*alpha )
+    ib  = ( 1j*beta )
+    
+    ia2 = ( 1j*alpha )**2.
+    ib2 = ( 1j*beta )**2.
+
+    iab = ( 1j*alpha )*( 1j*beta )
+
+    Du  = np.matmul(D1, ueig)
+    Dv  = np.matmul(D1, veig)
+    Dw  = np.matmul(D1, weig)
+    Dr  = np.matmul(D1, reig)
+
+    D2u = np.matmul(D2, ueig)
+    D2v = np.matmul(D2, veig)
+    D2w = np.matmul(D2, weig)
+    D2r = np.matmul(D2, reig)
+
+    visc1  = compute_inner_prod(ia2*ueig, ueig) + compute_inner_prod(ib2*ueig, ueig) + compute_inner_prod(D2u, ueig)
+    visc2  = compute_inner_prod(ia2*veig, veig) + compute_inner_prod(ib2*veig, veig) + compute_inner_prod(D2v, veig)
+    visc3  = compute_inner_prod(ia2*weig, weig) + compute_inner_prod(ib2*weig, weig) + compute_inner_prod(D2w, weig)
+
+    visc1_3Re = compute_inner_prod(ueig, ia2*ueig) + compute_inner_prod(veig, ib2*veig) + compute_inner_prod(weig, D2w)
+    visc2_3Re = compute_inner_prod(ueig, iab*veig) + compute_inner_prod(veig, iab*ueig) + compute_inner_prod(weig, ia*Du)
+    visc3_3Re = compute_inner_prod(ueig, ia*Dw) + compute_inner_prod(veig, ib*Dw) + compute_inner_prod(weig, ib*Dv)
+
+    # Reynolds-Schmidt terms
+    if   ( mob.boussinesq == 1 ):
+        # Multiply through by rho'
+        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
+        RHS_conti = 0.0*LHS_conti
+    elif ( mob.boussinesq == -2 ):
+        pass
+    elif ( mob.boussinesq == -3 ):
+        # Multiply through by rho'
+
+        print("rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape",\
+              rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape)
+
+        
+        bsfl1 = 2.*np.multiply(rho2_inv, Rhop)
+        bsfl2 = np.multiply(rho2_inv, Rhopp)
+        bsfl3 = -rho_inv
+        bsfl4 = -2.*np.multiply(rho3_inv, np.multiply(Rhop, Rhop))
+        ReSc_continuity   = ( np.multiply(bsfl1, compute_inner_prod(reig, Dr)) \
+                              + np.multiply(bsfl2, compute_inner_prod(reig, reig)) \
+                              + np.multiply(bsfl3, compute_inner_prod(reig, ia2*reig)) \
+                              + np.multiply(bsfl3, compute_inner_prod(reig, ib2*reig)) \
+                              + np.multiply(bsfl3, compute_inner_prod(reig, D2r)) \
+                              + np.multiply(bsfl4, compute_inner_prod(reig, reig)) )/(Re*Sc)
+        # Multiply through by rho'
+        bsfl5 = np.multiply(rho2_inv, np.multiply(Rhop, Rhop))
+        bsfl6 = -2.*np.multiply(rho2_inv, Rhop)
+        ReSc_rho_eq_terms = ( compute_inner_prod(reig, ia2*reig) \
+                              +compute_inner_prod(reig, ib2*reig) \
+                              +compute_inner_prod(reig, D2r) \
+                              +np.multiply(bsfl5, compute_inner_prod(reig, reig)) \
+                              +np.multiply(bsfl6, compute_inner_prod(reig, Dr)) )/(Re*Sc)
+        
+        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
+        RHS_conti = ReSc_continuity
+
+        LHS_mass  = omega_i*compute_inner_prod(reig, reig) + np.multiply(Rhop, compute_inner_prod(reig, weig))
+        RHS_mass  = ReSc_rho_eq_terms
+
+    if   ( mob.boussinesq == 1 ):
+        visc_t = np.divide(visc1 + visc2 + visc3, mob.Re)
+    elif ( mob.boussinesq == -2 ):
+        visc_t = np.multiply(Mu, visc1 + visc2 + visc3)
+        # Viscous (proportional to d mu_baseflow/dz)
+        visc_grad1  = compute_inner_prod(ueig, Du) + compute_inner_prod(veig, Dv) + compute_inner_prod(weig, Dw)
+        visc_grad2  = compute_inner_prod(ueig, ia*weig) + compute_inner_prod(veig, ib*weig) + compute_inner_prod(weig, Dw)
+        visc_grad_t = np.multiply(Mup, visc_grad1 + visc_grad2)
+    elif ( mob.boussinesq == -3 ):
+        visc_t = np.divide(visc1 + visc2 + visc3, mob.Re)
+        visc_t_3Re = np.divide(visc1_3Re + visc2_3Re + visc3_3Re, 3*mob.Re)
+        
+    # Build LHS and RHS
+    if   ( mob.boussinesq == 1 ):
+        # Gravity production term
+        grav_prod = -compute_inner_prod(reig, weig)/mob.Fr2 # Nondimensional here
+        # Left-hand-side
+        LHS = Et_integrand*2*omega_i
+        # Right-hand-side
+        RHS = VelPres + visc_t + grav_prod
+    elif ( mob.boussinesq == -2 ):
+        # Gravity production term
+        grav_prod = -9.81*compute_inner_prod(reig, weig)    # dimensional here
+        # Left-hand-side
+        LHS = np.multiply(Et_integrand, Rho)*2*omega_i
+        # Right-hand-side
+        RHS = VelPres + visc_t + visc_grad_t + grav_prod
+    elif ( mob.boussinesq == -3 ):
+        # Gravity production term
+        grav_prod = -compute_inner_prod(reig, weig)/mob.Fr2 # Nondimensional here
+        # Left-hand-side
+        LHS = np.multiply(Et_integrand, Rho)*2*omega_i
+        # Right-hand-side
+        RHS = VelPres + grav_prod + visc_t_3Re + visc_t
+
+        
+    #####################################################################
+    # MASS EQUATION: from drho'/dt = -w'drho_bar/dz ===> multiply by rho'
+    #####################################################################
+    
+    # Production drhodz
+    Prod_drhodz = -np.multiply( compute_inner_prod(reig, weig), Rhop )
+
+    # time depenedent density
+    Rho2_contrib = 0.5*2*omega_i*compute_inner_prod(reig, reig) 
+
+    #####################################################################
+    # Integrate along z and compute growth rate
+    #####################################################################
+    # Et_int          = np.zeros(ny,dp)
+    # VelPres_int     = np.zeros(ny,dp)
+    # visc_t_int      = np.zeros(ny,dp)
+    # visc_grad_t_int = np.zeros(ny,dp)
+    # grav_prod_int   = np.zeros(ny,dp)
+
+
+    # CHECK ALL THIS!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    if   ( mob.boussinesq == 1 ):
+        Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2), y)
+    elif ( mob.boussinesq == -2 ):
+        Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2*Rho), y)
+    elif ( mob.boussinesq == -3 ):
+        Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2*Rho), y)
+        
+    VelPres_int = trapezoid_integration(np.real(VelPres), y)
+    visc_t_int  = trapezoid_integration(np.real(visc_t), y)
+    
+    if   ( mob.boussinesq == -2 ):
+        visc_grad_t_int = trapezoid_integration(np.real(visc_grad_t), y)
+    elif ( mob.boussinesq == -3 ):
+        visc_t_3Re_int = trapezoid_integration(np.real(visc_t_3Re), y)
+
+    grav_prod_int   = trapezoid_integration(np.real(grav_prod), y)
+
+    if   ( mob.boussinesq == 1 ):
+        omega_i_balance = ( VelPres_int + visc_t_int + grav_prod_int )/Et_int
+    elif   ( mob.boussinesq == -2 ):
+        omega_i_balance = ( VelPres_int + visc_t_int + visc_grad_t_int + grav_prod_int )/Et_int
+    elif   ( mob.boussinesq == -3 ):
+        omega_i_balance = ( VelPres_int + visc_t_int + visc_t_3Re_int + grav_prod_int )/Et_int
+
+    if   ( mob.boussinesq == -3 ):
+        print("VelPres_int    = ", VelPres_int)
+        print("visc_t_int     = ", visc_t_int)
+        print("visc_t_3Re_int = ", visc_t_3Re_int)
+        print("grav_prod_int  = ", grav_prod_int)
+        print("Et_int         =", Et_int)
+        
+    
+    print("omega_i         = ", omega_i)
+    print("omega_i_balance = ", omega_i_balance)
+    print("")
+    
+    #####################################################################
+    # Plot 
+    #####################################################################
+
+    print("LHS and RHS should be real:")
+    print("---------------------------")
+    print("max(abs(imag(LHS))) = ", np.amax(np.abs(np.imag(LHS))))
+    print("max(abs(imag(RHS))) = ", np.amax(np.abs(np.imag(RHS))))
+
+    print("")
+    print("Check energy balance:")
+    print("---------------------")
+    energy_bal = np.amax(np.abs(LHS-RHS))
+    print("Energy balance (RT) = ", energy_bal)
+    print("")
+    
+    ptn = plt.gcf().number + 1
+
+    f = plt.figure(ptn)
+    plt.plot(np.real(LHS), y, 'k', linewidth=1.5, label=r"LHS")
+    plt.plot(np.real(RHS), y, 'r--', linewidth=1.5, label=r"RHS")
+    plt.xlabel("Energy balance R-T", fontsize=18)
+    plt.ylabel("y", fontsize=18)
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    #plt.xlim([0.0, 1.e-5])
+    plt.ylim([-0.07, 0.07])
+    f.show()
+
+    plt.legend(loc="upper center")
+
+    ptn = ptn + 1
+
+    f = plt.figure(ptn)
+    plt.plot(np.real(LHS), y, 'k', linewidth=1.5, label=r"LHS")
+    plt.plot(np.real(RHS), y, 'r--', linewidth=1.5, label=r"RHS")
+
+    #plt.plot(np.real(Et_integrand), y, 'k-.', linewidth=1.5, label=r"Disturbance kinetic energy")
+    plt.plot(np.real(VelPres), y, 'b', linewidth=1.5, label=r"Velocity-Pressure correlation (RHS)")
+    plt.plot(np.real(visc_t), y, 'g', linewidth=1.5, label=r"Viscous ($\bar{\mu}$) (RHS)")
+    if   ( mob.boussinesq == -2 ):
+        plt.plot(np.real(visc_grad_t), y, 'm', linewidth=1.5, label=r"Viscous ($d\bar{\mu}/dz$) (RHS)")
+    plt.plot(np.real(grav_prod), y, 'c', linewidth=1.5, label=r"Gravity Production (RHS)")
+    plt.xlabel("Energy balance R-T", fontsize=18)
+    plt.ylabel("z", fontsize=18)
+
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    #plt.xlim([-0.01, 0.01])
+    plt.ylim([-0.02, 0.02])
+    f.show()
+
+    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
+
+    ptn = ptn + 1
+
+    f = plt.figure(ptn)
+    plt.plot(np.real(visc_t), y, 'k', linewidth=1.5, label=r"visc_t")
+    plt.plot(np.real(compute_inner_prod(D2u, ueig)), y, 'r--', linewidth=1.5, label=r"D2u")
+    plt.plot(np.real(compute_inner_prod(D2v, veig)), y, 'c--', linewidth=1.5, label=r"D2v")
+    plt.plot(np.real(compute_inner_prod(D2w, weig)), y, 'g--', linewidth=1.5, label=r"D2w")
+    plt.xlabel("visc_t only + D2u + D2v + D2w", fontsize=18)
+    plt.ylabel("y", fontsize=18)
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    #plt.xlim([0.0, 1.e-5])
+    plt.ylim([-0.07, 0.07])
+    f.show()
+
+    plt.legend(loc="upper center")
+
+    if ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
+
+        ptn = ptn + 1
+        
+        f = plt.figure(ptn)
+        plt.plot(np.real(LHS_conti), y, 'k', linewidth=1.5, label=r"LHS (continuity)")
+        plt.plot(np.real(RHS_conti), y, 'c--', linewidth=1.5, label=r"RHS (continuity)")
+        plt.xlabel("LHS vs. RHS for continuity eq.", fontsize=18)
+        plt.ylabel("y", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.xlim([0.0, 1.e-5])
+        #plt.ylim([-0.07, 0.07])
+        f.show()
+        plt.legend(loc="upper center")
+
+        if ( mob.boussinesq == -3 ):
+            ptn = ptn + 1
+            
+            f = plt.figure(ptn)
+            plt.plot(np.real(LHS_mass), y, 'k', linewidth=1.5, label=r"LHS (mass)")
+            plt.plot(np.real(RHS_mass), y, 'c--', linewidth=1.5, label=r"RHS (mass)")
+            plt.xlabel("LHS vs. RHS for mass eq.", fontsize=18)
+            plt.ylabel("y", fontsize=18)
+            plt.gcf().subplots_adjust(left=0.17)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            #plt.xlim([0.0, 1.e-5])
+            #plt.ylim([-0.07, 0.07])
+            f.show()
+            plt.legend(loc="upper center")
+
+        
+    # Check and plot growth rate as a function of z
+
+    #print("RHS",RHS)
+    #print("")
+    #print("")
+    #print("LHS",LHS)
+    #print("")
+    #print("")
+    #print("LHS/RHS = ", np.divide(LHS,RHS))
+    
+    #growth_rate = np.divide(RHS, LHS)
+
+    #ptn = ptn + 1
+
+    # f = plt.figure(ptn)
+    # plt.plot(growth_rate, y, 'k', linewidth=1.5, label=r"growth rate")
+    # plt.xlabel("Energy balance R-T: growth rate vs. z", fontsize=18)
+    # plt.ylabel("z", fontsize=18)
+
+    # plt.gcf().subplots_adjust(left=0.17)
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    # f.show()
+
+    # plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
 
 
     
+    
+    plot_mass_eq = False
+
+    if (plot_mass_eq):
+        
+        ptn = ptn + 1
+        
+        f = plt.figure(ptn)
+        plt.plot(Prod_drhodz, y, 'b', linewidth=1.5, label=r"Prod_drhodz")
+        plt.plot(Rho2_contrib, y, 'm--', linewidth=1.5, label=r"Rho2_contrib")
+        plt.xlabel("Energy balance R-T", fontsize=18)
+        plt.ylabel("z", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        f.show()
+        
+        plt.legend(loc="upper center")
+
+    #####################################################################
+    # Compute Energy balance for all equations independently
+    #####################################################################
+
+    DoThis = False
+
+    if (DoThis):
+        
+        # x-momentum
+        LHS_xmom_tmp = 0.5*compute_inner_prod(ueig, ueig)*2*omega_i 
+        LHS_xmom     = np.multiply(LHS_xmom_tmp, Rho)
+        
+        visc_grad1_xmom  = compute_inner_prod(ueig, Du) 
+        visc_grad2_xmom  = compute_inner_prod(ueig, ia*weig) 
+        
+        visc_grad_t_xmom = np.multiply(Mup, visc_grad1_xmom + visc_grad2_xmom)
+        
+        visc_xmom = np.multiply(Mu, visc1)
+        
+        RHS_xmom  = vp1 + visc_xmom + visc_grad_t_xmom
+        
+        
+        # y-momentum
+        LHS_ymom_tmp = 0.5*compute_inner_prod(veig, veig)*2*omega_i 
+        LHS_ymom     = np.multiply(LHS_ymom_tmp, Rho)
+        
+        visc_grad1_ymom  = compute_inner_prod(veig, Dv) 
+        visc_grad2_ymom  = compute_inner_prod(veig, ib*weig) 
+        
+        visc_grad_t_ymom = np.multiply(Mup, visc_grad1_ymom + visc_grad2_ymom)
+        
+        visc_ymom = np.multiply(Mu, visc2)
+        
+        RHS_ymom  = vp2 + visc_ymom + visc_grad_t_ymom
+        
+        # z-momentum
+        LHS_zmom_tmp = 0.5*compute_inner_prod(weig, weig)*2*omega_i 
+        LHS_zmom     = np.multiply(LHS_zmom_tmp, Rho)
+        
+        visc_grad1_zmom  = compute_inner_prod(weig, Dw) 
+        visc_grad2_zmom  = compute_inner_prod(weig, Dw) 
+        
+        visc_grad_t_zmom = np.multiply(Mup, visc_grad1_zmom + visc_grad2_zmom)
+        
+        visc_zmom = np.multiply(Mu, visc3)
+        
+        grav_zmom = -compute_inner_prod(reig, weig)*9.81 
+        
+        RHS_zmom  = vp3 + visc_zmom + visc_grad_t_zmom + grav_zmom
+
+        
+    plot_each_eq = False
+
+    if (plot_each_eq):
+    
+        ptn = ptn + 1
+        
+        # X-MOMENTUM
+        f = plt.figure(ptn)
+        plt.plot(LHS_xmom, y, 'b', linewidth=1.5, label=r"LHS (x-mom)")
+        plt.plot(RHS_xmom, y, 'm--', linewidth=1.5, label=r"RHS (x-mom)")
+        plt.xlabel("Energy balance R-T X-MOMENTUM", fontsize=18)
+        plt.ylabel("z", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.ylim([-0.03, 0.03])
+        f.show()
+        
+        plt.legend(loc="upper center")
+        
+        ptn = ptn + 1
+        
+        # Y-MOMENTUM
+        f = plt.figure(ptn)
+        plt.plot(LHS_ymom, y, 'b', linewidth=1.5, label=r"LHS (y-mom)")
+        plt.plot(RHS_ymom, y, 'm--', linewidth=1.5, label=r"RHS (y-mom)")
+        plt.xlabel("Energy balance R-T Y-MOMENTUM", fontsize=18)
+        plt.ylabel("z", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.ylim([-0.03, 0.03])
+        f.show()
+        
+        plt.legend(loc="upper center")
+        
+        ptn = ptn + 1
+        
+        # Z-MOMENTUM
+        f = plt.figure(ptn)
+        plt.plot(LHS_zmom, y, 'b', linewidth=1.5, label=r"LHS (z-mom)")
+        plt.plot(RHS_zmom, y, 'm--', linewidth=1.5, label=r"RHS (z-mom)")
+        plt.xlabel("Energy balance R-T Z-MOMENTUM", fontsize=18)
+        plt.ylabel("z", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.ylim([-0.03, 0.03])
+        f.show()
+        
+        plt.legend(loc="upper center")
+
+    input("Check LHS/RHS")
+    
+    # # a_i (see Boussinesq paper by D. Israel page 17)
+    # rhoxw = compute_inner_prod(reig, weig)
+    # #a_i  = -np.divide(rhoxw, Rho) ==> bug fix ==> no leading minus sign
+
+    # a_i   = -np.divide(rhoxw, Rho)
+    
+    # a_1   = -np.divide(rhoxw, Rho)
+    # a_2   = -np.divide(rhoxw, Rho)
+    # a_3   = -np.divide(rhoxw, Rho)
+
+    # #print("a_i = ", a_i)
+
+    # # Compute b (see Boussinesq paper by D. Israel Eq. 22b)
+    # rhoxrho = compute_inner_prod(reig, reig)
+    # #b_      = -np.divide(rhoxrho, np.multiply(Rho, Rho) ) ==> bug fixed on December 8 2022 ==> no leading minus sign
+    # b_      = np.divide(rhoxrho, np.multiply(Rho, Rho) )
+
+    # Rho2    = np.multiply(Rho, Rho)
+    # #print("b_ = ", b_)
+
+    # #print("1/Rho2 = ", 1/Rho2)
+    
+    # # compute rho'*dp'/dz
+    # rhodpdz   = compute_inner_prod(reig, np.matmul(D1, peig))
+    # Pres_corr = -np.multiply(1/Rho2, rhodpdz)
+
+    # Cap             = 0.1 
+    # Pres_corr_model = Cap*np.multiply( np.divide(b_, Rho), -Rho*9.81 )
+
+    # # Dissipation ----- Other way 333
+    # term1_other333 = compute_inner_prod(1j*alpha*ueig, 1j*alpha*ueig)
+    # term2_other333 = compute_inner_prod(np.matmul(D1, ueig), np.matmul(D1, ueig))
+    # term3_other333 = compute_inner_prod(1j*alpha*veig, 1j*alpha*veig)
+    # term4_other333 = compute_inner_prod(np.matmul(D1, veig), np.matmul(D1, veig))
+
+    # # I do not have the Reynolds number here ==> use nu instead
+    # nu = np.divide(Mu, Rho)
+    # Dissipation_integrand_other333 = -np.multiply(nu, term1_other333 + term2_other333 + term3_other333 + term4_other333 )
+
+    # C1a = 2.8
+    # Pres_corr_model_full = Cap*np.multiply( np.divide(b_, Rho), -Rho*9.81 ) + C1a*np.multiply( np.divide(np.real(Dissipation_integrand_other333), np.real(Et_integrand)), a_i)
+
+    # ptn = ptn + 1
+
+    # print("np.amax(np.imag(a_i)) = ", np.amax(np.imag(a_i)))
+    # print("np.amax(np.imag(b_)) = ", np.amax(np.imag(b_)))
+    # print("np.amax(np.imag(Dissipation_integrand_other333)) = ", np.amax(np.imag(Dissipation_integrand_other333)))
+    
+    # f = plt.figure(ptn)
+    # plt.plot(np.real(a_i), y, 'k', linewidth=1.5, label=r"$a_i$")
+    # plt.plot(np.real(b_), y, 'r', linewidth=1.5, label=r"$b$")
+    # plt.plot(np.real(Dissipation_integrand_other333), y, 'b', linewidth=1.5, label=r"$\epsilon$")
+    # #plt.plot(Rho2, y, 'g', linewidth=1.5, label=r"$\bar{\rho}^2$")
+    
+    # plt.xlabel("a, b, epsilon", fontsize=18)
+    # plt.ylabel("z", fontsize=18)
+    # plt.gcf().subplots_adjust(left=0.17)
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    # plt.ylim([-0.03, 0.03])
+    # f.show()
+
+    # plt.legend(loc="upper center")
+
+    # ptn = ptn + 1
+
+    # f = plt.figure(ptn)
+    # plt.plot(np.real(Pres_corr), y, 'k', linewidth=1.5, label=r"Pressure correlation (exact)")
+    # plt.plot(np.real(Pres_corr_model), y, 'r', linewidth=1.5, label=r"Pressure correlation (model)")
+    # #plt.plot(np.real(Pres_corr_model_full), y, 'r', linewidth=1.5, label=r"Pressure correlation (full model)")
+    
+    # plt.xlabel("Pressure correlation", fontsize=18)
+    # plt.ylabel("z", fontsize=18)
+    # plt.gcf().subplots_adjust(left=0.20)
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    # plt.ylim([-0.002, 0.002])
+    # f.show()
+
+    # plt.legend(loc="upper center")
+
+
+    input("compute_important_terms_rayleigh_taylor")
+
+
+def check_continuity_satisfied(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega, bsfl, mob, rt_flag):
+
+    if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
+        Rho   = bsfl.Rho_nd
+        Rhop  = bsfl.Rhop_nd
+        Rhopp = bsfl.Rhopp_nd
+
+        rho2    = np.multiply(Rho, Rho)
+        rho3    = np.multiply(rho2, Rho)
+
+        rho_inv  = 1/Rho
+        rho2_inv = 1/rho2
+        rho3_inv = 1/rho3
+
+        Sc = mob.Sc
+        Re = mob.Re
+
+        print("Sc = ", Sc)
+        print("Re = ", Re)
+
+    elif ( mob.boussinesq == -2 ):
+        Rho  = bsfl.Rho
+        Rhop = bsfl.Rhop
+        Mu   = bsfl.Mu
+        Mup  = bsfl.Mup
+    else:
+        sys.exit("Flag error")
+
+    # Viscous (proportional to mu_baseflow)
+    ia  = ( 1j*alpha )
+    ib  = ( 1j*beta )
+    
+    ia2 = ( 1j*alpha )**2.
+    ib2 = ( 1j*beta )**2.
+
+    iab = ( 1j*alpha )*( 1j*beta )
+
+    Du  = np.matmul(D1, ueig)
+    Dv  = np.matmul(D1, veig)
+    Dw  = np.matmul(D1, weig)
+    Dr  = np.matmul(D1, reig)
+
+    D2u = np.matmul(D2, ueig)
+    D2v = np.matmul(D2, veig)
+    D2w = np.matmul(D2, weig)
+    D2r = np.matmul(D2, reig)
+    
+    # Verify that continuity equation is satisfied
+    print("")
+    print("Check if continuity equation is satisfied")
+    print("-----------------------------------------")
+    #print("dupdx + dvpdy = ", dupdx + dvpdy)
+
+    if (rt_flag):
+
+        if   ( mob.boussinesq == -3 ):
+            bsfl1 = 2.*np.multiply(rho2_inv, Rhop)
+            bsfl2 = np.multiply(rho2_inv, Rhopp)
+            bsfl3 = -rho_inv
+            bsfl4 = -2.*np.multiply(rho3_inv, np.multiply(Rhop, Rhop))
+            # Multiply through by rho'
+            bsfl5 = np.multiply(rho2_inv, np.multiply(Rhop, Rhop))
+            bsfl6 = -2.*np.multiply(rho2_inv, Rhop)
+            
+            LHS_conti = ia*ueig + ib*veig + Dw
+            RHS_conti = ( bsfl1*Dr + bsfl2*reig + bsfl3*( ia2*reig + ib2*reig + D2r ) + bsfl4*reig )/(Re*Sc)
+            
+            LHS_mass  = 0.0*LHS_conti
+            RHS_mass  = 0.0*LHS_conti
+            
+            conti_check = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
+            mass_check  = np.divide(conti_check, conti_check)
+            
+        elif ( mob.boussinesq == 1 ):
+            pass
+
+        elif ( mob.boussinesq == -2 ):
+            conti_check = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
+            mass_check  = np.multiply(weig, bsfl.Rhop) - 1j*omega*reig
+
+        #print("np.multiply(weig, bsfl.Rhop) = ", np.multiply(weig, bsfl.Rhop))
+        #print
+        #print
+        #print("- 1j*omega*reig = ",- 1j*omega*reig)
+
+    else:
+
+        conti_check = 1j*alpha*ueig + np.matmul(D1, veig) + 1j*beta*weig
+
+    conti_check_max = np.max(np.abs(conti_check))
+    print("Continuity residual = ", conti_check_max)
+    
+    if (rt_flag):
+        mass_check_max = np.max(np.abs(mass_check))
+        print("Extra R-T check     = ", mass_check_max)
+
+
+    #print("conti_check = ", conti_check)
+    #print("")
+    #print("")
+    #print("mass_check = ", mass_check)
+
+    plot = True
+
+    if (plot):
+        ptn = plt.gcf().number + 1
+        
+        f = plt.figure(ptn)
+        plt.plot(np.abs(LHS_conti), y, 'b', label="LHS (continuity)")
+        plt.plot(np.abs(RHS_conti), y, 'r--', label="RHS (continuity)")
+        plt.xlabel('LHS vs RHS (continuity)')
+        plt.ylabel('y')
+        plt.legend(loc="upper right")
+        f.show()
+        
+        input("Mass check")
+
+
+
+
+
 # using Test
 # using Plots
 # using LinearAlgebra: norm
@@ -1575,5 +2230,7 @@ def extrapolate_in_reynolds(iarr, i, ire):
     # plt.title('u*v')
     # plt.legend(loc="upper right")
     # fb.show()
+
+
 
 

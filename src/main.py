@@ -160,6 +160,40 @@ if ( Local and npts_alp == 1 and npts_re > 1 ):
 
     input("DDDDDDD")
 
+
+if ( Local and npts_alp > 1 and npts_re == 1 ):
+
+    ptn = plt.gcf().number + 1
+    
+    # f = plt.figure(ptn)
+    # plt.plot(Re_range, np.imag(iarr.omega_array), 'k', markerfacecolor='none')
+    # plt.xlabel(r'Reynolds number (Re)', fontsize=18)
+    # plt.ylabel(r'$\omega_i$', fontsize=18)
+    # plt.gcf().subplots_adjust(left=0.17)
+    # plt.gcf().subplots_adjust(bottom=0.16)
+    # #plt.xlim([-10, 10])
+    # #plt.ylim([-1, 1])
+    # f.show()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(alpha, np.imag(iarr.omega_array[0,:]), 'k', markerfacecolor='none')
+    
+    formatter = ticker.ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((-1,1))
+    ax.yaxis.set_major_formatter(formatter)
+
+    ax.set_xlabel(r'Wavenumber ($\alpha$)', fontsize=18)
+    ax.set_ylabel(r'$\omega_i$', fontsize=18)
+    plt.gcf().subplots_adjust(left=0.15)
+    plt.gcf().subplots_adjust(bottom=0.16)
+    #plt.xlim([0, 500])
+    #plt.ylim([-0.05, 0.1])
+    fig.show()
+
+    input("DDDDDDD")
+
     
 # Write stability banana
 filename      = "Banana_tec_bottom.dat"

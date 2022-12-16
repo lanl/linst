@@ -54,9 +54,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     # Create instance for class Mapping
     map = mma.Mapping(ny)
 
-    # Create instance for Class Baseflow
-    #bsfl = mbf.Baseflow(ny)
-
+    # Create mapping and generate baseflow
     if (rt_flag):
         k = np.sqrt(alpha[0]**2. + beta**2.)
         if (ire==0):
@@ -101,35 +99,11 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     if plot_grid_bsfl == 1:
         mod_util.plot_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up, map.D1)
     
-    # Create instance for Class BuildMatrices
-    if (rt_flag == True):
-        if (prim_form==1):
-            mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
-        else:
-            mob = mbm.BuildMatrices(ny) # Inviscid system matrix for RT based on w-equation only (see Chandrasekhar page 433)
-    else:
-        mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny (variables: u, v, w , p)
-
-    # Build main stability matrices
-    if (rt_flag == True):
-        if (prim_form==1):
-            mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
-        else:
-            mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
-    else:
-        mob.set_matrices(ny, Re, bsfl, map)
-
     # Create instance for Class SolveGeneralizedEVP
-    if (rt_flag == True):
-        if (prim_form==1):
-            solve = msg.SolveGeneralizedEVP(5*ny)
-        else:
-            solve = msg.SolveGeneralizedEVP(ny)
-    else:
-        solve = msg.SolveGeneralizedEVP(4*ny)
-
-
-    omega_all, eigvals_filtered = solve.solve_stability_problem(mob, map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
+    solve = msg.SolveGeneralizedEVP(ny, rt_flag, prim_form)
+    
+    # Build matrices and solve eigenvalue/local problem
+    omega_all, eigvals_filtered, mob = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
 
     #if (npts_alp > 1):
     #    mod_util.plot_imag_omega_vs_alpha(omega_all, "omega", alpha, alp_mich, ome_mich)
@@ -198,7 +172,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         print("np.max( np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
         print("np.max( np.abs( np.exp(1j*phase_u)) - np.abs( np.exp(1j*phase_u_uwrap )) ) = ", np.max( np.abs( np.exp(1j*phase_u) ) - np.abs( np.exp(1j*phase_u_uwrap ) ) ) )
         
-        Shift = 1
+        Shift = 0
         
         if Shift == 1:
             ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
@@ -247,15 +221,18 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         mod_util.plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
 
         input("Waiting after plotting eigenvectors")
+
+        
+    # Plot some useful terms of Rayleigh-Taylor computation
+    mod_util.compute_important_terms_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, mob,\
+                                                     bsfl, map.D1, map.D2, map.y, alpha, beta, Re, np.imag(omega_all[0]))
+
+    # Check that some equations are fullfilled by the eigenfunctions
+    mod_util.check_continuity_satisfied(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
+                                        map.D1, map.D2, map.y, alpha, beta, omega_all[0], bsfl, mob, rt_flag)
         
     ### CRASHES THE COMPUTER plt.close('all')
-
-    # # Verify that continuity equation is satisfied
-    # dupdx   = 1j*alpha*ueig_ps
-    # dvpdy   = np.matmul(map.D1, veig_ps)
-
-    # print("Continuity check:", np.max(np.abs(dupdx+dvpdy)))
-
+    
     # # Compute stream function check
     # Phi_eig_cc = mod_util.compute_stream_function_check(ueig_ps, veig_ps, alpha[0], map.D1, map.y, ny)
 
@@ -331,3 +308,50 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 #mod_util.plot_two_vars_amplitude(peig_ps, ueig_ps, "p", "u", map.y)
 
 #mod_util.plot_four_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, "u", "v", "w", "p", map.y)
+
+
+
+
+
+
+
+
+
+    # if (rt_flag == True):
+    #     if (prim_form==1):
+    #         mob = mbm.BuildMatrices(5*ny) # System matrices for RT are 5*ny by 5*ny (variables: u, v, w , p, rho)
+    #     else:
+    #         sys.exit("Just used for inviscid debugging 123456789")
+    #         mob = mbm.BuildMatrices(ny) # Inviscid system matrix for RT based on w-equation only (see Chandrasekhar page 433)
+    # else:
+    #     mob = mbm.BuildMatrices(4*ny) # System matrices are 4*ny by 4*ny (variables: u, v, w , p)
+
+    # if (rt_flag == True):
+    #     if (prim_form==1):
+    #         mob.set_matrices_rayleigh_taylor(ny, bsfl, map)
+    #     else:
+    #         mob.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
+    # else:
+    #     mob.set_matrices(ny, Re, bsfl, map)
+
+        
+    # if (rt_flag == True):
+    #     if (prim_form==1):
+    #         solve = msg.SolveGeneralizedEVP(5*ny)
+    #     else:
+    #         solve = msg.SolveGeneralizedEVP(ny)
+    # else:
+    #     solve = msg.SolveGeneralizedEVP(4*ny)
+
+
+
+    # Create instance for Class BuildMatrices
+    #mob = mbm.BuildMatrices(ny, rt_flag, prim_form)
+
+    # Build main stability matrices
+    #mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, Re, map)
+
+   
+
+
+    
