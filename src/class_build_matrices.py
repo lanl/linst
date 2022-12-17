@@ -27,9 +27,12 @@ class BuildMatrices:
                 size = 5*ny
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval
 
-                self.boussinesq = -3 # 1
-                self.Sc         = 100
-                
+                self.boussinesq = 1 # 1, -3
+                self.Sc         = 10
+
+                self.grav       = 1 #9.81 #1
+                self.Fr2        = 0.101936799 #Fr*Fr Fr^2 = Uinf^2/(ginf*L) assuming Uinf=1, ginf=9.81 and L=1
+
                 if   (self.boussinesq == 1 ):
                     print("")
                     print('-----------------------------------------------------')
@@ -324,7 +327,7 @@ class BuildMatrices:
         self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
 
         if ( self.boussinesq == -3 ):
-            print("Adding mat_ab")
+            #print("Adding mat_ab")
             self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab 
         
         if (Tracking and Local):
@@ -468,7 +471,11 @@ class BuildMatrices:
         Lder    = np.matmul(dMup, map.D1)
         Lder2   = np.matmul(dMu, map.D2)
 
-        grav    = 9.81
+        grav    = self.grav #9.81
+
+        print("")
+        print("In this solver, gravity should be dimensional, g = ", self.grav)
+        input("Check gravity")
 
         # 1st block indices
         imin = 0
@@ -642,7 +649,11 @@ class BuildMatrices:
         dMup    = np.diag(bsfl.Mup)
         dRhop   = np.diag(bsfl.Rhop)
 
-        grav    = 9.81
+        grav    = self.grav #9.81
+
+        print("")
+        print("In this solver, gravity should be dimensional, g = ", self.grav)
+        input("Check gravity in set_matrices_rayleigh_taylor_inviscid_w_equation")
 
         # 1st and only block indices
         imin = 0
@@ -872,22 +883,23 @@ class BuildMatrices:
         see Equations 30, 31, 32
         variables are taken here as (u, v, w, p, rho)^T
         """
+        
+        grav     = self.grav
+        Fr2      = self.Fr2
 
-        grav = 1
-        Pe_m = Re*self.Sc
-        Fr2  = 0.101936799 #Fr*Fr Fr^2 = Uinf^2/(ginf*L) assuming Uinf=1, ginf=9.81 and L=1
-
+        Sc       = self.Sc
+        
         self.Re  = Re
-        self.Fr2 = Fr2
-        self.Pe  = Pe_m
 
         print("")
-        print("In this solver, grav, Pe_m, Re and Fr currently hard-coded")
-        print("----------------------------------------------------------")
-        print("Re   = ", Re)
-        print("Fr   = ", np.sqrt(Fr2))
-        print("Pe_m = ", Pe_m)
-        print("grav = ", grav)
+        print("RT Boussinesq Equations: grav, Pe, Re and Fr currently hard-coded")
+        print("-----------------------------------------------------------------")
+        print("Gravity                       = ", grav)
+        print("Froude number Fr              = ", np.sqrt(Fr2))
+        print("Schmidt number Sc             = ", Sc)
+        print("Reynolds number Re            = ", Re)
+        print("Peclet number (mass transfer) = ", Re*Sc)
+        print("")
 
         D1 = map.D1
         D2 = map.D2
@@ -955,11 +967,11 @@ class BuildMatrices:
         imin = imin + ny
         imax = imax + ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/Pe_m
+        self.mat_a2[imin:imax, imin:imax]           = -id/(Re*Sc)
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/Pe_m
+        self.mat_b2[imin:imax, imin:imax]           = -id/(Re*Sc)
 
-        self.mat_d1[imin:imax, imin:imax]           = D2/Pe_m 
+        self.mat_d1[imin:imax, imin:imax]           = D2/(Re*Sc) 
         self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
@@ -1003,26 +1015,22 @@ class BuildMatrices:
         variables are taken here as (u, v, w, p, rho)^T
         """
 
-        grav = 1
-        Fr2  = 0.101936799 #Fr*Fr Fr^2 = Uinf^2/(ginf*L) assuming Uinf=1, ginf=9.81 and L=1
+        grav     = self.grav
+        Fr2      = self.Fr2
 
-        # Schmidt number
-        Sc   = self.Sc
-
+        Sc       = self.Sc
+        
         self.Re  = Re
-        self.Fr2 = Fr2
-
-        self.Pe  = Re*Sc
 
         print("")
-        print("In this solver, grav, Pe_m, Re and Fr currently hard-coded (SANDOVAL EQUATIONS)")
-        print("-------------------------------------------------------------------------------")
-        print("Re   = ", Re)
-        print("Fr   = ", np.sqrt(Fr2))
-        print("Sc   = ", Sc)
-        print("Pe (mass transfer) = ", Re*Sc)
-        #print("Pe_m = ", Pe_m)
-        print("grav = ", grav)
+        print('RT "Sandoval" Equations: grav, Pe, Re and Fr currently hard-coded')
+        print("-----------------------------------------------------------------")
+        print("Gravity                       = ", grav)
+        print("Froude number Fr              = ", np.sqrt(Fr2))
+        print("Schmidt number Sc             = ", Sc)
+        print("Reynolds number Re            = ", Re)
+        print("Peclet number (mass transfer) = ", Re*Sc)
+        print("")
 
         D1 = map.D1
         D2 = map.D2
@@ -1120,6 +1128,7 @@ class BuildMatrices:
         mat_tmp2 = np.matmul(drho2_inv, dRhopp)
         mat_tmp3 = -np.matmul(drho_inv, D2)
         mat_tmp4 = -2.*np.matmul(drho3_inv, np.matmul(dRhop,dRhop))
+        
         # BUGGY ===============> #self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( 2.*drho2_inv*dRhop*D1 + drho2_inv*dRhopp - drho_inv*D2 -2.*drho3_inv*dRhop*dRhop )/(Re*Sc)
         self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( mat_tmp1 + mat_tmp2 + mat_tmp3 + mat_tmp4 )/(Re*Sc)
 
@@ -1134,6 +1143,8 @@ class BuildMatrices:
         # BUGGY ================> self.mat_d1[imin:imax, imin:imax]           = ( D2 + drho2_inv*dRhop*dRhop - 2.*drho_inv*dRhop*D1 )/(Re*Sc)
         mat_tmp5 = np.matmul(drho2_inv, np.matmul(dRhop,dRhop))
         mat_tmp6 = -2.*np.matmul(drho_inv, np.matmul(dRhop,D1))
+
+        
         self.mat_d1[imin:imax, imin:imax]           = ( D2 + mat_tmp5 + mat_tmp6 )/(Re*Sc)
         
         self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop

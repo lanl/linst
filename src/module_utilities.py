@@ -1380,37 +1380,19 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     print("")
     print("Computing relevant quantities for Rayleigh-Taylor instability")
     print("-------------------------------------------------------------")
-    print("Fr2 = ", mob.Fr2)
-    print("Re  = ", Re)
-    print("Sc  = ", mob.Sc)
+    #print("Fr2 = ", mob.Fr2)
+    #print("Re  = ", Re)
+    #print("Sc  = ", mob.Sc)
     print("")
 
     Sc = mob.Sc
     
     ny = len(y)
 
-    if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
-        Rho   = bsfl.Rho_nd
-        Rhop  = bsfl.Rhop_nd
-        Rhopp = bsfl.Rhopp_nd
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+    ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
 
-        rho2    = np.multiply(Rho, Rho)
-        rho3    = np.multiply(rho2, Rho)
-
-        rho_inv  = 1/Rho
-        rho2_inv = 1/rho2
-        rho3_inv = 1/rho3
-
-    elif ( mob.boussinesq == -2 ):
-        Rho  = bsfl.Rho
-        Rhop = bsfl.Rhop
-        Mu   = bsfl.Mu
-        Mup  = bsfl.Mup
-    else:
-        sys.exit("Flag error")
-
-    #print("Rhopp = ", Rhopp)
-    
     #####################################################################
     # KINETIC ENERGY EQUATION
     #####################################################################
@@ -1428,25 +1410,6 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
 
     VelPres = vp1 + vp2 + vp3
 
-    # Viscous (proportional to mu_baseflow)
-    ia  = ( 1j*alpha )
-    ib  = ( 1j*beta )
-    
-    ia2 = ( 1j*alpha )**2.
-    ib2 = ( 1j*beta )**2.
-
-    iab = ( 1j*alpha )*( 1j*beta )
-
-    Du  = np.matmul(D1, ueig)
-    Dv  = np.matmul(D1, veig)
-    Dw  = np.matmul(D1, weig)
-    Dr  = np.matmul(D1, reig)
-
-    D2u = np.matmul(D2, ueig)
-    D2v = np.matmul(D2, veig)
-    D2w = np.matmul(D2, weig)
-    D2r = np.matmul(D2, reig)
-
     visc1  = compute_inner_prod(ia2*ueig, ueig) + compute_inner_prod(ib2*ueig, ueig) + compute_inner_prod(D2u, ueig)
     visc2  = compute_inner_prod(ia2*veig, veig) + compute_inner_prod(ib2*veig, veig) + compute_inner_prod(D2v, veig)
     visc3  = compute_inner_prod(ia2*weig, weig) + compute_inner_prod(ib2*weig, weig) + compute_inner_prod(D2w, weig)
@@ -1454,45 +1417,6 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     visc1_3Re = compute_inner_prod(ueig, ia2*ueig) + compute_inner_prod(veig, ib2*veig) + compute_inner_prod(weig, D2w)
     visc2_3Re = compute_inner_prod(ueig, iab*veig) + compute_inner_prod(veig, iab*ueig) + compute_inner_prod(weig, ia*Du)
     visc3_3Re = compute_inner_prod(ueig, ia*Dw) + compute_inner_prod(veig, ib*Dw) + compute_inner_prod(weig, ib*Dv)
-
-    # Reynolds-Schmidt terms
-    if   ( mob.boussinesq == 1 ):
-        # Multiply through by rho'
-        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
-        RHS_conti = 0.0*LHS_conti
-    elif ( mob.boussinesq == -2 ):
-        pass
-    elif ( mob.boussinesq == -3 ):
-        # Multiply through by rho'
-
-        print("rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape",\
-              rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape)
-
-        
-        bsfl1 = 2.*np.multiply(rho2_inv, Rhop)
-        bsfl2 = np.multiply(rho2_inv, Rhopp)
-        bsfl3 = -rho_inv
-        bsfl4 = -2.*np.multiply(rho3_inv, np.multiply(Rhop, Rhop))
-        ReSc_continuity   = ( np.multiply(bsfl1, compute_inner_prod(reig, Dr)) \
-                              + np.multiply(bsfl2, compute_inner_prod(reig, reig)) \
-                              + np.multiply(bsfl3, compute_inner_prod(reig, ia2*reig)) \
-                              + np.multiply(bsfl3, compute_inner_prod(reig, ib2*reig)) \
-                              + np.multiply(bsfl3, compute_inner_prod(reig, D2r)) \
-                              + np.multiply(bsfl4, compute_inner_prod(reig, reig)) )/(Re*Sc)
-        # Multiply through by rho'
-        bsfl5 = np.multiply(rho2_inv, np.multiply(Rhop, Rhop))
-        bsfl6 = -2.*np.multiply(rho2_inv, Rhop)
-        ReSc_rho_eq_terms = ( compute_inner_prod(reig, ia2*reig) \
-                              +compute_inner_prod(reig, ib2*reig) \
-                              +compute_inner_prod(reig, D2r) \
-                              +np.multiply(bsfl5, compute_inner_prod(reig, reig)) \
-                              +np.multiply(bsfl6, compute_inner_prod(reig, Dr)) )/(Re*Sc)
-        
-        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
-        RHS_conti = ReSc_continuity
-
-        LHS_mass  = omega_i*compute_inner_prod(reig, reig) + np.multiply(Rhop, compute_inner_prod(reig, weig))
-        RHS_mass  = ReSc_rho_eq_terms
 
     if   ( mob.boussinesq == 1 ):
         visc_t = np.divide(visc1 + visc2 + visc3, mob.Re)
@@ -1514,6 +1438,10 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
         LHS = Et_integrand*2*omega_i
         # Right-hand-side
         RHS = VelPres + visc_t + grav_prod
+
+        #RHS = np.multiply(Rho, RHS)
+        #LHS = np.multiply(Rho, LHS)
+        
     elif ( mob.boussinesq == -2 ):
         # Gravity production term
         grav_prod = -9.81*compute_inner_prod(reig, weig)    # dimensional here
@@ -1528,29 +1456,10 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
         LHS = np.multiply(Et_integrand, Rho)*2*omega_i
         # Right-hand-side
         RHS = VelPres + grav_prod + visc_t_3Re + visc_t
-
         
-    #####################################################################
-    # MASS EQUATION: from drho'/dt = -w'drho_bar/dz ===> multiply by rho'
-    #####################################################################
-    
-    # Production drhodz
-    Prod_drhodz = -np.multiply( compute_inner_prod(reig, weig), Rhop )
-
-    # time depenedent density
-    Rho2_contrib = 0.5*2*omega_i*compute_inner_prod(reig, reig) 
-
-    #####################################################################
-    # Integrate along z and compute growth rate
-    #####################################################################
-    # Et_int          = np.zeros(ny,dp)
-    # VelPres_int     = np.zeros(ny,dp)
-    # visc_t_int      = np.zeros(ny,dp)
-    # visc_grad_t_int = np.zeros(ny,dp)
-    # grav_prod_int   = np.zeros(ny,dp)
-
-
+    ##########################################
     # CHECK ALL THIS!!!!!!!!!!!!!!!!!!!!!!!!!
+    ##########################################
     
     if   ( mob.boussinesq == 1 ):
         Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2), y)
@@ -1582,8 +1491,10 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
         print("visc_t_3Re_int = ", visc_t_3Re_int)
         print("grav_prod_int  = ", grav_prod_int)
         print("Et_int         =", Et_int)
-        
-    
+ 
+    print("")
+    print("Comparison between growth rate from eigenvalue and energy balance")
+    print("-----------------------------------------------------------------")
     print("omega_i         = ", omega_i)
     print("omega_i_balance = ", omega_i_balance)
     print("")
@@ -1598,12 +1509,17 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     print("max(abs(imag(RHS))) = ", np.amax(np.abs(np.imag(RHS))))
 
     print("")
-    print("Check energy balance:")
-    print("---------------------")
+    print("Check energy balance: KINETIC ENERGY EQUATION")
+    print("---------------------------------------------")
     energy_bal = np.amax(np.abs(LHS-RHS))
     print("Energy balance (RT) = ", energy_bal)
     print("")
-    
+
+    zmin = -1
+    zmax = 1
+
+    SetMinMaxPlot = True
+
     ptn = plt.gcf().number + 1
 
     f = plt.figure(ptn)
@@ -1614,7 +1530,8 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     plt.gcf().subplots_adjust(left=0.17)
     plt.gcf().subplots_adjust(bottom=0.15)
     #plt.xlim([0.0, 1.e-5])
-    plt.ylim([-0.07, 0.07])
+    if (SetMinMaxPlot):
+        plt.ylim([zmin, zmax])
     f.show()
 
     plt.legend(loc="upper center")
@@ -1637,7 +1554,8 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     plt.gcf().subplots_adjust(left=0.17)
     plt.gcf().subplots_adjust(bottom=0.15)
     #plt.xlim([-0.01, 0.01])
-    plt.ylim([-0.02, 0.02])
+    if (SetMinMaxPlot):
+        plt.ylim([zmin, zmax])
     f.show()
 
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
@@ -1654,43 +1572,13 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     plt.gcf().subplots_adjust(left=0.17)
     plt.gcf().subplots_adjust(bottom=0.15)
     #plt.xlim([0.0, 1.e-5])
-    plt.ylim([-0.07, 0.07])
+    if (SetMinMaxPlot):
+        plt.ylim([zmin, zmax])
     f.show()
 
     plt.legend(loc="upper center")
 
-    if ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
-
-        ptn = ptn + 1
-        
-        f = plt.figure(ptn)
-        plt.plot(np.real(LHS_conti), y, 'k', linewidth=1.5, label=r"LHS (continuity)")
-        plt.plot(np.real(RHS_conti), y, 'c--', linewidth=1.5, label=r"RHS (continuity)")
-        plt.xlabel("LHS vs. RHS for continuity eq.", fontsize=18)
-        plt.ylabel("y", fontsize=18)
-        plt.gcf().subplots_adjust(left=0.17)
-        plt.gcf().subplots_adjust(bottom=0.15)
-        #plt.xlim([0.0, 1.e-5])
-        #plt.ylim([-0.07, 0.07])
-        f.show()
-        plt.legend(loc="upper center")
-
-        if ( mob.boussinesq == -3 ):
-            ptn = ptn + 1
-            
-            f = plt.figure(ptn)
-            plt.plot(np.real(LHS_mass), y, 'k', linewidth=1.5, label=r"LHS (mass)")
-            plt.plot(np.real(RHS_mass), y, 'c--', linewidth=1.5, label=r"RHS (mass)")
-            plt.xlabel("LHS vs. RHS for mass eq.", fontsize=18)
-            plt.ylabel("y", fontsize=18)
-            plt.gcf().subplots_adjust(left=0.17)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            #plt.xlim([0.0, 1.e-5])
-            #plt.ylim([-0.07, 0.07])
-            f.show()
-            plt.legend(loc="upper center")
-
-        
+    
     # Check and plot growth rate as a function of z
 
     #print("RHS",RHS)
@@ -1715,26 +1603,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     # f.show()
 
     # plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
-
-
     
-    
-    plot_mass_eq = False
-
-    if (plot_mass_eq):
-        
-        ptn = ptn + 1
-        
-        f = plt.figure(ptn)
-        plt.plot(Prod_drhodz, y, 'b', linewidth=1.5, label=r"Prod_drhodz")
-        plt.plot(Rho2_contrib, y, 'm--', linewidth=1.5, label=r"Rho2_contrib")
-        plt.xlabel("Energy balance R-T", fontsize=18)
-        plt.ylabel("z", fontsize=18)
-        plt.gcf().subplots_adjust(left=0.17)
-        plt.gcf().subplots_adjust(bottom=0.15)
-        f.show()
-        
-        plt.legend(loc="upper center")
 
     #####################################################################
     # Compute Energy balance for all equations independently
@@ -1836,7 +1705,8 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
         
         plt.legend(loc="upper center")
 
-    input("Check LHS/RHS")
+    print("")
+    input("R-T: LHS/RHS Kinetic Energy Equation")
     
     # # a_i (see Boussinesq paper by D. Israel page 17)
     # rhoxw = compute_inner_prod(reig, weig)
@@ -1917,11 +1787,174 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
 
     # plt.legend(loc="upper center")
 
+def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, mob, rt_flag):
 
-    input("compute_important_terms_rayleigh_taylor")
+
+    plt.close('all')
+    
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+    ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
+    
+    Sc = mob.Sc
+    Re = mob.Re
+    
+    #print("Sc = ", Sc)
+    #print("Re = ", Re)
+
+    # "Balance" Equations for Continuity and Mass
+    if   ( mob.boussinesq == 1 ):
+        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
+        RHS_conti = 0.0*LHS_conti
+
+        LHS_mass  = omega_i*compute_inner_prod(reig, reig) + np.multiply(Rhop, compute_inner_prod(reig, weig))
+        RHS_mass  = (  compute_inner_prod(reig, ia2*reig) \
+                      +compute_inner_prod(reig, ib2*reig) \
+                      +compute_inner_prod(reig, D2r) )/(Re*Sc)
+
+    elif ( mob.boussinesq == -2 ):
+        sys.exit("This needs to be added if required")
+    elif ( mob.boussinesq == -3 ):
+        #print("rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape",\
+        #      rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape)
+
+        bsfl1 = 2.*np.multiply(rho2_inv, Rhop)
+        bsfl2 = np.multiply(rho2_inv, Rhopp)
+        bsfl3 = -rho_inv
+        bsfl4 = -2.*np.multiply(rho3_inv, np.multiply(Rhop, Rhop))
+        ReSc_continuity   = ( np.multiply(bsfl1, compute_inner_prod(reig, Dr)) \
+                              + np.multiply(bsfl2, compute_inner_prod(reig, reig)) \
+                              + np.multiply(bsfl3, compute_inner_prod(reig, ia2*reig)) \
+                              + np.multiply(bsfl3, compute_inner_prod(reig, ib2*reig)) \
+                              + np.multiply(bsfl3, compute_inner_prod(reig, D2r)) \
+                              + np.multiply(bsfl4, compute_inner_prod(reig, reig)) )/(Re*Sc)
+
+        bsfl5 = np.multiply(rho2_inv, np.multiply(Rhop, Rhop))
+        bsfl6 = -2.*np.multiply(rho_inv, Rhop)
+        ReSc_rho_eq_terms = ( compute_inner_prod(reig, ia2*reig) \
+                              +compute_inner_prod(reig, ib2*reig) \
+                              +compute_inner_prod(reig, D2r) \
+                              +np.multiply(bsfl5, compute_inner_prod(reig, reig)) \
+                              +np.multiply(bsfl6, compute_inner_prod(reig, Dr)) )/(Re*Sc)
+        
+        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
+        RHS_conti = ReSc_continuity
+
+        LHS_mass  = omega_i*compute_inner_prod(reig, reig) + np.multiply(Rhop, compute_inner_prod(reig, weig))
+        RHS_mass  = ReSc_rho_eq_terms
+    
+
+    PlotIt = 1
+    
+    if ( mob.boussinesq == 1 or mob.boussinesq == -3 and PlotIt == 1 ):
+
+        ptn = plt.gcf().number + 1
+        
+        f = plt.figure(ptn)
+        plt.plot(np.real(LHS_conti), y, 'k', linewidth=1.5, label=r"LHS (continuity)")
+        plt.plot(np.real(RHS_conti), y, 'c--', linewidth=1.5, label=r"RHS (continuity)")
+        plt.xlabel("LHS vs. RHS for continuity eq.", fontsize=18)
+        plt.ylabel("y", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.xlim([0.0, 1.e-5])
+        #plt.ylim([-0.07, 0.07])
+        f.show()
+        plt.legend(loc="upper right")
 
 
-def check_continuity_satisfied(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega, bsfl, mob, rt_flag):
+        ptn = ptn + 1
+        
+        f = plt.figure(ptn)
+        plt.plot(np.real(LHS_mass), y, 'k', linewidth=1.5, label=r"LHS (mass)")
+        plt.plot(np.real(RHS_mass), y, 'c--', linewidth=1.5, label=r"RHS (mass)")
+        plt.xlabel("LHS vs. RHS for mass eq.", fontsize=18)
+        plt.ylabel("y", fontsize=18)
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.xlim([0.0, 1.e-5])
+        #plt.ylim([-0.07, 0.07])
+        f.show()
+        plt.legend(loc="upper right")
+        
+
+    print("")
+    print("Check energy balance: CONTINUITY AND MASS EQUATIONS")
+    print("---------------------------------------------------")
+    energy_bal_cont = np.amax(np.abs(LHS_conti-RHS_conti))
+    energy_bal_mass = np.amax(np.abs(LHS_mass-RHS_mass))
+    print("Energy balance (RT) continuity equation = ", energy_bal_cont)
+    print("Energy balance (RT) mass equation       = ", energy_bal_mass)
+    print("")
+
+    input("R-T: LHS/RHS for Continuity and Mass Equations")
+    print("")
+
+    #####################################################################
+    # MASS EQUATION: from drho'/dt = -w'drho_bar/dz ===> multiply by rho'
+    #####################################################################
+    
+    # Production drhodz
+    #Prod_drhodz = -np.multiply( compute_inner_prod(reig, weig), Rhop )
+
+    # time depenedent density
+    #Rho2_contrib = 0.5*2*omega_i*compute_inner_prod(reig, reig) 
+
+    # plot_mass_eq = False
+
+    # if (plot_mass_eq):
+        
+    #     ptn = ptn + 1
+        
+    #     f = plt.figure(ptn)
+    #     plt.plot(Prod_drhodz, y, 'b', linewidth=1.5, label=r"Prod_drhodz")
+    #     plt.plot(Rho2_contrib, y, 'm--', linewidth=1.5, label=r"Rho2_contrib")
+    #     plt.xlabel("Energy balance R-T", fontsize=18)
+    #     plt.ylabel("z", fontsize=18)
+    #     plt.gcf().subplots_adjust(left=0.17)
+    #     plt.gcf().subplots_adjust(bottom=0.15)
+    #     f.show()
+        
+    #     plt.legend(loc="upper center")
+
+
+
+
+
+
+    #LHS_conti = ia*ueig + ib*veig + Dw
+    #RHS_conti = ( bsfl1*Dr + bsfl2*reig + bsfl3*( ia2*reig + ib2*reig + D2r ) + bsfl4*reig )/(Re*Sc)
+    
+    #conti_check = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
+    #mass_check  = np.divide(conti_check, conti_check)
+
+
+    # if (rt_flag):
+
+    #     if   ( mob.boussinesq == -3 ):
+            
+    #     elif ( mob.boussinesq == 1 ):
+    #         pass
+
+    #     elif ( mob.boussinesq == -2 ):
+    #         conti_check = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
+    #         mass_check  = np.multiply(weig, bsfl.Rhop) - 1j*omega*reig
+
+    # else:
+
+    #     conti_check = 1j*alpha*ueig + np.matmul(D1, veig) + 1j*beta*weig
+
+    # conti_check_max = np.max(np.abs(conti_check))
+    # print("Continuity residual = ", conti_check_max)
+    
+    # if (rt_flag):
+    #     mass_check_max = np.max(np.abs(mass_check))
+    #     print("Extra R-T check     = ", mass_check_max)
+
+
+
+    
+def get_baseflow_and_derivatives(bsfl, mob):
 
     if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
         Rho   = bsfl.Rho_nd
@@ -1935,19 +1968,37 @@ def check_continuity_satisfied(ueig, veig, weig, peig, reig, D1, D2, y, alpha, b
         rho2_inv = 1/rho2
         rho3_inv = 1/rho3
 
-        Sc = mob.Sc
-        Re = mob.Re
-
-        print("Sc = ", Sc)
-        print("Re = ", Re)
+        Mu       = bsfl.Mu_nd
+        Mup      = bsfl.Mup_nd
 
     elif ( mob.boussinesq == -2 ):
-        Rho  = bsfl.Rho
-        Rhop = bsfl.Rhop
+        Rho   = bsfl.Rho
+        Rhop  = bsfl.Rhop
+        Rhopp = bsfl.Rhopp
+        
         Mu   = bsfl.Mu
         Mup  = bsfl.Mup
+
+        rho2    = np.multiply(Rho, Rho)
+        rho3    = np.multiply(rho2, Rho)
+
+        rho_inv  = 1/Rho
+        rho2_inv = 1/rho2
+        rho3_inv = 1/rho3
+        
+        #sys.exit("Check: might need other baseflow quantities!!")
     else:
         sys.exit("Flag error")
+
+    return Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv
+
+
+
+
+
+
+
+def get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig):
 
     # Viscous (proportional to mu_baseflow)
     ia  = ( 1j*alpha )
@@ -1967,80 +2018,22 @@ def check_continuity_satisfied(ueig, veig, weig, peig, reig, D1, D2, y, alpha, b
     D2v = np.matmul(D2, veig)
     D2w = np.matmul(D2, weig)
     D2r = np.matmul(D2, reig)
-    
-    # Verify that continuity equation is satisfied
-    print("")
-    print("Check if continuity equation is satisfied")
-    print("-----------------------------------------")
-    #print("dupdx + dvpdy = ", dupdx + dvpdy)
 
-    if (rt_flag):
-
-        if   ( mob.boussinesq == -3 ):
-            bsfl1 = 2.*np.multiply(rho2_inv, Rhop)
-            bsfl2 = np.multiply(rho2_inv, Rhopp)
-            bsfl3 = -rho_inv
-            bsfl4 = -2.*np.multiply(rho3_inv, np.multiply(Rhop, Rhop))
-            # Multiply through by rho'
-            bsfl5 = np.multiply(rho2_inv, np.multiply(Rhop, Rhop))
-            bsfl6 = -2.*np.multiply(rho2_inv, Rhop)
-            
-            LHS_conti = ia*ueig + ib*veig + Dw
-            RHS_conti = ( bsfl1*Dr + bsfl2*reig + bsfl3*( ia2*reig + ib2*reig + D2r ) + bsfl4*reig )/(Re*Sc)
-            
-            LHS_mass  = 0.0*LHS_conti
-            RHS_mass  = 0.0*LHS_conti
-            
-            conti_check = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
-            mass_check  = np.divide(conti_check, conti_check)
-            
-        elif ( mob.boussinesq == 1 ):
-            pass
-
-        elif ( mob.boussinesq == -2 ):
-            conti_check = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
-            mass_check  = np.multiply(weig, bsfl.Rhop) - 1j*omega*reig
-
-        #print("np.multiply(weig, bsfl.Rhop) = ", np.multiply(weig, bsfl.Rhop))
-        #print
-        #print
-        #print("- 1j*omega*reig = ",- 1j*omega*reig)
-
-    else:
-
-        conti_check = 1j*alpha*ueig + np.matmul(D1, veig) + 1j*beta*weig
-
-    conti_check_max = np.max(np.abs(conti_check))
-    print("Continuity residual = ", conti_check_max)
-    
-    if (rt_flag):
-        mass_check_max = np.max(np.abs(mass_check))
-        print("Extra R-T check     = ", mass_check_max)
+    return ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r
 
 
-    #print("conti_check = ", conti_check)
-    #print("")
-    #print("")
-    #print("mass_check = ", mass_check)
 
-    plot = True
 
-    if (plot):
-        ptn = plt.gcf().number + 1
+
+
+
+
+
+
+
+
+
         
-        f = plt.figure(ptn)
-        plt.plot(np.abs(LHS_conti), y, 'b', label="LHS (continuity)")
-        plt.plot(np.abs(RHS_conti), y, 'r--', label="RHS (continuity)")
-        plt.xlabel('LHS vs RHS (continuity)')
-        plt.ylabel('y')
-        plt.legend(loc="upper right")
-        f.show()
-        
-        input("Mass check")
-
-
-
-
 
 # using Test
 # using Plots

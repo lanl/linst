@@ -228,8 +228,10 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                                                      bsfl, map.D1, map.D2, map.y, alpha, beta, Re, np.imag(omega_all[0]))
 
     # Check that some equations are fullfilled by the eigenfunctions
-    mod_util.check_continuity_satisfied(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
-                                        map.D1, map.D2, map.y, alpha, beta, omega_all[0], bsfl, mob, rt_flag)
+    if (rt_flag):
+        mod_util.check_mass_continuity_satisfied_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
+                                            map.D1, map.D2, map.y, alpha, beta, np.imag(omega_all[0]), bsfl, mob, rt_flag)
+    
         
     ### CRASHES THE COMPUTER plt.close('all')
     

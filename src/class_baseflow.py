@@ -84,6 +84,9 @@ class RayleighTaylorBaseflow(Baseflow):
         
         self.size = size
 
+        # Reference velocity (velocity of interface in R-T?)
+        self.Uref = 1
+
         z  = y
         pi = math.pi
                     
@@ -110,12 +113,12 @@ class RayleighTaylorBaseflow(Baseflow):
         elif(opt==1):
 
             rho1  = 1.0
-            mu1   = 1.e-2 #1.e-2
+            mu1   = 1.e-6 #1.e-2
 
-            rho2 = 1.01*rho1 # use 3 to get Atw = 0.5
-            mu2  = 1.01*mu1 # use 3 to get Amu = 0.5
+            rho2 = 1.01*rho1 # use 3 to get Atw = 0.5 ==== 1.01
+            mu2  = 1.01*mu1 # use 3 to get Amu = 0.5  ==== 1.01
 
-            delta = 0.0005 # see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
+            delta = 0.01 # see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
             
             rho0 = 0.5*( rho1 + rho2 )
             mu0 = 0.5*( mu1 + mu2 )
@@ -123,13 +126,17 @@ class RayleighTaylorBaseflow(Baseflow):
             Atw = (rho2-rho1)/(rho2+rho1)
             Amu = (mu2-mu1)/(mu2+mu1)
             
-            self.Rho = rho0*( 1. + Atw*erf(z/delta) )
-            self.Mu  = mu0*( 1. + Amu*erf(z/delta) )
+            self.Rho    = rho0*( 1. + Atw*erf(z/delta) )
+            self.Rhop   = rho0*Atw*( 2.0*np.exp( -z**2/delta**2 )/(delta*np.sqrt(pi)) )
+            self.Rhopp  = 2.0*rho0*Atw/(delta*np.sqrt(pi))*(-2.*z/delta**2.)*np.exp( -z**2/delta**2 )
+            
+            self.Mu     = mu0*( 1. + Amu*erf(z/delta) )
+            self.Mup    = mu0*Amu*( 2.0*np.exp( -z**2/delta**2 )/(delta*np.sqrt(pi)) )
 
-            nu       = np.divide(self.Mu, self.Rho)
+            self.Mu_nd  = 0.0*self.Mu
+            self.Mup_nd = 0.0*self.Mup
 
-            self.Rhop = rho0*Atw*( 2.0*np.exp( -z**2/delta**2 )/(delta*np.sqrt(pi)) )
-            self.Mup  = mu0*Amu*( 2.0*np.exp( -z**2/delta**2 )/(delta*np.sqrt(pi)) )
+            nu          = np.divide(self.Mu, self.Rho)
 
             print("")
             print("Mup is hard-coded to zero")
@@ -143,17 +150,21 @@ class RayleighTaylorBaseflow(Baseflow):
             
             nu0 = mu0/rho0
 
-            #print("nu  = ", nu)
-
             self.Tscale = (nu0/grav**2.)**(1./3.)
             self.Lscale = (nu0**2./grav)**(1./3.)
 
-            print("Atwood number (density) Atw    = ", Atw)
-            print("Atwood number (viscosity) Amu  = ", Amu)
-            print("Time scale                     = ", self.Tscale)
-            print("Length scale                   = ", self.Lscale)
-            print("nu0                            = ", nu0)
-            print
+            print("Atwood number (density) Atw          = ", Atw)
+            print("Atwood number (viscosity) Amu        = ", Amu)
+            print("Time scale                           = ", self.Tscale)
+            print("Length scale                         = ", self.Lscale)
+            print("nu0                                  = ", nu0)
+            print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
+            print("nu0-np.amin(nu)                      = ", nu0-np.amin(nu))
+            print("")
+            #print("Reference velocity Uref              = ", bsfl.Uref)
+            #print("Reynolds number (Uref*delta/nu0)     = ", bsfl.Uref*delta/nu0)
+            #print("Froude number (Uref/sqrt(gref*delta) = ", bsfl.Uref/(basf.gref*delta))
+            #print
 
             # I want k_nondim = 2
             k_nondim = k*self.Lscale
@@ -165,6 +176,7 @@ class RayleighTaylorBaseflow(Baseflow):
             sys.exit("Not a proper value for flag opt in RT baseflow")
 
         Rhop_num     = np.matmul(map.D1, self.Rho)
+        Rhopp_num    = np.matmul(map.D2, self.Rho)
 
         Rhop_num_nd  = np.matmul(map.D1, self.Rho_nd)
         Rhopp_num_nd = np.matmul(map.D2, self.Rho_nd)
@@ -211,7 +223,23 @@ class RayleighTaylorBaseflow(Baseflow):
             if (not ViewFullDom):
                 plt.ylim([zmin, zmax])
             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$d\rho/dz$")
+            plt.title(r"$d\rho/dz$ DIMENSIONAL")
+            f.show()
+
+            ptn = ptn+1
+            
+            f = plt.figure(ptn)
+            plt.plot(self.Rhopp, z, 'k', markerfacecolor='none', label="d2rho/dz2 (analytical)")
+            plt.plot(Rhopp_num, z, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
+            plt.xlabel(r"$d^2\rho/dz^2$", fontsize=20)
+            plt.ylabel('z', fontsize=20)
+            plt.legend(loc="upper right")
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            if (not ViewFullDom):
+                plt.ylim([zmin, zmax])
+            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+            plt.title(r"$d^2\rho/dz^2$ DIMENSIONAL")
             f.show()
 
             ptn = ptn+1
