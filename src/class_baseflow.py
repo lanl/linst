@@ -52,23 +52,25 @@ class Baseflow:
 
         self.Dref  = self.nuref/self.Sc
 
-        print("")
-        print("Main non-dimensional numbers and corresponding reference quantities:")
-        print("====================================================================")
-        print("Froude number Fr              = ", self.Fr)
-        print("Schmidt number Sc             = ", self.Sc)
-        print("Reynolds number Re            = ", self.Re)
-        print("Reference gravity gref        = ", self.gref)
-        print("Reference velocity Uref       = ", self.Uref)
-        print("")
-        print("Remaining computed quantities:")
-        print("------------------------------")
-        print("Mass transfer Peclet number ( Pe = Re*Sc )           = ", self.Re*self.Sc)
-        print("Reference mass diffusivity Dref ( nuref/Sc )         = ", self.Dref)
-        print("Reference length scale Lref ( Uref^2/(Fr^2*gref) )   = ", self.Lref)
-        print("Reference kinematic viscosity nuref ( Uref*Lref/Re ) = ", self.nuref)
-        print("")
-        
+        WriteHere = True
+        if (WriteHere):
+            print("")
+            print("Main non-dimensional numbers and corresponding reference quantities:")
+            print("====================================================================")
+            print("Froude number Fr              = ", self.Fr)
+            print("Schmidt number Sc             = ", self.Sc)
+            print("Reynolds number Re            = ", self.Re)
+            print("Reference gravity gref        = ", self.gref)
+            print("Reference velocity Uref       = ", self.Uref)
+            print("")
+            print("Remaining computed quantities:")
+            print("------------------------------")
+            print("Mass transfer Peclet number ( Pe = Re*Sc )           = ", self.Re*self.Sc)
+            print("Reference mass diffusivity Dref ( nuref/Sc )         = ", self.Dref)
+            print("Reference length scale Lref ( Uref^2/(Fr^2*gref) )   = ", self.Lref)
+            print("Reference kinematic viscosity nuref ( Uref*Lref/Re ) = ", self.nuref)
+            print("")
+            
         # self.Re = 0.0
         # self.Fr = 0.0
         # self.Sc = 0.0
@@ -168,7 +170,7 @@ class RayleighTaylorBaseflow(Baseflow):
         Lref = bsfl_ref.Lref 
         nuref = bsfl_ref.nuref
 
-        print("At, Re, Uref, grav, Lref, nuref = ", At, Re, Uref, grav, Lref, nuref)
+        #print("At, Re, Uref, grav, Lref, nuref = ", At, Re, Uref, grav, Lref, nuref)
 
         # 
         # delta_star = 0.01 ==> delta_star is dimensionless delta ======> see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
@@ -222,7 +224,10 @@ class RayleighTaylorBaseflow(Baseflow):
             muref  = 0.5*( mu1 + mu2 )
 
             print("")
-            print("Setting reference density (rhoref) and dynamic viscosity (muref) to:", rhoref, muref)
+            print("Setting reference density and dynamic viscosity:")
+            print("------------------------------------------------")
+            print("rhoref = ", rhoref)
+            print("muref  = ", muref)
             print("")
             bsfl_ref.rhoref = rhoref
             bsfl_ref.muref = muref
@@ -277,19 +282,29 @@ class RayleighTaylorBaseflow(Baseflow):
 
             for iblk in range(0,1):
                 print("")
-
-            # Print some quantities
-            print("Input Reynolds number                = ", Re)
-            print("Re-computed Reynolds number          = ", Uref*Lref/nu0)
             
-            print("Atwood number At                     = ", At)
+            # Check Reynolds number
+            if ( np.abs(Re-Uref*Lref/nu0) > tol_c ):
+                sys.exit("Reynolds number inconsistency!!!!!!!")
+            
+            #print("Input Reynolds number                = ", Re)
+            #print("Re-computed Reynolds number          = ", Uref*Lref/nu0)
+            
+            #print("Atwood number At                     = ", At)
             #print("Atwood number (viscosity) Amu        = ", At)
-            print("Chandrasekhar time scale             = ", self.Tscale)
-            print("Chandrasekhar length scale           = ", self.Lscale)
-            print("nu0                                  = ", nu0)
-            print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
-            print("nu0-np.amin(nu)                      = ", nu0-np.amin(nu))
-            print("")
+            print("Chandrasekhar time scale   = ", self.Tscale)
+            print("Chandrasekhar length scale = ", self.Lscale)
+            print("nu0                        = ", nu0)
+
+            # Check that kinematic viscosity is constant
+            for ii in range(0, size):
+                #print("np.abs(nu0-nu[ii]), tol_c = ", np.abs(nu0-nu[ii]), tol_c)
+                if ( np.abs(nu0-nu[ii]) > tol_c ):
+                    sys.exit("Kinematic viscosity is not constant!!!!!!!!")
+            
+            #print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
+            #print("nu0-np.amin(nu)                      = ", nu0-np.amin(nu))
+            #print("")
 
             # I want k_nondim = 2
             #k_nondim = k*self.Lscale
@@ -457,7 +472,8 @@ class RayleighTaylorBaseflow(Baseflow):
             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             f.show()
 
-            input('RT baseflow')
+            print("")
+            input('RT baseflow plots ... strike any key to proceed')
 
             #sys.exit("Debug RT baseflow")
 

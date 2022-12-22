@@ -28,7 +28,7 @@ class BuildMatrices:
                 size = 5*ny
 
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval
-                self.boussinesq = -2
+                self.boussinesq = -3
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -650,14 +650,14 @@ class BuildMatrices:
             # ymin
             lhs[idx_p_ymin,:] = 0.0
             rhs[idx_p_ymin  ] = 0.0        
-            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
+            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            #lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
             
             # ymax
             lhs[idx_p_ymax,:] = 0.0
             rhs[idx_p_ymax  ] = 0.0
-            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            #lhs[idx_p_ymax, idx_p_ymax]      = 1.0
 
         ##################
         # density BCs #
@@ -1166,9 +1166,15 @@ class BuildMatrices:
         mat_tmp2 = np.matmul(drho2_inv, dRhopp)
         mat_tmp3 = -np.matmul(drho_inv, D2)
         mat_tmp4 = -2.*np.matmul(drho3_inv, np.matmul(dRhop,dRhop))
-        
+
         # BUGGY ===============> #self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( 2.*drho2_inv*dRhop*D1 + drho2_inv*dRhopp - drho_inv*D2 -2.*drho3_inv*dRhop*dRhop )/(Re*Sc)
         self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( mat_tmp1 + mat_tmp2 + mat_tmp3 + mat_tmp4 )/(Re*Sc)
+
+        SetDivergenceToZero = 0
+        if (SetDivergenceToZero==1):
+            self.mat_a2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
+            self.mat_b2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
+            self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = 0.0
 
         # 5th block indices
         imin = imin + ny
@@ -1181,14 +1187,19 @@ class BuildMatrices:
         # BUGGY ================> self.mat_d1[imin:imax, imin:imax]           = ( D2 + drho2_inv*dRhop*dRhop - 2.*drho_inv*dRhop*D1 )/(Re*Sc)
         mat_tmp5 = np.matmul(drho2_inv, np.matmul(dRhop,dRhop))
         mat_tmp6 = -2.*np.matmul(drho_inv, np.matmul(dRhop,D1))
-
-        
+                    
         self.mat_d1[imin:imax, imin:imax]           = ( D2 + mat_tmp5 + mat_tmp6 )/(Re*Sc)
         
         self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
+        SetOtherReScTermsToZero = 0
+        if (SetOtherReScTermsToZero == 1):
+            self.mat_a2[imin:imax, imin:imax]           = 0.0
+            self.mat_b2[imin:imax, imin:imax]           = 0.0
+            self.mat_d1[imin:imax, imin:imax]           = 0.0
+            
         
     def call_to_build_matrices(self, rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map):
 

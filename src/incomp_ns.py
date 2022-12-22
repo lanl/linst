@@ -70,10 +70,11 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             # In main.py I make yinf and lmap dimensional for solver boussinesq == -2
             map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
 
-        print("yinf, lmap = ", yinf, lmap)
         bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, bsfl_ref, mtmp)
 
-        print("bsfl_ref", bsfl_ref)
+        #print("bsfl_ref", bsfl_ref)
+        print("")
+        print("Deletting instance mtmp")
         del mtmp
 
     else:
@@ -103,8 +104,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             bsfl = mbf.PlanePoiseuille(ny, map.y)
         else:
             sys.exit("Not a proper value for flag baseflowT")
-
-    print("Solving for Reynolds number Re = ", Re)
 
     if plot_grid_bsfl == 1:
         mod_util.plot_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up, map.D1)
@@ -159,10 +158,11 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                 #omega_cur = omega_all[-1]*bsfl_ref.Lref/bsfl_ref.Uref
         else:
             alpha_cur = alpha
+            beta_cur  = beta
             omega_cur = omega_all[0]
             
         mod_util.compute_important_terms_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, map, mob, \
-        bsfl, map.D1, map.D2, map.y, alpha_cur, beta_cur, Re, np.imag(omega_cur), bsfl_ref, rt_flag, riist)
+        bsfl, map.D1, map.D2, map.y, alpha_cur, beta_cur, Re, np.imag(omega_cur), bsfl_ref, rt_flag, riist, Local)
         
         mod_util.check_mass_continuity_satisfied_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
         map.D1, map.D2, map.y, alpha_cur, beta_cur, np.imag(omega_cur), bsfl, bsfl_ref, mob, rt_flag)

@@ -46,8 +46,8 @@ class SolveGeneralizedEVP:
         for i in range(0, npts):
 
             print("")
-            print("Solving for alpha %i/%i = %21.11e" % (i, npts, alpha[i]) )
-            print("-------------------------------------------------")
+            print("Solving for wavenumber alpha = %10.5e (%i/%i)" % (alpha[i], i+1, npts) )
+            print("------------------------------------------------")
             print("")
 
             if Tracking and Local:
@@ -64,7 +64,7 @@ class SolveGeneralizedEVP:
                 # Create instance for Class BuildMatrices
                 mob = mbm.BuildMatrices(ny, rt_flag, prim_form)
                 
-                omega, q_eigvect = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-8, alpha[i], beta, \
+                omega, q_eigvect = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-5, alpha[i], beta, \
                                                                   Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form)
 
                 iarr.omega_array[ire, i] = omega
@@ -106,12 +106,17 @@ class SolveGeneralizedEVP:
                     eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
 
                 idx = mod_util.get_idx_of_max(eigvals_filtered)
+                omega = eigvals_filtered[idx]#*bsfl.Tscale
+                
                 if (rt_flag):
-                    print("omega (dimensional)     = ", eigvals_filtered[idx])
-                    omega = eigvals_filtered[idx]#*bsfl.Tscale
-                    print("omega (non-dimensional) = ", omega)
+                    if   ( mob.boussinesq == -2 ):
+                        print("omega (dimensional)     = ", omega)
+                        print("omega (non-dimensional) = ", omega*bsfl_ref.Lref/bsfl_ref.Uref)
+                    else:
+                        print("omega (dimensional)     = ", omega*bsfl_ref.Uref/bsfl_ref.Lref)
+                        print("omega (non-dimensional) = ", omega)
                 else:
-                    omega = eigvals_filtered[idx]
+                    pass
                     
             omega_all[i] = omega
 
@@ -133,7 +138,7 @@ class SolveGeneralizedEVP:
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
         if rt_flag == True:
-            tol  = 1.0e-10
+            tol  = 1.0e-6
         else:
             if baseflowT == 1:
                 tol  = 1.0e-8
@@ -176,12 +181,14 @@ class SolveGeneralizedEVP:
         #Extract boundary condition
         #mid_idx = mod_util.get_mid_idx(ny)
         u00 = SOL[jxu]
+
+        res = 1
         
         #
         # Main loop
         #
         
-        while (abs(u0) > tol and iter < maxiter):
+        while ( ( abs(u0) > tol**2. or abs(res) > tol ) and iter < maxiter ):
         
             iter=iter+1
 
@@ -215,11 +222,13 @@ class SolveGeneralizedEVP:
             
             omega00  = omega0
             omega0   = omegaNEW
+
+            res      = abs(omega0)-abs(omega00)
             
-            # NEW
+            # New
             u00      = u0
             
-            print("Iteration %2d: abs(u0) = %10.5e, omega = %21.11e, %21.11e" % (iter, np.abs(u0), omega0.real, omega0.imag))
+            print("Iteration %2d: abs(u0) = %10.5e, abs(res) = %10.5e, omega = %21.11e, %21.11e" % (iter, np.abs(u0), abs(res), omega0.real, omega0.imag))
             
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 

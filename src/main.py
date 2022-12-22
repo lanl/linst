@@ -121,6 +121,10 @@ for i in range(0, bsfl_ref.npts_re):
     #input("Check grav 101")
         
     Re = Re_range[i]
+
+    print("Main Loop over Reynolds number: solving for Re = %10.5e (%i/%i)" % (Re, i+1, bsfl_ref.npts_re))
+    print("==================================================================")
+    
     mod_incomp.incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, riist.rt_flag, riist.SolverT, \
                              riist.baseflowT, riist.ny, Re, riist.npts_alp, riist.alpha, riist.beta, mtmp, \
                              riist.yinf, riist.lmap, target1, alp_mich, ome_mich, bsfl_ref.npts_re, iarr, i, bsfl_ref, riist)

@@ -424,11 +424,13 @@ def plot_five_vars_amplitude(eig_fct1, eig_fct2, eig_fct3, eig_fct4, eig_fct5, s
 
     # Third variable
     labelw = "|w| ( scaling = %s )" % str('{:.2e}'.format(fac_w)) 
-    plt.plot(np.abs(eig_fct3)*fac_w, y, 'k:', linewidth=1.5, label=labelw)
+    plt.plot(np.abs(eig_fct3)*fac_w, y, 'b-', linewidth=1.5, label=labelw)
+    #plt.plot(np.abs(eig_fct3)*fac_w, y, 'k:', linewidth=1.5, label=labelw)
 
     # Fourth variable
     labelp = "|p| ( scaling = %s )" % str('{:.2e}'.format(fac_p)) 
-    plt.plot(np.abs(eig_fct4)*fac_p, y, 'k-.', linewidth=1.5, label=labelp)
+    plt.plot(np.abs(eig_fct4)*fac_p, y, 'm-', linewidth=1.5, label=labelp)
+    #plt.plot(np.abs(eig_fct4)*fac_p, y, 'k-.', linewidth=1.5, label=labelp)
 
     # Fifth variable
     plt.plot(np.abs(eig_fct5)*fac_r, y, 'r-', linewidth=1.5, label="|r|")
@@ -1357,6 +1359,7 @@ def set_local_flag_display_sizes(npts_alp, npts_re, plot_eigvcts):
 
     if ( npts_alp == 1 and npts_re == 1 ):
         print("Single alpha, single Reynolds ==> Global solution")
+        print("")
         Local = False
         plot_eigvcts = 1
     else:
@@ -1449,11 +1452,23 @@ def extrapolate_in_reynolds(iarr, i, ire):
     return omega
 
 
-def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, mob, bsfl, D1, D2, y, alpha, beta, Re, omega_i, bsfl_ref, rt_flag, riist):
+def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, mob, bsfl, D1, D2, y, alpha, beta, Re, omega_i, bsfl_ref, rt_flag, riist, Local):
 
+    #plt.close('all') ==> this command freezes my machine
+    
     print("")
-    print("Computing relevant quantities for Rayleigh-Taylor instability")
-    print("-------------------------------------------------------------")
+    print("Closing all previous plots...")
+
+    ifig = plt.gcf().number
+    #print("ifig = ", ifig)
+    for ii in range(1, ifig+1):
+        #print("ii = ", ii)
+        plt.close(ii)
+        
+    print("")
+    print("=====================================")
+    print("Energy balance plots and calculations")
+    print("=====================================")
     print("")
 
     Sc = bsfl_ref.Sc
@@ -1624,7 +1639,8 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     elif   ( mob.boussinesq == -3 ):
         omega_i_balance = ( VelPres_int + visc_t_int + visc_t_3Re_int + grav_prod_int )/Et_int
 
-    if   ( mob.boussinesq == -3 ):
+    WriteThisInfo=False
+    if   ( mob.boussinesq == -3 and WriteThisInfo ):
         print("VelPres_int    = ", VelPres_int)
         print("visc_t_int     = ", visc_t_int)
         print("visc_t_3Re_int = ", visc_t_3Re_int)
@@ -1658,6 +1674,34 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     energy_bal = np.amax(np.abs(LHS-RHS))
     print("Energy balance (RT) = ", energy_bal)
     print("")
+    
+    # Write data out
+    if ( mob.boussinesq < 0 ):
+        str_b = 'minus'
+    else:
+        str_b = 'plus'
+
+    alpha_out = float(alpha)
+    #print("type(alpha_out) = ", type(alpha_out))
+    #print("type(alpha) = ", type(alpha))
+    #print("{:.2f}".format(3.1234567890123))
+    str_alp = "{:.4f}".format(alpha_out)
+    str_bet = "{:.4f}".format(beta)
+
+    #print("type(str_o) = ", type(str_o))
+
+    if (Local):
+        str_loc = 'Local'
+    else:
+        str_loc = 'Global'
+        
+    filename = 'Energy_balance_' + str_loc + '_alpha_' + str_alp + '_beta_' + str_bet + '_boussi_' + str_b + '_' + str(abs(mob.boussinesq)) + '.txt'
+    
+    if ( mob.boussinesq == -2 ):
+        energy_balance_terms(ny , map.y/Lref, np.real(VelPres_nd), np.real(visc_t_nd), np.real(grav_prod_nd), filename)
+    else:
+        energy_balance_terms(ny, map.y, np.real(VelPres), np.real(visc_t), np.real(grav_prod), filename)
+
 
     zmax = riist.yinf/10
     zmin = -zmax
@@ -1957,7 +2001,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
 
 def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, bsfl_ref, mob, rt_flag):
 
-    plt.close('all')
+    #plt.close('all') 
     
     # Get some quantities to compute the balances
     Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
@@ -1965,6 +2009,10 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
     
     Sc = bsfl_ref.Sc
     Re = bsfl_ref.Re
+
+    Lref = bsfl_ref.Lref
+    Uref = bsfl_ref.Uref
+    rhoref = bsfl_ref.rhoref
 
     #
     # "Balance" Equations for Continuity and Mass ==> I multiply through by rho'
@@ -1985,6 +2033,19 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
 
         LHS_mass  = omega_i*compute_inner_prod(reig, reig) + np.multiply(Rhop, compute_inner_prod(reig, weig))
         RHS_mass  = 0.0*LHS_mass
+
+        # Nondimensionalize eigenfunctions
+        ueig_nd = ueig/Uref
+        veig_nd = veig/Uref
+        weig_nd = weig/Uref
+
+        peig_nd = peig/(rhoref*Uref**2.)
+        reig_nd = reig/rhoref
+
+        ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd = normalize_eigenvectors(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, rt_flag)
+
+        LHS_mass_nd = omega_i*Lref/Uref*compute_inner_prod(reig_nd, reig_nd) + np.multiply(bsfl.Rhop_nd, compute_inner_prod(reig_nd, weig_nd))
+        RHS_mass_nd = 0.0*LHS_mass        
 
     elif ( mob.boussinesq == -3 ):
         #print("rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape",\
@@ -2008,6 +2069,13 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
                               +compute_inner_prod(reig, D2r) \
                               +np.multiply(bsfl5, compute_inner_prod(reig, reig)) \
                               +np.multiply(bsfl6, compute_inner_prod(reig, Dr)) )/(Re*Sc)
+
+        print("")
+        print("Sandoval Equations: Magnitude of RHS terms of mass equation:")
+        print("------------------------------------------------------------")
+        print("1/(Re*Sc)*( d2rho'dxjdxj ) = ", np.linalg.norm((compute_inner_prod(reig, ia2*reig) + compute_inner_prod(reig, ib2*reig) + compute_inner_prod(reig, D2r))/(Re*Sc)))
+        print("1/(Re*Sc)*( drho_bar/dxj drho_bar/dxj *rho'/rho_bar^2 ) = ", np.linalg.norm(np.multiply(bsfl5, compute_inner_prod(reig, reig))/(Re*Sc) ))
+        print("1/(Re*Sc)*( -2/rho_bar*drho_bar/dxj*drho'/dxj ) = ", np.linalg.norm(np.multiply(bsfl6, compute_inner_prod(reig, Dr))/(Re*Sc) ))
         
         LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
         RHS_conti = ReSc_continuity
@@ -2057,6 +2125,11 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
     energy_bal_mass = np.amax(np.abs(LHS_mass-RHS_mass))
     print("Energy balance (RT) continuity equation = ", energy_bal_cont)
     print("Energy balance (RT) mass equation       = ", energy_bal_mass)
+    if ( mob.boussinesq == -2 ):
+        energy_bal_mass_nd = np.amax(np.abs(LHS_mass_nd-RHS_mass_nd))
+        print("boussinesq == -2")
+        print("Energy balance (RT) mass equation (non-dimensional) = ", energy_bal_mass_nd)
+        
     print("")
 
     input("R-T: LHS/RHS for Continuity and Mass Equations")
@@ -2247,6 +2320,32 @@ def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_
             reig_vec    = reig_vec/norm_s
 
     return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
+
+
+
+
+
+
+def energy_balance_terms(npts, y, t1, t2, t3, filename):
+    
+    work_dir      = "/home/aph/incompressible-stability-equations/src"
+    save_path     = work_dir #+ '/' + folder1
+    completeName  = os.path.join(save_path, filename)
+    fileoutFinal  = open(completeName,'w')
+    
+    zname1D       = 'ZONE T="1-D Zone", I = ' + str(npts) + '\n'
+    #fileoutFinal.write('TITLE     = "1d energy balance data"\n')
+    #fileoutFinal.write('VARIABLES = "Y" "VelPres" "Visc" "Prod"\n')
+    #fileoutFinal.write(zname1D)
+    
+    for i in range(0, npts):
+        fileoutFinal.write("%25.15e %25.15e %25.15e %25.15e \n" % ( y[i], t1[i], t2[i], t3[i] ) )
+
+    fileoutFinal.close()
+
+
+
+
 
 # using Test
 # using Plots
