@@ -9,6 +9,7 @@ import class_baseflow as mbf
 import class_build_matrices as mbm
 import class_solve_gevp as msg
 import class_mapping as mma
+import class_readinput as rinput
 import matplotlib.pyplot as plt
 
 import module_utilities as mod_util
@@ -36,27 +37,15 @@ i8  = np.dtype('i8') # integer 8
 #   Flags and reference strings   #
 ###################################
 
-# Gravity
-grav = 9.81
-
-# rt_flag == True: "Rayleigh-Taylor" stability equations (from Chandrasekhar, see pp. 429 -> ...);
-# rt_flag == False: Incompressible stability equations (Shear-layer and Poiseuille baseflows)
-# rt_flag   = False
-
-# only used if rt_flag is True.
-# prim_form = 1: RT problem with primitive variable formulation,
-# prim_form = 0: inviscid RT with w-equation only (see Chandrasekhar page 433) 
+# Leave on 1 (only used if rt_flag is True)
+# prim_form = 1: RT problem with primitive variable formulation ==> solvers Boussinesq = 1, -2 or -3
+# prim_form = 0: inviscid RT with w-equation only (see Chandrasekhar page 433) ===> do not use in general
 prim_form = 1
-
-# Currently not working: keep to False
-#Local     = True
 
 # Plotting flags
 plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
-plot_eigvcts = 0 # set to 1 to plot eigenvectors ==> will be set to 1 if only one location and one alpha
+plot_eigvcts = 1 # set to 1 to plot eigenvectors ==> will be set to 1 if only one location and one alpha
 plot_eigvals = 0 # set to 1 to plot eigenvalues
-
-str_vars = np.array(['u-velocity', 'v-velocity', 'w-velocity', 'pressure'])
 
 ###################################
 #   Reference data from Michalke  #
@@ -65,39 +54,85 @@ str_vars = np.array(['u-velocity', 'v-velocity', 'w-velocity', 'pressure'])
 alp_mich = np.array([0., 0.1, 0.2, 0.3, 0.4, 0.4446, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=float)
 ome_mich = np.array([0.0, 0.04184, 0.06975, 0.08654, 0.09410, 0.09485, 0.09376, 0.08650, 0.07305, 0.05388, 0.02942, 0.0], dtype=float)
 
-#print("alp_mich, ome_mich = ", alp_mich, ome_mich)
-
 ###################################
 #         Read input file         #
 ###################################
 
-inFile = sys.argv[1]
+# Get input file name
+inFile  = sys.argv[1]
 
-rt_flag, SolverT, baseflowT, ny, Re_min, Re_max, npts_re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1 = mod_util.read_input_file(inFile)
+# Instance for class_readinput
+riist   = rinput.ReadInput()
 
-Re_range = np.linspace(Re_min, Re_max, npts_re)
+# Read input file
+riist.read_input_file(inFile)
+target1 = riist.target 
 
-Local, plot_eigvcts = mod_util.set_local_flag_display_sizes(npts_alp, npts_re, plot_eigvcts)
+# Set reference quantities from non-dimensional parameters and Uref (ref. velocity) and gref (ref. acceleration)
+bsfl_ref = mbf.Baseflow()
+bsfl_ref.set_reference_quantities(riist)
+
+###################################
+# Dimensionalize inputs if needed #
+###################################
+
+# Deal with dimensional vs. nondimensional solvers
+mtmp = mbm.BuildMatrices(riist.ny, riist.rt_flag, prim_form)
+
+# If solver boussines = -2 is used, I need to dimensionalize inputs
+if ( mtmp.boussinesq == -2 ): # =================> dimensional solver
+    # Make yinf and lmap dimensional
+    riist.yinf = riist.yinf*bsfl_ref.Lref
+    riist.lmap = riist.lmap*bsfl_ref.Lref
+    # Make wavenumbers dimensional
+    riist.alpha_min = riist.alpha_min/bsfl_ref.Lref
+    riist.alpha_max = riist.alpha_max/bsfl_ref.Lref
+    riist.alpha = riist.alpha/bsfl_ref.Lref
+
+# Delete read input instance
+#del riist
+#print("riist.Re_min = ",riist.Re_min)
+#print("riist.npts_alp = ",riist.npts_alp)
+
+###################################
+#   Setup some arrays and flags   #
+###################################
+
+Re_range            = np.linspace(bsfl_ref.Re_min, bsfl_ref.Re_max, bsfl_ref.npts_re)
+Local, plot_eigvcts = mod_util.set_local_flag_display_sizes(riist.npts_alp, bsfl_ref.npts_re, plot_eigvcts)
 
 # Create instance for main array omega
-iarr = marray.MainArrays(npts_re, npts_alp)
+iarr = marray.MainArrays(bsfl_ref.npts_re, riist.npts_alp)
 
 iarr.re_array = Re_range
 
-for i in range(0, npts_re):
+
+###################################
+#  Main Loop of Reynolds number   #
+###################################
+
+for i in range(0, bsfl_ref.npts_re):
 
     if (i > 0):
         target1 = iarr.omega_array[i-1,0]
         print("setting target to target = ",target1)
+
+    #print("bsfl_ref.gref currently set to: ", bsfl_ref.gref)
+    #input("Check grav 101")
         
     Re = Re_range[i]
-    mod_incomp.incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, rt_flag, SolverT, \
-                             baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1, alp_mich, ome_mich, npts_re, iarr, i, grav)
+    mod_incomp.incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, riist.rt_flag, riist.SolverT, \
+                             riist.baseflowT, riist.ny, Re, riist.npts_alp, riist.alpha, riist.beta, mtmp, \
+                             riist.yinf, riist.lmap, target1, alp_mich, ome_mich, bsfl_ref.npts_re, iarr, i, bsfl_ref, riist)
 
+    
+###################################
+#     Plot and write out data     #
+###################################
 
-if ( Local and npts_alp > 1 and npts_re > 1 ):
+if ( Local and riist.npts_alp > 1 and bsfl_ref.npts_re > 1 ):
     # Contour plot of stability banana
-    [X, Y] = np.meshgrid(Re_range, alpha)
+    [X, Y] = np.meshgrid(Re_range, riist.alpha)
     
     #fig = plt.figure(figsize=(6,5))
     fig = plt.figure()
@@ -123,7 +158,7 @@ if ( Local and npts_alp > 1 and npts_re > 1 ):
     plt.show()
 
 
-if ( Local and npts_alp == 1 and npts_re > 1 ):
+if ( Local and riist.npts_alp == 1 and bsfl_ref.npts_re > 1 ):
 
     ptn = plt.gcf().number + 1
     
@@ -161,7 +196,7 @@ if ( Local and npts_alp == 1 and npts_re > 1 ):
     input("DDDDDDD")
 
 
-if ( Local and npts_alp > 1 and npts_re == 1 ):
+if ( Local and riist.npts_alp > 1 and bsfl_ref.npts_re == 1 ):
 
     ptn = plt.gcf().number + 1
     
@@ -177,7 +212,7 @@ if ( Local and npts_alp > 1 and npts_re == 1 ):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(alpha, np.imag(iarr.omega_array[0,:]), 'k', markerfacecolor='none')
+    ax.plot(riist.alpha, np.imag(iarr.omega_array[0,:]), 'k', markerfacecolor='none')
     
     formatter = ticker.ScalarFormatter(useMathText=True)
     formatter.set_scientific(True)
@@ -197,7 +232,7 @@ if ( Local and npts_alp > 1 and npts_re == 1 ):
     
 # Write stability banana
 filename      = "Banana_tec_bottom.dat"
-mod_util.write_stability_banana(npts_alp, npts_re, iarr, alpha, Re_range, filename)
+mod_util.write_stability_banana(riist.npts_alp, bsfl_ref.npts_re, iarr, riist.alpha, Re_range, filename)
 
 # Grab Currrent Time After Running the Code
 end = time.time()
@@ -205,3 +240,29 @@ end = time.time()
 #Subtract Start Time from The End Time
 total_time = end - start
 print("Total runtime: %21.11f [s]" % total_time)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#rt_flag, SolverT, baseflowT, ny, Re_min, Re_max, npts_re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1 = mod_util.read_input_file(inFile, bsfl_init)

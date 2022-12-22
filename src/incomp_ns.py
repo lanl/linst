@@ -23,7 +23,8 @@ i8  = np.dtype('i8') # integer 8
 #################################
 
 def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, rt_flag, SolverT, \
-                  baseflowT, ny, Re, alp_min, alp_max, npts_alp, alpha, beta, yinf, lmap, target1, alp_mich, ome_mich, npts_re, iarr, ire, grav):
+                  baseflowT, ny, Re, npts_alp, alpha, beta, mtmp, \
+                  yinf, lmap, target1, alp_mich, ome_mich, npts_re, iarr, ire, bsfl_ref, riist):
 
     if (rt_flag==False):
         prim_form = 1
@@ -39,6 +40,10 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         Tracking = False
 
     abs_target1 = np.abs(target1)
+
+    #################################################
+    #  Create Chebyshev matrices and map if needed  #
+    #################################################
 
     # Create instance for class GaussLobatto
     cheb = mgl.GaussLobatto(ny)
@@ -56,14 +61,20 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
     # Create mapping and generate baseflow
     if (rt_flag):
-        k = np.sqrt(alpha[0]**2. + beta**2.)
+        #k = np.sqrt(alpha[0]**2. + beta**2.)
         if (ire==0):
             print("")
             print("Rayleigh-Taylor Stability Analysis")
             print("==================================")
             print("")
-        map.map_shear_layer(yinf, yi, lmap, cheb.DM)
-        bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, Re, grav, k)
+            # In main.py I make yinf and lmap dimensional for solver boussinesq == -2
+            map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
+
+        print("yinf, lmap = ", yinf, lmap)
+        bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, bsfl_ref, mtmp)
+
+        print("bsfl_ref", bsfl_ref)
+        del mtmp
 
     else:
         if ( baseflowT == 1 ):
@@ -72,14 +83,14 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                 print("Mixing-Layer Stability Analysis")
                 print("===============================")
                 print("")
-            map.map_shear_layer(yinf, yi, lmap, cheb.DM)
+            map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
             bsfl = mbf.HypTan(ny, map.y)
 
             flag_reset = mod_util.check_lmap_val_reset_if_needed(bsfl.Up, map, lmap, ny)
 
             # If the mapping parameter has been reset, we need to re-map!
             if ( flag_reset ):
-                map.map_shear_layer(yinf, yi, lmap, cheb.DM)
+                map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
                 bsfl = mbf.HypTan(ny, map.y)
                 
         elif ( baseflowT == 2 ):
@@ -94,144 +105,113 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             sys.exit("Not a proper value for flag baseflowT")
 
     print("Solving for Reynolds number Re = ", Re)
-    print
 
     if plot_grid_bsfl == 1:
         mod_util.plot_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up, map.D1)
-    
+
+    #################################################
+    #            Solve stability problem            # 
+    #################################################
+        
     # Create instance for Class SolveGeneralizedEVP
     solve = msg.SolveGeneralizedEVP(ny, rt_flag, prim_form)
     
-    # Build matrices and solve eigenvalue/local problem
-    omega_all, eigvals_filtered, mob = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
+    # Build matrices and solve global/local problem
+    omega_all, eigvals_filtered, mob, q_eigvect = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
 
-    #if (npts_alp > 1):
-    #    mod_util.plot_imag_omega_vs_alpha(omega_all, "omega", alpha, alp_mich, ome_mich)
 
-    # Plot and Write out eigenvalues
-    if plot_eigvals == 1:
-        mod_util.plot_eigvals(eigvals_filtered)
+    #################################################
+    #           Plots, Energy balance, etc.         # 
+    #################################################
 
+    # Plot and write out eigenvalue spectrum (Global solver only)        
     if (not Local):
+        if plot_eigvals == 1:
+            mod_util.plot_eigvals(eigvals_filtered)
+            
         mod_util.write_out_eigenvalues(solve.EigVal, ny)
+        
+        # Find index of target eigenvalue to extract eigenvector
+        idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target1, target1)
+    else:
+        idx_tar1 = -999
 
-    # Find index of target eigenvalue to extract eigenvector
-    idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target1, target1)
-    #idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target2, target2)
+    # Get eigenvectors
+    ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
 
-    if ( found1 == True and found2 == True ):
-        found = True
-        print("Both target eigenvalues have been found")
-        print("")
+    # Plot eigenvectors if needed
+    #mod_util.get_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
 
-    if (plot_eigvcts==1):
-        
-        # Get and Plot eigenvectors
-        ueig, veig, weig, peig, reig = mod_util.get_plot_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts, rt_flag)
-        
-        phase_u = np.zeros(ny, dp)
-        phase_v = np.zeros(ny, dp)
-        phase_w = np.zeros(ny, dp)
-        phase_p = np.zeros(ny, dp)
-        phase_r = np.zeros(ny, dp)
-        
-        phase_u = np.arctan2(ueig.imag, ueig.real)
-        phase_v = np.arctan2(veig.imag, veig.real)
-        phase_w = np.arctan2(weig.imag, weig.real)
-        phase_p = np.arctan2(peig.imag, peig.real)
-        phase_r = np.arctan2(reig.imag, reig.real)
-        
-        amp_u   = np.abs(ueig)
-        amp_v   = np.abs(veig)
-        amp_w   = np.abs(weig)
-        amp_p   = np.abs(peig)
-        amp_r   = np.abs(reig)
-        
-        phase_u_uwrap = np.unwrap(phase_u)
-        phase_v_uwrap = np.unwrap(phase_v)
-        phase_w_uwrap = np.unwrap(phase_w)
-        phase_p_uwrap = np.unwrap(phase_p)
-        phase_r_uwrap = np.unwrap(phase_r)
-        
-        # When I take phase_ref as phase_v_uwrap ==> I get u and v symmetric/anti-symmetric
-        # When I take phase_ref as phase_u_uwrap ==> v is not symmetric/anti-symmetric
-        phase_ref     = phase_v_uwrap[mid_idx]
-        
-        phase_u_uwrap = phase_u_uwrap - phase_ref
-        phase_v_uwrap = phase_v_uwrap - phase_ref
-        phase_w_uwrap = phase_w_uwrap - phase_ref
-        phase_p_uwrap = phase_p_uwrap - phase_ref
-        phase_r_uwrap = phase_r_uwrap - phase_ref
-        
-        # Plot some results
-        mod_util.plot_phase(phase_u, "phase_u", map.y)
-        
-        #print("exp(1j*phase) = ", np.exp(1j*phase_u))
-        #print("exp(1j*phase_unwrapped) = ", np.exp(1j*phase_u_uwrap))
-        
-        print("np.max( np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
-        print("np.max( np.abs( np.exp(1j*phase_u)) - np.abs( np.exp(1j*phase_u_uwrap )) ) = ", np.max( np.abs( np.exp(1j*phase_u) ) - np.abs( np.exp(1j*phase_u_uwrap ) ) ) )
-        
-        Shift = 0
-        
-        if Shift == 1:
-            ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
-            veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
-            weig_ps = amp_w*np.exp(1j*phase_w_uwrap)
-            peig_ps = amp_p*np.exp(1j*phase_p_uwrap)
-            reig_ps = amp_r*np.exp(1j*phase_r_uwrap)
-        else:
-            ueig_ps = ueig
-            veig_ps = veig
-            weig_ps = weig
-            peig_ps = peig
-            reig_ps = reig
-        
-        print("")
-        print("np.max(np.real(ueig_ps)) = ", np.max(np.real(ueig_ps)))
-        print("np.max(np.abs(ueig_ps)) = ", np.max(np.abs(ueig_ps)))
-        print("")
-        print("")
-        print("np.max(np.real(weig_ps)) = ", np.max(np.real(weig_ps)))
-        print("np.max(np.abs(weig_ps)) = ", np.max(np.abs(weig_ps)))
-        print("")
-        print("np.max(np.real(peig_ps)) = ", np.max(np.real(peig_ps)))
-        print("np.max(np.abs(peig_ps)) = ", np.max(np.abs(peig_ps)))
-        print("")
-        print("np.max(np.real(reig_ps)) = ", np.max(np.real(reig_ps)))
-        print("np.max(np.abs(reig_ps)) = ", np.max(np.abs(reig_ps)))
-        print("")
-        
-        amp_u_ps = np.abs(ueig_ps)
-        amp_v_ps = np.abs(veig_ps)
-        amp_w_ps = np.abs(weig_ps)
-        amp_p_ps = np.abs(peig_ps)
-        amp_r_ps = np.abs(reig_ps)
-        
-        ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
-        
-        mod_util.plot_real_imag_part(ueig_ps, "u", map.y)
-        #mod_util.plot_real_imag_part(veig_ps, "v", map.y)
-        mod_util.plot_real_imag_part(weig_ps, "w", map.y)
-        mod_util.plot_real_imag_part(peig_ps, "p", map.y)
-        mod_util.plot_real_imag_part(reig_ps, "r", map.y)
-        
-        input("Check real imag parts")
-        
-        mod_util.plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
-
-        input("Waiting after plotting eigenvectors")
+    # Unwrap and shift phase
+    Shift = 0   
+    ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps = mod_util.unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map)
 
         
-    # Plot some useful terms of Rayleigh-Taylor computation
-    mod_util.compute_important_terms_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, mob,\
-                                                     bsfl, map.D1, map.D2, map.y, alpha, beta, Re, np.imag(omega_all[0]))
-
-    # Check that some equations are fullfilled by the eigenfunctions
+    # Energy balance for Rayleigh-Taylor + Check that equations fullfilled by eigenfunctions
     if (rt_flag):
+        if (Local):
+            alpha_cur = alpha[-1]
+            beta_cur  = beta
+            omega_cur = omega_all[-1]
+            #if   ( mob.boussinesq == -2 ): # non-dimensionalize since I have non-dimensionalized the eigenfunctions
+                #alpha_cur = alpha[-1]*bsfl_ref.Lref
+                #beta_cur  = beta*bsfl_ref.Lref
+                #omega_cur = omega_all[-1]*bsfl_ref.Lref/bsfl_ref.Uref
+        else:
+            alpha_cur = alpha
+            omega_cur = omega_all[0]
+            
+        mod_util.compute_important_terms_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, map, mob, \
+        bsfl, map.D1, map.D2, map.y, alpha_cur, beta_cur, Re, np.imag(omega_cur), bsfl_ref, rt_flag, riist)
+        
         mod_util.check_mass_continuity_satisfied_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
-                                            map.D1, map.D2, map.y, alpha, beta, np.imag(omega_all[0]), bsfl, mob, rt_flag)
-    
+        map.D1, map.D2, map.y, alpha_cur, beta_cur, np.imag(omega_cur), bsfl, bsfl_ref, mob, rt_flag)
+
+        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
+            scale_fac = bsfl_ref.Lref
+        else:
+            scale_fac = 1.0
+            
+        print("")
+        print("Range of dimensional wavenumbers and wavelengths:")
+        print("-------------------------------------------------")
+        alpha_min = min(alpha[0], alpha[-1])
+        alpha_max = max(alpha[0], alpha[-1])
+        print("alpha_min (dimensional)  = ", alpha_min/scale_fac)
+        print("alpha_max (dimensional)  = ", alpha_max/scale_fac)
+        lambda_min = 2*math.pi/alpha_max
+        lambda_max = 2*math.pi/alpha_min
+        print("lambda_min (dimensional) = ", lambda_min*scale_fac)
+        print("lambda_max (dimensional) = ", lambda_max*scale_fac)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         
     ### CRASHES THE COMPUTER plt.close('all')
     

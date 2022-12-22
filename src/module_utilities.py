@@ -251,6 +251,8 @@ def plot_real_imag_part(eig_fct, str_var, y):
         plt.xlabel(r'$\hat{w}_r$', fontsize=20)
     elif str_var == "p":
         plt.xlabel(r'$\hat{p}_r$', fontsize=20)
+    elif str_var == "r":
+        plt.xlabel(r'$\hat{\rho}_r$', fontsize=20)
     else:
         plt.xlabel("real(" +str_var + ")", fontsize=20)
         print("Not an expected string!!!!!")
@@ -271,6 +273,8 @@ def plot_real_imag_part(eig_fct, str_var, y):
         plt.xlabel(r'$\hat{w}_i$', fontsize=20)
     elif str_var == "p":
         plt.xlabel(r'$\hat{p}_i$', fontsize=20)
+    elif str_var == "r":
+        plt.xlabel(r'$\hat{\rho}_i$', fontsize=20)
     else:
         plt.xlabel("imag(" +str_var + ")", fontsize=20)
         print("Not an expected string!!!!!")
@@ -465,101 +469,158 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
 
     input("debug all omega")
 
-#def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, idx_tar2, alpha, map, bsfl, plot_eigvcts):
-def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eigvcts, rt_flag):
 
+def get_normalize_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
+    
     y  = map.y
     D1 = map.D1
-    
-    ueig_vec    = eigvects[0*ny:1*ny, idx_tar1]
-    veig_vec    = eigvects[1*ny:2*ny, idx_tar1]
-    weig_vec    = eigvects[2*ny:3*ny, idx_tar1]
-    peig_vec    = eigvects[3*ny:4*ny, idx_tar1]
 
-    if (rt_flag):
-        reig_vec    = eigvects[4*ny:5*ny, idx_tar1]
-    else:
-        reig_vec    = 0.0*ueig_vec
-
-    # ueig_conj_vec = eigvects[0*ny:1*ny, idx_tar2]
-    # veig_conj_vec = eigvects[1*ny:2*ny, idx_tar2]
-    # weig_conj_vec = eigvects[2*ny:3*ny, idx_tar2]
-    # peig_conj_vec = eigvects[3*ny:4*ny, idx_tar2]
-
-    max_array = np.zeros(5, dp)
-
-    max_array[0] = np.max(np.abs(ueig_vec))
-    max_array[1] = np.max(np.abs(veig_vec))
-    max_array[2] = np.max(np.abs(weig_vec))
-    max_array[3] = np.max(np.abs(peig_vec))
-    max_array[4] = np.max(np.abs(reig_vec))
-
-    idx_array = np.argsort(max_array)
-    idx_max   = idx_array[-1] # because it sorts in ascending order
-
-    if   (idx_max==0):
-        print("Scaling eigenfunctions with max. of u-vel")
-        norm_s      = np.max(np.abs(ueig_vec))
-    elif (idx_max==1):
-        print("Scaling eigenfunctions with max. of v-vel")
-        norm_s      = np.max(np.abs(veig_vec))
-    elif (idx_max==2):
-        print("Scaling eigenfunctions with max. of w-vel")
-        norm_s      = np.max(np.abs(weig_vec))
-    elif (idx_max==3):
-        print("Scaling eigenfunctions with max. of pressure")
-        norm_s      = np.max(np.abs(peig_vec))
-    elif (idx_max==4):
-        print("Scaling eigenfunctions with max. of density")
-        norm_s      = np.max(np.abs(reig_vec))
-
-    print("norm_s = ", norm_s)
-    #print("max_array = ", max_array)
-    #print("idx_max = ", idx_max)
-    #input("debug")
-    
-    # normalizing u and v by max(abs(u))
-    #norm_s      = np.max(np.abs(ueig_vec))
-    #norm_s_conj = np.max(np.abs(ueig_conj_vec))
-
-    normalize = 1
-
-    if (normalize==1):
-        ueig_vec = ueig_vec/norm_s
-        veig_vec = veig_vec/norm_s
-        weig_vec = weig_vec/norm_s
-        peig_vec = peig_vec/norm_s
+    if (Local):
+        ueig_vec    = q_eigvect[0*ny:1*ny]
+        veig_vec    = q_eigvect[1*ny:2*ny]
+        weig_vec    = q_eigvect[2*ny:3*ny]
+        peig_vec    = q_eigvect[3*ny:4*ny]
 
         if (rt_flag):
-            reig_vec    = reig_vec/norm_s
+            reig_vec    = q_eigvect[4*ny:5*ny]
+        else:
+            reig_vec    = 0.0*ueig_vec
+            
+    else:
+        ueig_vec    = eigvects[0*ny:1*ny, idx_tar1]
+        veig_vec    = eigvects[1*ny:2*ny, idx_tar1]
+        weig_vec    = eigvects[2*ny:3*ny, idx_tar1]
+        peig_vec    = eigvects[3*ny:4*ny, idx_tar1]
 
-    #ueig_conj_vec = ueig_conj_vec/norm_s_conj 
-    #veig_conj_vec = veig_conj_vec/norm_s_conj
-    #weig_conj_vec = weig_conj_vec/norm_s_conj 
-    #peig_conj_vec = peig_conj_vec/norm_s_conj
+        if (rt_flag):
+            reig_vec    = eigvects[4*ny:5*ny, idx_tar1]
+        else:
+            reig_vec    = 0.0*ueig_vec
 
-    #ueig_real = 0.5*( ueig_vec + ueig_conj_vec )
-    #ueig_imag = 0.5*( ueig_vec - ueig_conj_vec )
+    # Normalize eigenvectors
+    ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec = normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag)
+
+    return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
+
+    
+def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map):
+    
+    phase_u = np.zeros(ny, dp)
+    phase_v = np.zeros(ny, dp)
+    phase_w = np.zeros(ny, dp)
+    phase_p = np.zeros(ny, dp)
+    phase_r = np.zeros(ny, dp)
+    
+    phase_u = np.arctan2(ueig.imag, ueig.real)
+    phase_v = np.arctan2(veig.imag, veig.real)
+    phase_w = np.arctan2(weig.imag, weig.real)
+    phase_p = np.arctan2(peig.imag, peig.real)
+    phase_r = np.arctan2(reig.imag, reig.real)
+    
+    amp_u   = np.abs(ueig)
+    amp_v   = np.abs(veig)
+    amp_w   = np.abs(weig)
+    amp_p   = np.abs(peig)
+    amp_r   = np.abs(reig)
+    
+    phase_u_uwrap = np.unwrap(phase_u)
+    phase_v_uwrap = np.unwrap(phase_v)
+    phase_w_uwrap = np.unwrap(phase_w)
+    phase_p_uwrap = np.unwrap(phase_p)
+    phase_r_uwrap = np.unwrap(phase_r)
+    
+    # When I take phase_ref as phase_v_uwrap ==> I get u and v symmetric/anti-symmetric
+    # When I take phase_ref as phase_u_uwrap ==> v is not symmetric/anti-symmetric
+    print("Reference phase taken from v-velocity")
+    print("")
+
+    mid_idx       = mod_util.get_mid_idx(ny)
+    phase_ref     = phase_v_uwrap[mid_idx]
+    
+    phase_u_uwrap = phase_u_uwrap - phase_ref
+    phase_v_uwrap = phase_v_uwrap - phase_ref
+    phase_w_uwrap = phase_w_uwrap - phase_ref
+    phase_p_uwrap = phase_p_uwrap - phase_ref
+    phase_r_uwrap = phase_r_uwrap - phase_ref
+    
+    # Plot some results
+    plot_phase(phase_u, "phase_u", map.y)
+    
+    #print("exp(1j*phase) = ", np.exp(1j*phase_u))
+    #print("exp(1j*phase_unwrapped) = ", np.exp(1j*phase_u_uwrap))
+    
+    #print("np.max( np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))) = ", np.max(np.abs( np.exp(1j*phase_u) - np.exp(1j*phase_u_uwrap ))))
+    #print("np.max( np.abs( np.exp(1j*phase_u)) - np.abs( np.exp(1j*phase_u_uwrap )) ) = ", np.max( np.abs( np.exp(1j*phase_u) ) - np.abs( np.exp(1j*phase_u_uwrap ) ) ) )
+        
+    if Shift == 1:
+        ueig_ps = amp_u*np.exp(1j*phase_u_uwrap)
+        veig_ps = amp_v*np.exp(1j*phase_v_uwrap)
+        weig_ps = amp_w*np.exp(1j*phase_w_uwrap)
+        peig_ps = amp_p*np.exp(1j*phase_p_uwrap)
+        reig_ps = amp_r*np.exp(1j*phase_r_uwrap)
+    else:
+        ueig_ps = ueig
+        veig_ps = veig
+        weig_ps = weig
+        peig_ps = peig
+        reig_ps = reig
+        
+    WriteThisNow = 0
+    if (WriteThisNow==1):
+        print("")
+        print("np.max(np.real(ueig_ps)) = ", np.max(np.real(ueig_ps)))
+        print("np.max(np.abs(ueig_ps)) = ", np.max(np.abs(ueig_ps)))
+        print("")
+        print("")
+        print("np.max(np.real(weig_ps)) = ", np.max(np.real(weig_ps)))
+        print("np.max(np.abs(weig_ps)) = ", np.max(np.abs(weig_ps)))
+        print("")
+        print("np.max(np.real(peig_ps)) = ", np.max(np.real(peig_ps)))
+        print("np.max(np.abs(peig_ps)) = ", np.max(np.abs(peig_ps)))
+        print("")
+        print("np.max(np.real(reig_ps)) = ", np.max(np.real(reig_ps)))
+        print("np.max(np.abs(reig_ps)) = ", np.max(np.abs(reig_ps)))
+        print("")
+        
+    amp_u_ps = np.abs(ueig_ps)
+    amp_v_ps = np.abs(veig_ps)
+    amp_w_ps = np.abs(weig_ps)
+    amp_p_ps = np.abs(peig_ps)
+    amp_r_ps = np.abs(reig_ps)
+    
+    #ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
+    
+    mod_util.plot_real_imag_part(ueig_ps, "u", map.y)
+    #mod_util.plot_real_imag_part(veig_ps, "v", map.y)
+    mod_util.plot_real_imag_part(weig_ps, "w", map.y)
+    mod_util.plot_real_imag_part(peig_ps, "p", map.y)
+    mod_util.plot_real_imag_part(reig_ps, "r", map.y)
+    
+    #input("Check real imag parts")
+    
+    mod_util.plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
+
+    return ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps
+    
+    
+def plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
 
     # Compute phase for v-eigenfunction
-    mid_idx = mod_util.get_mid_idx(ny)
+    #mid_idx = mod_util.get_mid_idx(ny)
     
-    phase_vvel = np.arctan2( veig_vec.imag, veig_vec.real)    
-    phase_vvel = phase_vvel - phase_vvel[mid_idx]
+    #phase_vvel = np.arctan2( veig_vec.imag, veig_vec.real)    
+    #phase_vvel = phase_vvel - phase_vvel[mid_idx]
 
-    veig_vec_polar = np.abs(veig_vec)*np.exp(1j*phase_vvel)
+    #veig_vec_polar = np.abs(veig_vec)*np.exp(1j*phase_vvel)
 
     #print("np.max(np.abs(veig_vec-veig_vec_polar)) = ", np.max(np.abs(veig_vec-veig_vec_polar)))
 
-    dpeig_vec_dx = 1j*alpha*peig_vec 
-    dpeig_vec_dy = np.matmul(D1, peig_vec)
+    #dpeig_vec_dx = 1j*alpha*peig_vec 
+    #dpeig_vec_dy = np.matmul(D1, peig_vec)
 
-    if (not rt_flag):
-        v_from_pres = dpeig_vec_dy/( 1j*target1 -1j*alpha*bsfl.U )
-        u_from_pres = -( 1j*alpha*peig_vec + bsfl.Up*v_from_pres )/( 1j*alpha*bsfl.U - 1j*target1 )
 
-    updppdx = ueig_vec + dpeig_vec_dx
-    vpdppdy = veig_vec + dpeig_vec_dy
+    #updppdx = ueig_vec + dpeig_vec_dx
+    #vpdppdy = veig_vec + dpeig_vec_dy
 
     DoThis = False
 
@@ -587,11 +648,6 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
 
         ## Renormalize to match Michalke
         Phi_vec_new  = Phi_vec_new/Phi_vec_new[mid_idx]
-
-    if (not rt_flag):
-        Re_stress     = uv_eig.real*bsfl.Up
-        Re_stress_new = uv_eig_new.real*bsfl.Up
-
         
     flag1 = False
     
@@ -695,7 +751,7 @@ def get_plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, bsfl, plot_eig
     return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
 
 
-def read_input_file(inFile):
+def read_input_file(inFile, bsfl):
 
     with open(inFile) as f:
         lines = f.readlines()
@@ -732,6 +788,21 @@ def read_input_file(inFile):
     if (Re_min == Re_max): npts_re = 1
 
     #Re  = float(tmp)
+
+    # Froude number, Schmidt number, reference velocity Uref and acceleration gref
+    i=i+1
+
+    tmp = lines[i].split("#")[0]
+    tmp = tmp.split(",")
+
+    bsfl.Fr   = float(tmp[0])
+    bsfl.Sc   = float(tmp[1])
+    bsfl.Uref = float(tmp[2])
+    bsfl.gref = float(tmp[3])
+
+    bsfl.Re_min = Re_min
+    bsfl.Re_max = Re_max
+    bsfl.npts_re = npts_re 
 
     # alpha_min, alpha_max and npts_alpha
     i=i+1
@@ -776,19 +847,23 @@ def read_input_file(inFile):
     print("")
     print("Reading input file")
     print("==================")
-    print("SolverT   = ", SolverT)
-    print("baseflowT = ", baseflowT)
-    print("ny        = ", ny)
-    print("Re_min    = ", Re_min)
-    print("Re_max    = ", Re_max)
-    print("npts_re   = ", npts_re)
-    print("alpha_min = ", alpha_min)
-    print("alpha_max = ", alpha_max)
-    print("npts_alp  = ", npts_alp)
-    print("beta      = ", beta)
-    print("yinf      = ", yinf)
-    print("lmap      = ", lmap)
-    print("target    = ", target)
+    print("SolverT                     = ", SolverT)
+    print("baseflowT                   = ", baseflowT)
+    print("ny                          = ", ny)
+    print("Re_min                      = ", Re_min)
+    print("Re_max                      = ", Re_max)
+    print("npts_re                     = ", npts_re)
+    print("Reference velocity Uref     = ", bsfl.Uref)
+    print("Reference acceleration gref = ", bsfl.gref)
+    print("Froude number               = ", bsfl.Fr)
+    print("Schmidt number              = ", bsfl.Sc)
+    print("alpha_min                   = ", alpha_min)
+    print("alpha_max                   = ", alpha_max)
+    print("npts_alp                    = ", npts_alp)
+    print("beta                        = ", beta)
+    print("yinf                        = ", yinf)
+    print("lmap                        = ", lmap)
+    print("target                      = ", target)
     print("==> Eigenfunction will be extracted for omega = ", target)
 
     print("")
@@ -805,7 +880,6 @@ def read_input_file(inFile):
         sys.exit("Not a proper value for flag SolverT!!!!")
         
     return rt_flag, SolverT, baseflowT, ny, Re_min, Re_max, npts_re, alpha_min, alpha_max, npts_alp, alpha, beta, yinf, lmap, target
-
 
 
 def compute_stream_function_check(ueig, veig, alpha, D1, y, ny):
@@ -1375,17 +1449,22 @@ def extrapolate_in_reynolds(iarr, i, ire):
     return omega
 
 
-def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, bsfl, D1, D2, y, alpha, beta, Re, omega_i):
+def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, mob, bsfl, D1, D2, y, alpha, beta, Re, omega_i, bsfl_ref, rt_flag, riist):
 
     print("")
     print("Computing relevant quantities for Rayleigh-Taylor instability")
     print("-------------------------------------------------------------")
-    #print("Fr2 = ", mob.Fr2)
-    #print("Re  = ", Re)
-    #print("Sc  = ", mob.Sc)
     print("")
 
-    Sc = mob.Sc
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+    Fr2 = bsfl_ref.Fr**2.
+
+    gref = bsfl_ref.gref
+    Lref = bsfl_ref.Lref
+    Uref = bsfl_ref.Uref
+    rhoref = bsfl_ref.rhoref
+    muref  = bsfl_ref.muref
     
     ny = len(y)
 
@@ -1409,31 +1488,89 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     vp3 = -compute_inner_prod(weig, np.matmul(D1, peig))
 
     VelPres = vp1 + vp2 + vp3
+    
+    if ( mob.boussinesq == -2 ):
+
+        # Compute the various terms non-dimensional too
+        alpha_nd   = alpha*Lref
+        beta_nd    = beta*Lref
+
+        # Nondimensionalize eigenfunctions
+        ueig_nd = ueig/Uref
+        veig_nd = veig/Uref
+        weig_nd = weig/Uref
+
+        peig_nd = peig/(rhoref*Uref**2.)
+        reig_nd = reig/rhoref
+
+        ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd = normalize_eigenvectors(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, rt_flag)
+        
+        vp1_nd = -compute_inner_prod(ueig_nd, 1j*alpha_nd*peig_nd)
+        vp2_nd = -compute_inner_prod(veig_nd, 1j*beta_nd*peig_nd)
+        vp3_nd = -compute_inner_prod(weig_nd, np.matmul(map.D1_nondim, peig_nd))
+
+        VelPres_nd = vp1_nd + vp2_nd + vp3_nd
+
+        ia_nd  = ( 1j*alpha_nd ) 
+        ib_nd  = ( 1j*beta_nd )
+
+        ia2_nd = ( 1j*alpha_nd )**2. 
+        ib2_nd = ( 1j*beta_nd )**2.
+
+        Du_nd = np.matmul(map.D1_nondim, ueig_nd)
+        Dv_nd = np.matmul(map.D1_nondim, veig_nd)
+        Dw_nd = np.matmul(map.D1_nondim, weig_nd)
+
+        D2u_nd = np.matmul(map.D2_nondim, ueig_nd)
+        D2v_nd = np.matmul(map.D2_nondim, veig_nd)
+        D2w_nd = np.matmul(map.D2_nondim, weig_nd)
+        D2r_nd = np.matmul(map.D2_nondim, reig_nd)
+        
+        visc1_nd  = compute_inner_prod(ia2_nd*ueig_nd, ueig_nd) + compute_inner_prod(ib2_nd*ueig_nd, ueig_nd) + compute_inner_prod(D2u_nd, ueig_nd)
+        visc2_nd  = compute_inner_prod(ia2_nd*veig_nd, veig_nd) + compute_inner_prod(ib2_nd*veig_nd, veig_nd) + compute_inner_prod(D2v_nd, veig_nd)
+        visc3_nd  = compute_inner_prod(ia2_nd*weig_nd, weig_nd) + compute_inner_prod(ib2_nd*weig_nd, weig_nd) + compute_inner_prod(D2w_nd, weig_nd)
 
     visc1  = compute_inner_prod(ia2*ueig, ueig) + compute_inner_prod(ib2*ueig, ueig) + compute_inner_prod(D2u, ueig)
     visc2  = compute_inner_prod(ia2*veig, veig) + compute_inner_prod(ib2*veig, veig) + compute_inner_prod(D2v, veig)
     visc3  = compute_inner_prod(ia2*weig, weig) + compute_inner_prod(ib2*weig, weig) + compute_inner_prod(D2w, weig)
 
-    visc1_3Re = compute_inner_prod(ueig, ia2*ueig) + compute_inner_prod(veig, ib2*veig) + compute_inner_prod(weig, D2w)
-    visc2_3Re = compute_inner_prod(ueig, iab*veig) + compute_inner_prod(veig, iab*ueig) + compute_inner_prod(weig, ia*Du)
-    visc3_3Re = compute_inner_prod(ueig, ia*Dw) + compute_inner_prod(veig, ib*Dw) + compute_inner_prod(weig, ib*Dv)
-
     if   ( mob.boussinesq == 1 ):
-        visc_t = np.divide(visc1 + visc2 + visc3, mob.Re)
+        visc_t = np.divide(visc1 + visc2 + visc3, Re)
     elif ( mob.boussinesq == -2 ):
         visc_t = np.multiply(Mu, visc1 + visc2 + visc3)
+
+        # The following three lines do not lead to the proper non-dimensional term
+        # because the equation is nondimensionalized as a whole with the Reynolds
+        # number appearing
+        #scal_visc = muref*Uref**2/Lref**2.
+        #visc_t_nd = np.multiply(bsfl.Mu_nd, visc1_nd + visc2_nd + visc3_nd)
+        #visc_t_nd = visc_t/scal_visc
+        visc_t_nd = np.divide(visc1_nd + visc2_nd + visc3_nd, Re)
+        
         # Viscous (proportional to d mu_baseflow/dz)
         visc_grad1  = compute_inner_prod(ueig, Du) + compute_inner_prod(veig, Dv) + compute_inner_prod(weig, Dw)
         visc_grad2  = compute_inner_prod(ueig, ia*weig) + compute_inner_prod(veig, ib*weig) + compute_inner_prod(weig, Dw)
-        visc_grad_t = np.multiply(Mup, visc_grad1 + visc_grad2)
+        visc_grad_t = np.multiply(Mup, visc_grad1 + visc_grad2)        
+
+        # Need to check this by coputing it for solver -3
+        visc_grad1_nd  = compute_inner_prod(ueig_nd, Du_nd) + compute_inner_prod(veig_nd, Dv_nd) + compute_inner_prod(weig_nd, Dw_nd)
+        visc_grad2_nd  = compute_inner_prod(ueig_nd, ia_nd*weig_nd) + compute_inner_prod(veig_nd, ib_nd*weig_nd) + compute_inner_prod(weig_nd, Dw_nd)
+        # The following line does not seem to work for the same reason as above probably 
+        #visc_grad_t_nd = np.multiply(bsfl.Mup_nd, visc_grad1_nd + visc_grad2_nd)
+        visc_grad_t_nd = np.divide(visc_grad1_nd + visc_grad2_nd, Re)        
+
     elif ( mob.boussinesq == -3 ):
-        visc_t = np.divide(visc1 + visc2 + visc3, mob.Re)
-        visc_t_3Re = np.divide(visc1_3Re + visc2_3Re + visc3_3Re, 3*mob.Re)
+        visc1_3Re = compute_inner_prod(ueig, ia2*ueig) + compute_inner_prod(veig, ib2*veig) + compute_inner_prod(weig, D2w)
+        visc2_3Re = compute_inner_prod(ueig, iab*veig) + compute_inner_prod(veig, iab*ueig) + compute_inner_prod(weig, ia*Du)
+        visc3_3Re = compute_inner_prod(ueig, ia*Dw) + compute_inner_prod(veig, ib*Dw) + compute_inner_prod(weig, ib*Dv)
+
+        visc_t = np.divide(visc1 + visc2 + visc3, Re)
+        visc_t_3Re = np.divide(visc1_3Re + visc2_3Re + visc3_3Re, 3*Re)
         
     # Build LHS and RHS
     if   ( mob.boussinesq == 1 ):
         # Gravity production term
-        grav_prod = -compute_inner_prod(reig, weig)/mob.Fr2 # Nondimensional here
+        grav_prod = -compute_inner_prod(reig, weig)/Fr2 # Nondimensional here
         # Left-hand-side
         LHS = Et_integrand*2*omega_i
         # Right-hand-side
@@ -1444,14 +1581,16 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
         
     elif ( mob.boussinesq == -2 ):
         # Gravity production term
-        grav_prod = -9.81*compute_inner_prod(reig, weig)    # dimensional here
+        grav_prod = -gref*compute_inner_prod(reig, weig)    # dimensional
+        grav_prod_nd = -compute_inner_prod(reig_nd, weig_nd)/Fr2    # non-dimensional
+        
         # Left-hand-side
         LHS = np.multiply(Et_integrand, Rho)*2*omega_i
         # Right-hand-side
         RHS = VelPres + visc_t + visc_grad_t + grav_prod
     elif ( mob.boussinesq == -3 ):
         # Gravity production term
-        grav_prod = -compute_inner_prod(reig, weig)/mob.Fr2 # Nondimensional here
+        grav_prod = -compute_inner_prod(reig, weig)/Fr2 # Nondimensional here
         # Left-hand-side
         LHS = np.multiply(Et_integrand, Rho)*2*omega_i
         # Right-hand-side
@@ -1495,7 +1634,12 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     print("")
     print("Comparison between growth rate from eigenvalue and energy balance")
     print("-----------------------------------------------------------------")
-    print("omega_i         = ", omega_i)
+    if ( mob.boussinesq == -2 ):
+        print("omega_i (dimensional)     = ", omega_i)
+        print("omega_i (non-dimensional) = ", omega_i*bsfl_ref.Lref/bsfl_ref.Uref)
+    else:
+        print("omega_i (dimensional)     = ", omega_i*bsfl_ref.Uref/bsfl_ref.Lref)    
+        print("omega_i (non-dimensional) = ", omega_i)    
     print("omega_i_balance = ", omega_i_balance)
     print("")
     
@@ -1515,9 +1659,9 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     print("Energy balance (RT) = ", energy_bal)
     print("")
 
-    zmin = -1
-    zmax = 1
-
+    zmax = riist.yinf/10
+    zmin = -zmax
+    
     SetMinMaxPlot = True
 
     ptn = plt.gcf().number + 1
@@ -1559,6 +1703,30 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
     f.show()
 
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
+
+    # Plot non-dimensionalized data from solver boussinesq == -2
+    if   ( mob.boussinesq == -2 ):
+
+        ptn = ptn + 1
+        
+        f = plt.figure(ptn)
+        plt.plot(np.real(visc_t_nd), y, 'g', linewidth=1.5, label=r"Viscous ($\bar{\mu}$) (non-dim)")
+        plt.plot(np.real(visc_grad_t_nd), y, 'm', linewidth=1.5, label=r"Viscous ($d\bar{\mu}/dz$) (CHECK THIS !!!!!!!!!!!)")
+        plt.plot(np.real(VelPres_nd), y, 'b', linewidth=1.5, label=r"Velocity-Pressure correlation (non-dim)")
+        plt.plot(np.real(grav_prod_nd), y, 'c', linewidth=1.5, label=r"Gravity Production (non-dim)")
+        plt.xlabel("Energy balance: Non-dimensional", fontsize=18)
+        plt.ylabel("z", fontsize=18)
+        plt.title('Solver boussinesq == -2') 
+        
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.xlim([-0.01, 0.01])
+        if (SetMinMaxPlot):
+            plt.ylim([zmin, zmax])
+            f.show()
+            
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
+
 
     ptn = ptn + 1
 
@@ -1787,8 +1955,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, mob, b
 
     # plt.legend(loc="upper center")
 
-def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, mob, rt_flag):
-
+def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, bsfl_ref, mob, rt_flag):
 
     plt.close('all')
     
@@ -1796,13 +1963,13 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
     Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
     ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
     
-    Sc = mob.Sc
-    Re = mob.Re
-    
-    #print("Sc = ", Sc)
-    #print("Re = ", Re)
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
 
-    # "Balance" Equations for Continuity and Mass
+    #
+    # "Balance" Equations for Continuity and Mass ==> I multiply through by rho'
+    #
+    
     if   ( mob.boussinesq == 1 ):
         LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
         RHS_conti = 0.0*LHS_conti
@@ -1813,7 +1980,12 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
                       +compute_inner_prod(reig, D2r) )/(Re*Sc)
 
     elif ( mob.boussinesq == -2 ):
-        sys.exit("This needs to be added if required")
+        LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
+        RHS_conti = 0.0*LHS_conti
+
+        LHS_mass  = omega_i*compute_inner_prod(reig, reig) + np.multiply(Rhop, compute_inner_prod(reig, weig))
+        RHS_mass  = 0.0*LHS_mass
+
     elif ( mob.boussinesq == -3 ):
         #print("rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape",\
         #      rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape)
@@ -2023,17 +2195,58 @@ def get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig):
 
 
 
+def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag):
 
-
-
-
-
-
-
-
-
-
+    normalize = 1
         
+    max_array = np.zeros(5, dp)
+
+    max_array[0] = np.max(np.abs(ueig_vec))
+    max_array[1] = np.max(np.abs(veig_vec))
+    max_array[2] = np.max(np.abs(weig_vec))
+    max_array[3] = np.max(np.abs(peig_vec))
+    max_array[4] = np.max(np.abs(reig_vec))
+
+    idx_array = np.argsort(max_array)
+    idx_max   = idx_array[-1] # because it sorts in ascending order
+
+    print("")
+    if   (idx_max==0):
+        print("Scaling eigenfunctions with max. of u-vel")
+        norm_s      = np.max(np.abs(ueig_vec))
+    elif (idx_max==1):
+        print("Scaling eigenfunctions with max. of v-vel")
+        norm_s      = np.max(np.abs(veig_vec))
+    elif (idx_max==2):
+        print("Scaling eigenfunctions with max. of w-vel")
+        norm_s      = np.max(np.abs(weig_vec))
+    elif (idx_max==3):
+        print("Scaling eigenfunctions with max. of pressure")
+        norm_s      = np.max(np.abs(peig_vec))
+    elif (idx_max==4):
+        print("Scaling eigenfunctions with max. of density")
+        norm_s      = np.max(np.abs(reig_vec))
+
+    #print("norm_s = ", norm_s)
+
+    #print("max_array = ", max_array)
+    #print("idx_max = ", idx_max)
+    #input("debug")
+    
+    # normalizing u and v by max(abs(u))
+    #norm_s      = np.max(np.abs(ueig_vec))
+    #norm_s_conj = np.max(np.abs(ueig_conj_vec))
+
+    if (normalize==1):
+        ueig_vec = ueig_vec/norm_s
+        veig_vec = veig_vec/norm_s
+        weig_vec = weig_vec/norm_s
+        peig_vec = peig_vec/norm_s
+
+        if (rt_flag):
+            reig_vec    = reig_vec/norm_s
+
+    return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
 
 # using Test
 # using Plots
@@ -2227,3 +2440,42 @@ def get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig):
 
 
 
+    #if (not rt_flag):
+        #pass
+        #Re_stress     = uv_eig.real*bsfl.Up
+        #Re_stress_new = uv_eig_new.real*bsfl.Up
+
+
+
+
+        # if   ( mob.boussinesq == -2 ): # we need to non-dimensionalize eigenfunctions to compare with other solvers
+        #     print("")
+        #     print("Non-dimensionalizing eigenfunctions for R-T solver based on Chandrasekhar Eq.")
+        #     ueig_vec = ueig_vec/bsfl_ref.Uref
+        #     veig_vec = veig_vec/bsfl_ref.Uref
+        #     weig_vec = weig_vec/bsfl_ref.Uref
+        #     peig_vec = peig_vec/(bsfl_ref.rhoref*bsfl_ref.Uref**2.)
+        #     reig_vec = reig_vec/bsfl_ref.rhoref
+
+
+    # ueig_conj_vec = eigvects[0*ny:1*ny, idx_tar2]
+    # veig_conj_vec = eigvects[1*ny:2*ny, idx_tar2]
+    # weig_conj_vec = eigvects[2*ny:3*ny, idx_tar2]
+    # peig_conj_vec = eigvects[3*ny:4*ny, idx_tar2]
+
+
+    #ueig_conj_vec = ueig_conj_vec/norm_s_conj 
+    #veig_conj_vec = veig_conj_vec/norm_s_conj
+    #weig_conj_vec = weig_conj_vec/norm_s_conj 
+    #peig_conj_vec = peig_conj_vec/norm_s_conj
+
+    #ueig_real = 0.5*( ueig_vec + ueig_conj_vec )
+    #ueig_imag = 0.5*( ueig_vec - ueig_conj_vec )
+
+
+
+#    if (not rt_flag):
+#        pass
+        #v_from_pres = dpeig_vec_dy/( 1j*target1 -1j*alpha*bsfl.U )
+        #u_from_pres = -( 1j*alpha*peig_vec + bsfl.Up*v_from_pres )/( 1j*alpha*bsfl.U - 1j*target1 )
+    

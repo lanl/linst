@@ -16,7 +16,7 @@ class Mapping:
         self.D2   = np.zeros((size,size), dp)
         self.y    = np.zeros(size, dp)
 
-    def map_shear_layer(self, sinf, yi, l, DM): # passing yinf (sinf), Gauss-Lobatto points (yi), l and differentiation matrices on [1,-1]
+    def map_shear_layer(self, sinf, yi, l, DM, bsfl_ref): # passing yinf (sinf), Gauss-Lobatto points (yi), l and differentiation matrices on [1,-1]
         """
         Mapping for shear-layer flows: From [-1,1] -> [ymin,ymax]
         """                
@@ -39,7 +39,12 @@ class Mapping:
         self.D1 = np.matmul(np.diag(dyidy), DM[:,:,0])
         self.D2 = np.matmul(np.diag(d2yidy2), DM[:,:,0]) + np.matmul(np.diag(dyidy**2.), DM[:,:,1])
 
-        return self.y, self.D1, self.D2
+        #if ( mtmp.boussinesq == -2 ): # dimensional solver
+        # Only for solver boussinesq == -2
+        self.D1_nondim = bsfl_ref.Lref*self.D1
+        self.D2_nondim = bsfl_ref.Lref**2.*self.D2
+
+        #return self.y, self.D1, self.D2
 
 
     def map_void(self, yi, DM): # void mapping keep matrices and y as is
