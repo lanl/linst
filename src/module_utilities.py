@@ -1481,7 +1481,8 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     rhoref = bsfl_ref.rhoref
     muref  = bsfl_ref.muref
     
-    ny = len(y)
+    ny   = len(y)
+    yinf = riist.yinf
 
     # Get some quantities to compute the balances
     Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
@@ -1702,13 +1703,58 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     else:
         energy_balance_terms(ny, map.y, np.real(VelPres), np.real(visc_t), np.real(grav_prod), filename)
 
+    # Dimensional and non-dimensional coordinates
 
-    zmax = riist.yinf/10
-    zmin = -zmax
+    fac_lim = 10
+    if ( mob.boussinesq == -2 ):
+        zdim = y
+        znondim = y/Lref
+        
+        zmaxdim = yinf/fac_lim
+        zmaxnondim = yinf/Lref/fac_lim
+
+        zmax = zmaxdim
+        zmin = -zmax
+
+    else:
+        zdim = y*Lref
+        znondim = y
+        
+        zmaxdim = yinf*Lref/fac_lim
+        zmaxnondim = yinf/fac_lim
+
+        zmax = zmaxnondim
+        zmin = -zmax
+
+    zmindim = -zmaxdim
+    zminnondim = -zmaxnondim
     
     SetMinMaxPlot = True
 
     ptn = plt.gcf().number + 1
+
+    if ( mob.boussinesq == -2 ):
+
+        # Plot non-dimensionalized data from solver boussinesq == -2        
+        f = plt.figure(ptn)
+        plt.plot(np.real(visc_t_nd), znondim, 'g', linewidth=1.5, label=r"Viscous ($\bar{\mu}$) (non-dim)")
+        plt.plot(np.real(visc_grad_t_nd), znondim, 'm', linewidth=1.5, label=r"Viscous ($d\bar{\mu}/dz$) (CHECK THIS !!!!!!!!!!!)")
+        plt.plot(np.real(VelPres_nd), znondim, 'b', linewidth=1.5, label=r"Velocity-Pressure correlation (non-dim)")
+        plt.plot(np.real(grav_prod_nd), znondim, 'c', linewidth=1.5, label=r"Gravity Production (non-dim)")
+        plt.xlabel("Energy balance: Non-dimensional", fontsize=18)
+        plt.ylabel("z (non-dim)", fontsize=18)
+        plt.title('Solver boussinesq == -2') 
+        
+        plt.gcf().subplots_adjust(left=0.18)
+        plt.gcf().subplots_adjust(bottom=0.15)
+        #plt.xlim([-0.01, 0.01])
+        if (SetMinMaxPlot):
+            plt.ylim([zminnondim, zmaxnondim])
+            f.show()
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
+
+        ptn = ptn + 1
+
 
     f = plt.figure(ptn)
     plt.plot(np.real(LHS), y, 'k', linewidth=1.5, label=r"LHS")
@@ -1721,15 +1767,15 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     if (SetMinMaxPlot):
         plt.ylim([zmin, zmax])
     f.show()
-
+    
     plt.legend(loc="upper center")
-
+    
     ptn = ptn + 1
-
+    
     f = plt.figure(ptn)
     plt.plot(np.real(LHS), y, 'k', linewidth=1.5, label=r"LHS")
     plt.plot(np.real(RHS), y, 'r--', linewidth=1.5, label=r"RHS")
-
+    
     #plt.plot(np.real(Et_integrand), y, 'k-.', linewidth=1.5, label=r"Disturbance kinetic energy")
     plt.plot(np.real(VelPres), y, 'b', linewidth=1.5, label=r"Velocity-Pressure correlation (RHS)")
     plt.plot(np.real(visc_t), y, 'g', linewidth=1.5, label=r"Viscous ($\bar{\mu}$) (RHS)")
@@ -1738,7 +1784,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     plt.plot(np.real(grav_prod), y, 'c', linewidth=1.5, label=r"Gravity Production (RHS)")
     plt.xlabel("Energy balance R-T", fontsize=18)
     plt.ylabel("z", fontsize=18)
-
+    
     plt.gcf().subplots_adjust(left=0.17)
     plt.gcf().subplots_adjust(bottom=0.15)
     #plt.xlim([-0.01, 0.01])
@@ -1748,32 +1794,10 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
 
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
 
-    # Plot non-dimensionalized data from solver boussinesq == -2
-    if   ( mob.boussinesq == -2 ):
-
-        ptn = ptn + 1
-        
-        f = plt.figure(ptn)
-        plt.plot(np.real(visc_t_nd), y, 'g', linewidth=1.5, label=r"Viscous ($\bar{\mu}$) (non-dim)")
-        plt.plot(np.real(visc_grad_t_nd), y, 'm', linewidth=1.5, label=r"Viscous ($d\bar{\mu}/dz$) (CHECK THIS !!!!!!!!!!!)")
-        plt.plot(np.real(VelPres_nd), y, 'b', linewidth=1.5, label=r"Velocity-Pressure correlation (non-dim)")
-        plt.plot(np.real(grav_prod_nd), y, 'c', linewidth=1.5, label=r"Gravity Production (non-dim)")
-        plt.xlabel("Energy balance: Non-dimensional", fontsize=18)
-        plt.ylabel("z", fontsize=18)
-        plt.title('Solver boussinesq == -2') 
-        
-        plt.gcf().subplots_adjust(left=0.17)
-        plt.gcf().subplots_adjust(bottom=0.15)
-        #plt.xlim([-0.01, 0.01])
-        if (SetMinMaxPlot):
-            plt.ylim([zmin, zmax])
-            f.show()
-            
-        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper right', fontsize=8)
-
-
+    
+    
     ptn = ptn + 1
-
+    
     f = plt.figure(ptn)
     plt.plot(np.real(visc_t), y, 'k', linewidth=1.5, label=r"visc_t")
     plt.plot(np.real(compute_inner_prod(D2u, ueig)), y, 'r--', linewidth=1.5, label=r"D2u")
@@ -1787,7 +1811,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     if (SetMinMaxPlot):
         plt.ylim([zmin, zmax])
     f.show()
-
+    
     plt.legend(loc="upper center")
 
     

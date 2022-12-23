@@ -28,7 +28,7 @@ class BuildMatrices:
                 size = 5*ny
 
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval
-                self.boussinesq = -3
+                self.boussinesq = 1
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -1060,6 +1060,23 @@ class BuildMatrices:
         Sc       = bsfl_ref.Sc
         Re       = bsfl_ref.Re
 
+        # To match Chandrasekhar equations
+        MatchChandrasekhar = 0
+        
+        SetDivergenceToZero = 0
+        SetOtherReScTermsToZero = 0
+        coef_zer = 1.
+        
+        if (MatchChandrasekhar==1): # we want to match data from solver boussinesq = -2
+            
+            # Note: for very large Scmidt number the right hand side of continuity and mass
+            # equations are already automatically zero and therefor the 1/3 terms should be
+            # zero too anyway
+            print("Matching Chandrasekhar Equations...")
+            SetDivergenceToZero = 1
+            SetOtherReScTermsToZero = 1
+            coef_zer = 0.
+
         # print("")
         # print('R-T "Sandoval" Equations (non-dimensional)')
         # print("-----------------------------------------------------------------")
@@ -1100,14 +1117,15 @@ class BuildMatrices:
         imin = 0
         imax = ny
 
-        self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = 1j/(3.*Re)*D1
+        self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = coef_zer*1j/(3.*Re)*D1
         self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
 
-        self.mat_a2[imin:imax, imin:imax]           = -4.*id/(3.*Re)
+        #self.mat_a2[imin:imax, imin:imax]           = -4.*id/(3.*Re)
+        self.mat_a2[imin:imax, imin:imax]           = -id/(Re) - coef_zer*1.*id/(3.*Re)
 
         self.mat_b2[imin:imax, imin:imax]           = -id/Re
 
-        self.mat_ab[imin:imax, imin+1*ny:imax+1*ny] = -id/(3.*Re)
+        self.mat_ab[imin:imax, imin+1*ny:imax+1*ny] = -coef_zer*id/(3.*Re)
 
         self.mat_d1[imin:imax, imin:imax]           = D2/Re
 
@@ -1119,12 +1137,13 @@ class BuildMatrices:
 
         self.mat_a2[imin:imax, imin:imax]           = -id/Re
 
-        self.mat_b1[imin:imax, imin+1*ny:imax+1*ny] = 1j/(3.*Re)*D1
+        self.mat_b1[imin:imax, imin+1*ny:imax+1*ny] = coef_zer*1j/(3.*Re)*D1
         self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
                 
-        self.mat_b2[imin:imax, imin:imax]           = -4.*id/(3.*Re)
+        #self.mat_b2[imin:imax, imin:imax]           = -4.*id/(3.*Re)
+        self.mat_b2[imin:imax, imin:imax]           = -id/(Re) -coef_zer*1.*id/(3.*Re)
 
-        self.mat_ab[imin:imax, imin-1*ny:imax-1*ny] = -id/(3.*Re)
+        self.mat_ab[imin:imax, imin-1*ny:imax-1*ny] = -coef_zer*id/(3.*Re)
 
         self.mat_d1[imin:imax, imin:imax]           = D2/Re
 
@@ -1134,15 +1153,17 @@ class BuildMatrices:
         imin = imin + ny
         imax = imax + ny
 
-        self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = 1j/(3.*Re)*D1
+        self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = coef_zer*1j/(3.*Re)*D1
 
         self.mat_a2[imin:imax, imin:imax]           = -id/Re
 
-        self.mat_b1[imin:imax, imin-1*ny:imax-1*ny] = 1j/(3.*Re)*D1
+        self.mat_b1[imin:imax, imin-1*ny:imax-1*ny] = coef_zer*1j/(3.*Re)*D1
 
         self.mat_b2[imin:imax, imin:imax]           = -id/Re
 
-        self.mat_d1[imin:imax, imin:imax]           = 4.*D2/(3.*Re)
+        #self.mat_d1[imin:imax, imin:imax]           = 4.*D2/(3.*Re)
+        self.mat_d1[imin:imax, imin:imax]           = D2/(Re) + coef_zer*1.*D2/(3.*Re)
+        
         self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1 
         self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/Fr2 
 
@@ -1170,7 +1191,7 @@ class BuildMatrices:
         # BUGGY ===============> #self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( 2.*drho2_inv*dRhop*D1 + drho2_inv*dRhopp - drho_inv*D2 -2.*drho3_inv*dRhop*dRhop )/(Re*Sc)
         self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( mat_tmp1 + mat_tmp2 + mat_tmp3 + mat_tmp4 )/(Re*Sc)
 
-        SetDivergenceToZero = 0
+        # Match Chandrasekhar Equations Trick
         if (SetDivergenceToZero==1):
             self.mat_a2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
             self.mat_b2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
@@ -1194,7 +1215,7 @@ class BuildMatrices:
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
-        SetOtherReScTermsToZero = 0
+        # Match Chandrasekhar Equations Trick
         if (SetOtherReScTermsToZero == 1):
             self.mat_a2[imin:imax, imin:imax]           = 0.0
             self.mat_b2[imin:imax, imin:imax]           = 0.0

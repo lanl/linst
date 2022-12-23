@@ -57,18 +57,19 @@ class Baseflow:
             print("")
             print("Main non-dimensional numbers and corresponding reference quantities:")
             print("====================================================================")
-            print("Froude number Fr              = ", self.Fr)
-            print("Schmidt number Sc             = ", self.Sc)
-            print("Reynolds number Re            = ", self.Re)
-            print("Reference gravity gref        = ", self.gref)
-            print("Reference velocity Uref       = ", self.Uref)
+            print("Atwood number At               = ", self.At)
+            print("Froude number Fr               = ", self.Fr)
+            print("Schmidt number Sc              = ", self.Sc)
+            print("Reynolds number Re             = ", self.Re)
+            print("Reference gravity gref [m/s^2] = ", self.gref)
+            print("Reference velocity Uref [m/s]  = ", self.Uref)
             print("")
-            print("Remaining computed quantities:")
-            print("------------------------------")
-            print("Mass transfer Peclet number ( Pe = Re*Sc )           = ", self.Re*self.Sc)
-            print("Reference mass diffusivity Dref ( nuref/Sc )         = ", self.Dref)
-            print("Reference length scale Lref ( Uref^2/(Fr^2*gref) )   = ", self.Lref)
-            print("Reference kinematic viscosity nuref ( Uref*Lref/Re ) = ", self.nuref)
+            print("Other reference quantities:")
+            print("---------------------------")
+            print("Mass transfer Peclet number ( Pe = Re*Sc )                      = ", self.Re*self.Sc)
+            print("Ref. mass diffusivity Dref [m^2/s] ( Dref = nuref/Sc )          = ", self.Dref)
+            print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )         = ", self.Lref)
+            print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
             print("")
             
         # self.Re = 0.0
@@ -248,23 +249,27 @@ class RayleighTaylorBaseflow(Baseflow):
             self.Rhop  = rhoref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
             self.Rhopp = 2.0*rhoref*At/(delta_dim*np.sqrt(pi))*(-2.*zdim/delta_dim**2.)*np.exp( -zdim**2/delta_dim**2 )
 
-            # Compute dimensional viscosity and its derivatives
-            self.Mu    = muref*( 1. + At*erf(zdim/delta_dim) )
-            self.Mup   = muref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
-
-            #print("")
-            #print("Mup is hard-coded to zero")
-            #print("")
-
-            #self.Mup   = 0.0*self.Mup
-
+            # To Match Chandrasekhar and simplified Sandoval Equations, I need to use constant mu
+            # in Chandrasekhar equations, i.e. mu = muref
+            UseConstantMu = True
+            if (UseConstantMu):
+                print("")
+                print("Using constant dynamic viscosity in baseflow setup")
+                print("")
+                self.Mu  = muref*np.ones(size)
+                self.Mup = 0.0*self.Mu
+            else:
+                # Compute dimensional viscosity and its derivatives
+                self.Mu  = muref*( 1. + At*erf(zdim/delta_dim) )
+                self.Mup = muref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
+                
             # Compute dimensional kinematic viscosity
             nu         = np.divide(self.Mu, self.Rho)
             nu0        = muref/rhoref
 
             if ( np.abs(nu0-nuref) > tol_c ):
-                sys.exit("Kinematic viscosity inconsistency!!!!!!!")
-
+               sys.exit("Kinematic viscosity inconsistency!!!!!!!")
+            
             # Compute non-dimensional density and its derivatives (d/dy and d^2/dy^2)
             self.Rho_nd   = 1/rhoref*self.Rho
             # drho_dim/dy_dim = rhoref/Lref*(drho/dy) ==> drho/dy = Lref/rhoref*(drho_dim/dy_dim)
@@ -300,7 +305,8 @@ class RayleighTaylorBaseflow(Baseflow):
             for ii in range(0, size):
                 #print("np.abs(nu0-nu[ii]), tol_c = ", np.abs(nu0-nu[ii]), tol_c)
                 if ( np.abs(nu0-nu[ii]) > tol_c ):
-                    sys.exit("Kinematic viscosity is not constant!!!!!!!!")
+                    warnings.warn("Kinematic viscosity is not constant!!!!!!!!")
+                    #sys.exit("Kinematic viscosity is not constant!!!!!!!!")
             
             #print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
             #print("nu0-np.amin(nu)                      = ", nu0-np.amin(nu))
