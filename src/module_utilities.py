@@ -1401,7 +1401,7 @@ def check_lmap_val_reset_if_needed(Var, map, lmap, ny):
 
 def write_stability_banana(npts_alp, npts_re, iarr, alpha, Re_range, filename):
 
-    work_dir      = "/home/aph/incompressible-stability-equations/src"
+    work_dir      = "./"
     save_path     = work_dir #+ '/' + folder1
     completeName  = os.path.join(save_path, filename)
     fileoutFinal  = open(completeName,'w')
