@@ -2352,7 +2352,7 @@ def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_
 
 def energy_balance_terms(npts, y, t1, t2, t3, filename):
     
-    work_dir      = "/home/aph/incompressible-stability-equations/src"
+    work_dir      = "./"
     save_path     = work_dir #+ '/' + folder1
     completeName  = os.path.join(save_path, filename)
     fileoutFinal  = open(completeName,'w')
