@@ -72,11 +72,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
         bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, bsfl_ref, mtmp)
 
-        #print("bsfl_ref", bsfl_ref)
-        print("")
-        print("Deletting instance mtmp")
-        del mtmp
-
     else:
         if ( baseflowT == 1 ):
             if (ire==0):
@@ -113,7 +108,12 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     #################################################
         
     # Create instance for Class SolveGeneralizedEVP
-    solve = msg.SolveGeneralizedEVP(ny, rt_flag, prim_form)
+    solve = msg.SolveGeneralizedEVP(ny, rt_flag, prim_form, mtmp.boussinesq)
+
+    print("")
+    print("Deletting instance mtmp")
+    del mtmp
+
     
     # Build matrices and solve global/local problem
     omega_all, eigvals_filtered, mob, q_eigvect = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
@@ -132,18 +132,47 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         
         # Find index of target eigenvalue to extract eigenvector
         idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target1, target1)
+
+        print("")
+        print("Eigenvector will be extracted for eigenvalue omega = ", solve.EigVal[idx_tar1])
+        q_eigvect = solve.EigVec[:,idx_tar1]
     else:
         idx_tar1 = -999
 
-    # Get eigenvectors
-    ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
+    #print("q_eigvect.shape = ", q_eigvect.shape)
 
+    # Get eigenvectors
+    norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
+
+    if (not Local): solve.EigVec = solve.EigVec/norm_s
+
+    mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob)
+
+    #####
+    #idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.578232), 0.0+1j*0.578232)
+    #idx_tar3, found3 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.448152), 0.0+1j*0.448152)
+    #idx_tar4, found4 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.366181), 0.0+1j*0.366181)
+
+    #mod_util.plot_real_imag_part(solve.EigVec[0:1*ny,idx_tar1], "u (mode 1)", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(solve.EigVec[0:1*ny,idx_tar2], "u (mode 2)", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(solve.EigVec[0:1*ny,idx_tar3], "u (mode 3)", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(solve.EigVec[0:1*ny,idx_tar4], "u (mode 4)", map.y, rt_flag, mob)
+
+    mod_util.write_eigvects_out_new(map.y, ueig, veig, weig, peig, reig, Local)
+    
+    input("Debug plot")
+    
     # Plot eigenvectors if needed
     #mod_util.get_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
 
     # Unwrap and shift phase
-    Shift = 0   
-    ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps = mod_util.unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map)
+    Shift = 0
+    ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps = mod_util.unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_flag)
 
         
     # Energy balance for Rayleigh-Taylor + Check that equations fullfilled by eigenfunctions
@@ -167,7 +196,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         mod_util.check_mass_continuity_satisfied_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
         map.D1, map.D2, map.y, alpha_cur, beta_cur, np.imag(omega_cur), bsfl, bsfl_ref, mob, rt_flag)
 
-        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
+        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ):
             scale_fac = bsfl_ref.Lref
         else:
             scale_fac = 1.0
@@ -184,9 +213,47 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         print("lambda_min (dimensional) = ", lambda_min*scale_fac)
         print("lambda_max (dimensional) = ", lambda_max*scale_fac)
 
+        
+    # For R-T computations: Compute non-dimensional growth rate and wave-number using Chandrasekhar time and length scales
+    if (rt_flag):
+        print("")
+        print("Non-dimensional growth rate and wavenumber using Chandrasekhar time ans length scales")
+        print("=====================================================================================")
+    
+        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ): # non-dimensional solvers
 
+            if   ( mob.boussinesq == 1 ):  # Boussinesq solver
+                print("Boussinesq R-T solver")                
 
+            elif ( mob.boussinesq == -3 ): # Sandoval solver
+                print("Sandoval R-T solver")
 
+            elif ( mob.boussinesq == -4 ): # Modified Sandoval solver
+                print("Modified Sandoval R-T solver")
+    
+            print("Nondimensional growth rate (Chandrasekhar time scale)   n = ", iarr.omega_dim*bsfl_ref.Tscale_Chandra)
+            # For these solvers the wavenumber is non-dimensional (non-dimensionalized by Lref)
+            print("Nondimensional wave-number (Chandrasekhar length scale) k = ",riist.alpha/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra)
+
+            reig_nd = reig
+            weig_nd = weig
+            alpha_nd = alpha_cur
+            beta_nd = beta_cur
+            mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y)
+            mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y, bsfl, mob)
+            
+        elif ( mob.boussinesq == -2):                         # dimensional solver
+            print("Chandrasekhar R-T solver")
+            print("Nondimensional growth rate (Chandrasekhar time scale)   n = ", iarr.omega_dim*bsfl_ref.Tscale_Chandra)
+            # Note: For solver -2, the wavenumber is made dimensional in main.py
+            print("Nondimensional wave-number (Chandrasekhar length scale) k = ",riist.alpha*bsfl_ref.Lscale_Chandra)
+
+            reig_nd = reig/bsfl_ref.rhoref
+            weig_nd = weig/bsfl_ref.Uref
+            alpha_nd = alpha_cur*bsfl_ref.Lref
+            beta_nd = beta_cur*bsfl_ref.Lref
+            mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y/bsfl_ref.Lref)
+            mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y/bsfl_ref.Lref, bsfl, mob)
 
 
 

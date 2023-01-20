@@ -25,3 +25,5 @@ class MainArrays:
         self.omega_array = np.zeros((n_re, n_alp), dpc)
         self.re_array = np.zeros(n_re, dp)
 
+        self.omega_dim = np.zeros(1, dpc)
+        self.omega_nondim = np.zeros(1, dpc)

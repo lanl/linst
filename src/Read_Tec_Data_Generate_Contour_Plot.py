@@ -52,6 +52,46 @@ def ReadTecplotFormattedDatta(filename, nx, ny):
     return renum, alpha, omegar, omegai
 
 
+def ReadTecplotFormattedEigenfunction_2D(filename, nx, ny):
+    
+    # Loading file data into numpy array and storing it in variable called data_collected
+    data_collected = np.loadtxt(filename, skiprows=3, dtype=float)
+
+    # Printing data stored
+    #print(data_collected)
+    
+    #print(data_collected.shape)
+    
+    #print("data_collected.dtype = ",data_collected.dtype)
+    
+    xx = data_collected[:,0]
+    zz = data_collected[:,1]
+    
+    rho_d = data_collected[:,2]
+    
+    x = np.zeros((nx,ny), dp)
+    z = np.zeros((nx,ny), dp)
+    
+    rho_dist = np.zeros((nx,ny), dp)
+    
+    #print(renum.shape)
+    
+    count = 0
+    
+    for j in range(0,ny):
+        
+        for i in range(0,nx):
+            
+            x[i,j] = xx[count]
+            z[i,j] = zz[count]
+            
+            rho_dist[i,j] = rho_d[count]
+            
+            count = count + 1
+        
+    return x, z, rho_dist
+
+
 #####################################################################################
 #####################################################################################
 
@@ -86,21 +126,24 @@ i8  = np.dtype('i8') # integer 8
 #####################################################
 
 # Type of plot
-tplot  = 3 # 1 -> line plot, 2 -> contour plot, 3 -> line plot with alpha as x-axis
+tplot  = 4 # 1 -> line plot, 2 -> contour plot, 3 -> line plot with alpha as x-axis, 4 -> 2d (reconstructed) eigenfunctions
 
 # Number of files to read
-nfiles = 2
+nfiles = 1
 
 # File names and dimensions
 
 # File 1
-nx1 = 1
-ny1 = 101
-filename1 =  "Banana_tec_bottom_rt_atw0pt5_atwmu0pt5_ny201.dat" #"Banana_tec_poiseuille_top.dat" #"Banana_tec_alpha_1.dat"  "Banana_tec_bottom_rt_atw1over3_atwmu1over3_ny181.dat" #
+nx1 = 51
+ny1 = 351
+filename1 = "Eigenfunction_2d_rho_ny351.dat" #"Banana_tec_bottom_rt_atw0pt5_atwmu0pt5_ny201.dat" #"Banana_tec_poiseuille_top.dat" #"Banana_tec_alpha_1.dat"  "Banana_tec_bottom_rt_atw1over3_atwmu1over3_ny181.dat" #
 
-re1, alp1, wr1, wi1 = ReadTecplotFormattedDatta(filename1, nx1, ny1)
+if (tplot == 4):
+    x, z, rho_dist = ReadTecplotFormattedEigenfunction_2D(filename1, nx1, ny1)
+else:
+    re1, alp1, wr1, wi1 = ReadTecplotFormattedDatta(filename1, nx1, ny1)
 
-if (nfiles == 2):
+if (nfiles == 2 and tplot != 4):
     # File 2
     nx2 = 1
     ny2 = 101
@@ -198,6 +241,36 @@ elif   (tplot==3): # line plot
     plt.legend(loc="upper right")
     fig.show()
 
+elif (tplot==4): # contour plot ==> 2D eigenfunctions
+    
+    fig = plt.figure()
+    
+    Max_ct1 = np.amax(np.abs(rho_dist))
+    print("Maximum = ", Max_ct1)
+    
+    levels = np.linspace(-Max_ct1, Max_ct1, 50)
+    
+    cp = plt.contourf(x, z, rho_dist, levels=levels, cmap=cm.jet)
+    
+    plt.xlabel(r"x", fontsize=18)
+    plt.ylabel(r"z", fontsize=18)
+    #plt.title("Stability diagram")
+    
+    #ax.set_title('Stability diagram')
+    #ax.set_xlabel('Reynolds number (Re)', fontsize=18)
+    #ax.set_ylabel(r'$\alpha$', fontsize=18)
+    fig.subplots_adjust(left=0.15)
+    fig.subplots_adjust(bottom=0.16)
+    #fig.subplots_adjust(right=0.88)
+
+    #plt.colorbar()
+    #plt.colorbar(format=ticker.FuncFormatter(fmt))
+    plt.colorbar(format=ticker.FuncFormatter(major_formatter))
+
+    #plt.xlim([5000, 50000])
+    plt.ylim([-0.00025, 0.00025])
+
+    plt.show()
 
     
 else:

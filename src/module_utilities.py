@@ -81,7 +81,7 @@ def get_idx_of_closest_eigenvalue(eigvals, abs_target, target):
     # print("np.sort(diff_array_real) = ", np.sort(diff_array_real))
     # print("np.sort(diff_array_abs) = ", np.sort(diff_array_abs))
 
-    # print("idx_i, idx_r, idx_a = ", idx_i, idx_r, idx_a)
+    #print("idx_i, idx_r, idx_a = ", idx_i, idx_r, idx_a)
 
     # input("1111111")
 
@@ -235,55 +235,95 @@ def plot_phase(phase, str_var, y):
 
     f1.show()
 
-def plot_real_imag_part(eig_fct, str_var, y):
+def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob):
 
     ptn = plt.gcf().number + 1
 
-    #mv = 20
-    
     f1 = plt.figure(ptn)
-    plt.plot(eig_fct.real, y, 'k', linewidth=1.5)
-    if str_var == "u":
-        plt.xlabel(r'$\hat{u}_r$', fontsize=20)
-    elif str_var == "v":
-        plt.xlabel(r'$\hat{v}_r$', fontsize=20)
-    elif str_var == "w":
-        plt.xlabel(r'$\hat{w}_r$', fontsize=20)
-    elif str_var == "p":
-        plt.xlabel(r'$\hat{p}_r$', fontsize=20)
-    elif str_var == "r":
-        plt.xlabel(r'$\hat{\rho}_r$', fontsize=20)
+    if (rt_flag and mob.boussinesq == -555):
+        plt.plot(y, eig_fct.real, 'k', linewidth=1.5)
+        plt.xlabel('x', fontsize=16)
+        if str_var == "u":
+            plt.ylabel(r'$\hat{u}_r$', fontsize=16)
+        elif str_var == "v":
+            plt.ylabel(r'$\hat{v}_r$', fontsize=16)
+        elif str_var == "w":
+            plt.ylabel(r'$\hat{w}_r$', fontsize=16)
+        elif str_var == "p":
+            plt.ylabel(r'$\hat{p}_r$', fontsize=16)
+        elif str_var == "r":
+            plt.ylabel(r'$\hat{\rho}_r$', fontsize=16)
+        else:
+            plt.ylabel("real(" +str_var + ")", fontsize=16)
+            print("Not an expected string!!!!!")
     else:
-        plt.xlabel("real(" +str_var + ")", fontsize=20)
-        print("Not an expected string!!!!!")
-    plt.ylabel('y', fontsize=20)
-    plt.gcf().subplots_adjust(left=0.16)
-    plt.gcf().subplots_adjust(bottom=0.16)
+        plt.plot(eig_fct.real, y, 'k', linewidth=1.5)
+        plt.ylabel('y', fontsize=16)
+        if str_var == "u":
+            plt.xlabel(r'$\hat{u}_r$', fontsize=16)
+        elif str_var == "v":
+            plt.xlabel(r'$\hat{v}_r$', fontsize=16)
+        elif str_var == "w":
+            plt.xlabel(r'$\hat{w}_r$', fontsize=16)
+        elif str_var == "p":
+            plt.xlabel(r'$\hat{p}_r$', fontsize=16)
+        elif str_var == "r":
+            plt.xlabel(r'$\hat{\rho}_r$', fontsize=16)
+        else:
+            plt.xlabel("real(" +str_var + ")", fontsize=16)
+            print("Not an expected string!!!!!")
+
     #plt.xlim([-1, 1])
     #plt.ylim([-mv, mv])
     f1.show()
+    f1.subplots_adjust(bottom=0.16)
+    f1.subplots_adjust(left=0.19)
+
+    #plt.gcf().subplots_adjust(left=0.19)
+    #plt.gcf().subplots_adjust(bottom=0.16)
+
 
     f2 = plt.figure(ptn+1)
-    plt.plot(eig_fct.imag, y, 'k', linewidth=1.5)
-    if str_var == "u":
-        plt.xlabel(r'$\hat{u}_i$', fontsize=20)
-    elif str_var == "v":
-        plt.xlabel(r'$\hat{v}_i$', fontsize=20)
-    elif str_var == "w":
-        plt.xlabel(r'$\hat{w}_i$', fontsize=20)
-    elif str_var == "p":
-        plt.xlabel(r'$\hat{p}_i$', fontsize=20)
-    elif str_var == "r":
-        plt.xlabel(r'$\hat{\rho}_i$', fontsize=20)
+
+    if (rt_flag and mob.boussinesq == -555):
+        plt.plot(y, eig_fct.imag, 'k', linewidth=1.5)
+        plt.xlabel('x', fontsize=16)
+        if str_var == "u":
+            plt.ylabel(r'$\hat{u}_i$', fontsize=16)
+        elif str_var == "v":
+            plt.ylabel(r'$\hat{v}_i$', fontsize=16)
+        elif str_var == "w":
+            plt.ylabel(r'$\hat{w}_i$', fontsize=16)
+        elif str_var == "p":
+            plt.ylabel(r'$\hat{p}_i$', fontsize=16)
+        elif str_var == "r":
+            plt.ylabel(r'$\hat{\rho}_i$', fontsize=16)
+        else:
+            plt.ylabel("imag(" +str_var + ")", fontsize=16)
+            print("Not an expected string!!!!!")
     else:
-        plt.xlabel("imag(" +str_var + ")", fontsize=20)
-        print("Not an expected string!!!!!")
-    plt.ylabel('y', fontsize=20)
-    plt.gcf().subplots_adjust(left=0.16)
-    plt.gcf().subplots_adjust(bottom=0.16)
+        plt.plot(eig_fct.imag, y, 'k', linewidth=1.5)
+        plt.ylabel('y', fontsize=16)
+        if str_var == "u":
+            plt.xlabel(r'$\hat{u}_i$', fontsize=16)
+        elif str_var == "v":
+            plt.xlabel(r'$\hat{v}_i$', fontsize=16)
+        elif str_var == "w":
+            plt.xlabel(r'$\hat{w}_i$', fontsize=16)
+        elif str_var == "p":
+            plt.xlabel(r'$\hat{p}_i$', fontsize=16)
+        elif str_var == "r":
+            plt.xlabel(r'$\hat{\rho}_i$', fontsize=16)
+        else:
+            plt.xlabel("imag(" +str_var + ")", fontsize=16)
+            print("Not an expected string!!!!!")
+
     #plt.xlim([-1, 1])
     #plt.ylim([-mv, mv])
+    f2.subplots_adjust(bottom=0.16)
+    f2.subplots_adjust(left=0.19)
     f2.show()
+
 
 def plot_amplitude(eig_fct, str_var, y):
 
@@ -472,10 +512,10 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
     input("debug all omega")
 
 
-def get_normalize_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
+def get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
     
-    y  = map.y
-    D1 = map.D1
+    #y  = map.y
+    #D1 = map.D1
 
     if (Local):
         ueig_vec    = q_eigvect[0*ny:1*ny]
@@ -484,28 +524,44 @@ def get_normalize_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, mob, bsfl
         peig_vec    = q_eigvect[3*ny:4*ny]
 
         if (rt_flag):
-            reig_vec    = q_eigvect[4*ny:5*ny]
+            if ( mob.boussinesq == -555 ):
+                ueig_vec    = q_eigvect[0*ny:1*ny]
+                veig_vec    = q_eigvect[1*ny:2*ny]
+                reig_vec    = q_eigvect[2*ny:3*ny]
+                peig_vec    = q_eigvect[3*ny:4*ny]
+                
+                weig_vec    = 0.0*ueig_vec
+            else:
+                reig_vec    = q_eigvect[4*ny:5*ny]
         else:
             reig_vec    = 0.0*ueig_vec
             
     else:
-        ueig_vec    = eigvects[0*ny:1*ny, idx_tar1]
-        veig_vec    = eigvects[1*ny:2*ny, idx_tar1]
-        weig_vec    = eigvects[2*ny:3*ny, idx_tar1]
-        peig_vec    = eigvects[3*ny:4*ny, idx_tar1]
+        ueig_vec    = q_eigvect[0*ny:1*ny]
+        veig_vec    = q_eigvect[1*ny:2*ny]
+        weig_vec    = q_eigvect[2*ny:3*ny]
+        peig_vec    = q_eigvect[3*ny:4*ny]
 
         if (rt_flag):
-            reig_vec    = eigvects[4*ny:5*ny, idx_tar1]
+            if ( mob.boussinesq == -555 ):
+                ueig_vec    = q_eigvect[0*ny:1*ny]
+                veig_vec    = q_eigvect[1*ny:2*ny]
+                reig_vec    = q_eigvect[2*ny:3*ny]
+                peig_vec    = q_eigvect[3*ny:4*ny]
+                
+                weig_vec    = 0.0*ueig_vec
+            else:
+                reig_vec    = q_eigvect[4*ny:5*ny]
         else:
             reig_vec    = 0.0*ueig_vec
-
+    
     # Normalize eigenvectors
-    ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec = normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag)
+    norm_s, ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec = normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag)
 
-    return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
+    return norm_s, ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
 
     
-def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map):
+def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_flag):
     
     phase_u = np.zeros(ny, dp)
     phase_v = np.zeros(ny, dp)
@@ -547,6 +603,7 @@ def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map):
     
     # Plot some results
     plot_phase(phase_u, "phase_u", map.y)
+    plot_phase(phase_v, "phase_v", map.y)
     
     #print("exp(1j*phase) = ", np.exp(1j*phase_u))
     #print("exp(1j*phase_unwrapped) = ", np.exp(1j*phase_u_uwrap))
@@ -592,13 +649,13 @@ def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map):
     
     #ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
     
-    mod_util.plot_real_imag_part(ueig_ps, "u", map.y)
-    #mod_util.plot_real_imag_part(veig_ps, "v", map.y)
-    mod_util.plot_real_imag_part(weig_ps, "w", map.y)
-    mod_util.plot_real_imag_part(peig_ps, "p", map.y)
-    mod_util.plot_real_imag_part(reig_ps, "r", map.y)
+    mod_util.plot_real_imag_part(ueig_ps, "u", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(veig_ps, "v", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(weig_ps, "w", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(peig_ps, "p", map.y, rt_flag, mob)
+    mod_util.plot_real_imag_part(reig_ps, "r", map.y, rt_flag, mob)
     
-    #input("Check real imag parts")
+    #input("Check real imag parts + PHASE")
     
     mod_util.plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
 
@@ -1232,6 +1289,18 @@ def trapezoid_integration(fct, y):
 
     return integral
 
+def trapezoid_integration_cum(fct, y):
+
+    nn = len(y)
+    wt = np.zeros(nn-1, dp)
+    
+    integral = np.zeros(nn, dp)
+
+    for i in range(0, nn-1):
+       wt[i]       = ( y[i+1]-y[i] )/2.0
+       integral[i+1] = integral[i] + wt[i]*( fct[i] + fct[i+1] )
+
+    return integral
 
 def plot_production_dissipation(prod, dissip, pres_trans, Et, Mod_term, Mod_term_alt, y):
 
@@ -1355,6 +1424,29 @@ def write_eigvects_out(q, y, i, ny):
         datafile_path = "./Eigenfunctions_Local_Solution_" + str(i) + ".txt"
     np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
 
+
+
+def write_eigvects_out_new(y, ueig, veig, weig, peig, reig, Local):
+
+    # variables are u, v, w, p
+    # data_out = np.column_stack([ y, np.abs(q[idx_u]), np.abs(q[idx_v]), np.abs(q[idx_w]), np.abs(q[idx_p]), \
+    #                              q[idx_u].real, q[idx_v].real, q[idx_w].real, q[idx_p].real, \
+    #                              q[idx_u].imag, q[idx_v].imag, q[idx_w].imag, q[idx_p].imag                  ])
+
+    data_out = np.column_stack([ y, np.abs(ueig), np.abs(veig), np.abs(weig), np.abs(peig), np.abs(reig), \
+                                 ueig.real, veig.real, weig.real, peig.real, peig.real, \
+                                 ueig.imag, veig.imag, weig.imag, peig.imag, peig.imag                  ])
+
+
+    if (Local):
+        datafile_path = "./Eigenfunctions_Local_Solution.txt"
+    else:
+        datafile_path = "./Eigenfunctions_Global_Solution.txt"
+
+    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
+                                              '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+
+    
 def set_local_flag_display_sizes(npts_alp, npts_re, plot_eigvcts):
 
     if ( npts_alp == 1 and npts_re == 1 ):
@@ -1519,7 +1611,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
         peig_nd = peig/(rhoref*Uref**2.)
         reig_nd = reig/rhoref
 
-        ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd = normalize_eigenvectors(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, rt_flag)
+        norm_s, ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd = normalize_eigenvectors(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, rt_flag)
         
         vp1_nd = -compute_inner_prod(ueig_nd, 1j*alpha_nd*peig_nd)
         vp2_nd = -compute_inner_prod(veig_nd, 1j*beta_nd*peig_nd)
@@ -1568,20 +1660,31 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
         visc_grad2  = compute_inner_prod(ueig, ia*weig) + compute_inner_prod(veig, ib*weig) + compute_inner_prod(weig, Dw)
         visc_grad_t = np.multiply(Mup, visc_grad1 + visc_grad2)        
 
-        # Need to check this by coputing it for solver -3
+        # Need to check this by computing it for solver -3
         visc_grad1_nd  = compute_inner_prod(ueig_nd, Du_nd) + compute_inner_prod(veig_nd, Dv_nd) + compute_inner_prod(weig_nd, Dw_nd)
         visc_grad2_nd  = compute_inner_prod(ueig_nd, ia_nd*weig_nd) + compute_inner_prod(veig_nd, ib_nd*weig_nd) + compute_inner_prod(weig_nd, Dw_nd)
         # The following line does not seem to work for the same reason as above probably 
         #visc_grad_t_nd = np.multiply(bsfl.Mup_nd, visc_grad1_nd + visc_grad2_nd)
         visc_grad_t_nd = np.divide(visc_grad1_nd + visc_grad2_nd, Re)        
 
-    elif ( mob.boussinesq == -3 ):
+    elif ( mob.boussinesq == -3 or mob.boussinesq == -4 ):
         visc1_3Re = compute_inner_prod(ueig, ia2*ueig) + compute_inner_prod(veig, ib2*veig) + compute_inner_prod(weig, D2w)
         visc2_3Re = compute_inner_prod(ueig, iab*veig) + compute_inner_prod(veig, iab*ueig) + compute_inner_prod(weig, ia*Du)
         visc3_3Re = compute_inner_prod(ueig, ia*Dw) + compute_inner_prod(veig, ib*Dw) + compute_inner_prod(weig, ib*Dv)
 
         visc_t = np.divide(visc1 + visc2 + visc3, Re)
         visc_t_3Re = np.divide(visc1_3Re + visc2_3Re + visc3_3Re, 3*Re)
+
+        if (mob.boussinesq == -4):
+
+            visc_t = np.multiply(Mu, visc_t)
+            visc_t_3Re = np.multiply(Mu, visc_t_3Re)
+
+            # Viscous (proportional to d mu_baseflow/dz)
+            visc_grad1  = compute_inner_prod(ueig, Du) + compute_inner_prod(veig, Dv) + compute_inner_prod(weig, Dw)
+            visc_grad2  = compute_inner_prod(ueig, ia*weig) + compute_inner_prod(veig, ib*weig) + compute_inner_prod(weig, Dw)
+            visc_grad3  = -2./3.*( compute_inner_prod(weig, ia*ueig) + compute_inner_prod(weig, ib*veig) + compute_inner_prod(weig, Dw) )
+            visc_grad_t = np.multiply(Mup, visc_grad1 + visc_grad2 + visc_grad3 )/Re        
         
     # Build LHS and RHS
     if   ( mob.boussinesq == 1 ):
@@ -1604,13 +1707,16 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
         LHS = np.multiply(Et_integrand, Rho)*2*omega_i
         # Right-hand-side
         RHS = VelPres + visc_t + visc_grad_t + grav_prod
-    elif ( mob.boussinesq == -3 ):
+    elif ( mob.boussinesq == -3 or mob.boussinesq == -4 ):
         # Gravity production term
         grav_prod = -compute_inner_prod(reig, weig)/Fr2 # Nondimensional here
         # Left-hand-side
         LHS = np.multiply(Et_integrand, Rho)*2*omega_i
         # Right-hand-side
         RHS = VelPres + grav_prod + visc_t_3Re + visc_t
+
+        if (mob.boussinesq == -4):
+            RHS = RHS + visc_grad_t 
         
     ##########################################
     # CHECK ALL THIS!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1620,7 +1726,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
         Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2), y)
     elif ( mob.boussinesq == -2 ):
         Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2*Rho), y)
-    elif ( mob.boussinesq == -3 ):
+    elif ( mob.boussinesq == -3 or mob.boussinesq == -4 ):
         Et_int = trapezoid_integration(np.multiply(np.real(Et_integrand), 2*Rho), y)
         
     VelPres_int = trapezoid_integration(np.real(VelPres), y)
@@ -1628,7 +1734,7 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     
     if   ( mob.boussinesq == -2 ):
         visc_grad_t_int = trapezoid_integration(np.real(visc_grad_t), y)
-    elif ( mob.boussinesq == -3 ):
+    elif ( mob.boussinesq == -3 or mob.boussinesq == -4 ):
         visc_t_3Re_int = trapezoid_integration(np.real(visc_t_3Re), y)
 
     grav_prod_int   = trapezoid_integration(np.real(grav_prod), y)
@@ -1637,11 +1743,11 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
         omega_i_balance = ( VelPres_int + visc_t_int + grav_prod_int )/Et_int
     elif   ( mob.boussinesq == -2 ):
         omega_i_balance = ( VelPres_int + visc_t_int + visc_grad_t_int + grav_prod_int )/Et_int
-    elif   ( mob.boussinesq == -3 ):
+    elif   ( mob.boussinesq == -3 or mob.boussinesq == -4 ):
         omega_i_balance = ( VelPres_int + visc_t_int + visc_t_3Re_int + grav_prod_int )/Et_int
 
     WriteThisInfo=False
-    if   ( mob.boussinesq == -3 and WriteThisInfo ):
+    if   ( ( mob.boussinesq == -3 or mob.boussinesq == -4 ) and WriteThisInfo ):
         print("VelPres_int    = ", VelPres_int)
         print("visc_t_int     = ", visc_t_int)
         print("visc_t_3Re_int = ", visc_t_3Re_int)
@@ -1699,13 +1805,13 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
     filename = 'Energy_balance_' + str_loc + '_alpha_' + str_alp + '_beta_' + str_bet + '_boussi_' + str_b + '_' + str(abs(mob.boussinesq)) + '.txt'
     
     if ( mob.boussinesq == -2 ):
-        energy_balance_terms(ny , map.y/Lref, np.real(VelPres_nd), np.real(visc_t_nd), np.real(grav_prod_nd), filename)
+        write_energy_balance_terms(ny , map.y/Lref, np.real(VelPres_nd), np.real(visc_t_nd), np.real(grav_prod_nd), filename)
     else:
-        energy_balance_terms(ny, map.y, np.real(VelPres), np.real(visc_t), np.real(grav_prod), filename)
+        write_energy_balance_terms(ny, map.y, np.real(VelPres), np.real(visc_t), np.real(grav_prod), filename)
 
     # Dimensional and non-dimensional coordinates
 
-    fac_lim = 10
+    fac_lim = 1
     if ( mob.boussinesq == -2 ):
         zdim = y
         znondim = y/Lref
@@ -2051,6 +2157,17 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
                       +compute_inner_prod(reig, ib2*reig) \
                       +compute_inner_prod(reig, D2r) )/(Re*Sc)
 
+        # Equation for b
+        LHS_bEq = 2*omega_i*np.multiply(rho2_inv, compute_inner_prod(reig, reig))
+
+        bsfl_t1 = -2.*np.multiply(rho2_inv, Rhop)
+        
+        RHS_bEq = np.multiply(bsfl_t1, compute_inner_prod(reig, weig))
+        -2.*np.multiply(rho_inv, compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw))
+        
+        #print("omega_i = ", omega_i)
+        #print("max ( LHS_mass, RHS_mass ) = ", np.max(np.abs(LHS_mass)), np.max(np.abs(RHS_mass)))
+
     elif ( mob.boussinesq == -2 ):
         LHS_conti = compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw)
         RHS_conti = 0.0*LHS_conti
@@ -2066,12 +2183,12 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
         peig_nd = peig/(rhoref*Uref**2.)
         reig_nd = reig/rhoref
 
-        ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd = normalize_eigenvectors(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, rt_flag)
+        norm_s, ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd = normalize_eigenvectors(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, rt_flag)
 
         LHS_mass_nd = omega_i*Lref/Uref*compute_inner_prod(reig_nd, reig_nd) + np.multiply(bsfl.Rhop_nd, compute_inner_prod(reig_nd, weig_nd))
         RHS_mass_nd = 0.0*LHS_mass        
 
-    elif ( mob.boussinesq == -3 ):
+    elif ( mob.boussinesq == -3 or mob.boussinesq == -4 ):
         #print("rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape",\
         #      rho2_inv.shape, Rhop.shape, Rhopp.shape, rho_inv.shape, rho3_inv.shape)
 
@@ -2110,7 +2227,7 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
 
     PlotIt = 1
     
-    if ( mob.boussinesq == 1 or mob.boussinesq == -3 and PlotIt == 1 ):
+    if ( ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ) and PlotIt == 1 ):
 
         ptn = plt.gcf().number + 1
         
@@ -2147,8 +2264,12 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
     print("---------------------------------------------------")
     energy_bal_cont = np.amax(np.abs(LHS_conti-RHS_conti))
     energy_bal_mass = np.amax(np.abs(LHS_mass-RHS_mass))
+
+    energy_bal_bEq  = np.amax(np.abs(LHS_bEq-RHS_bEq))
     print("Energy balance (RT) continuity equation = ", energy_bal_cont)
     print("Energy balance (RT) mass equation       = ", energy_bal_mass)
+
+    print("Energy balance (RT) b-equation       = ", energy_bal_bEq)
     if ( mob.boussinesq == -2 ):
         energy_bal_mass_nd = np.amax(np.abs(LHS_mass_nd-RHS_mass_nd))
         print("boussinesq == -2")
@@ -2225,7 +2346,7 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
     
 def get_baseflow_and_derivatives(bsfl, mob):
 
-    if   ( mob.boussinesq == 1 or mob.boussinesq == -3 ):
+    if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ):
         Rho   = bsfl.Rho_nd
         Rhop  = bsfl.Rhop_nd
         Rhopp = bsfl.Rhopp_nd
@@ -2294,37 +2415,71 @@ def get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig):
 
 def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag):
 
+    multiply_by_1j = 0
     normalize = 1
         
     max_array = np.zeros(5, dp)
+    idx_max_a = np.zeros(5, i4)
 
     max_array[0] = np.max(np.abs(ueig_vec))
+    idx_max_a[0] = np.argmax(np.abs(ueig_vec))
+    
     max_array[1] = np.max(np.abs(veig_vec))
+    idx_max_a[1] = np.argmax(np.abs(veig_vec))
+    
     max_array[2] = np.max(np.abs(weig_vec))
+    idx_max_a[2] = np.argmax(np.abs(weig_vec))
+    
     max_array[3] = np.max(np.abs(peig_vec))
+    idx_max_a[3] = np.argmax(np.abs(peig_vec))
+        
     max_array[4] = np.max(np.abs(reig_vec))
+    idx_max_a[4] = np.argmax(np.abs(reig_vec))
 
+    # Global max
     idx_array = np.argsort(max_array)
     idx_max   = idx_array[-1] # because it sorts in ascending order
+
+    # print("max_array[0] = ", max_array[0])
+    # print("max_array[1] = ", max_array[1])
+    # print("max_array[2] = ", max_array[2])
+    # print("max_array[3] = ", max_array[3])
+    # print("max_array[4] = ", max_array[4])
+
+    # print("")
+    # print("max_array[idx_max] = ", max_array[idx_max])
+
+    global_max = np.max(max_array)
+    print("")
+    print("global_max (absolute value) = ", global_max)
+
+    global_max_idx = idx_max_a[idx_max]
+    print("global_max_idx = ", global_max_idx)
+    
+    #print("ueig_vec[global_max_idx] = ", ueig_vec[global_max_idx])
+    #print("veig_vec[global_max_idx] = ", veig_vec[global_max_idx])
+    #print("weig_vec[global_max_idx] = ", weig_vec[global_max_idx])
+    #print("reig_vec[global_max_idx] = ", reig_vec[global_max_idx])
+    #print("peig_vec[global_max_idx] = ", peig_vec[global_max_idx])
 
     print("")
     if   (idx_max==0):
         print("Scaling eigenfunctions with max. of u-vel")
-        norm_s      = np.max(np.abs(ueig_vec))
+        norm_s      = ueig_vec[global_max_idx] #np.max(np.abs(ueig_vec))
     elif (idx_max==1):
         print("Scaling eigenfunctions with max. of v-vel")
-        norm_s      = np.max(np.abs(veig_vec))
+        norm_s      = veig_vec[global_max_idx] #np.max(np.abs(veig_vec))
     elif (idx_max==2):
         print("Scaling eigenfunctions with max. of w-vel")
-        norm_s      = np.max(np.abs(weig_vec))
+        norm_s      = weig_vec[global_max_idx] #np.max(np.abs(weig_vec))
     elif (idx_max==3):
         print("Scaling eigenfunctions with max. of pressure")
-        norm_s      = np.max(np.abs(peig_vec))
+        norm_s      = peig_vec[global_max_idx] #np.max(np.abs(peig_vec))
     elif (idx_max==4):
         print("Scaling eigenfunctions with max. of density")
-        norm_s      = np.max(np.abs(reig_vec))
+        norm_s      = reig_vec[global_max_idx] #np.max(np.abs(reig_vec))
 
-    #print("norm_s = ", norm_s)
+    print("norm_s = ", norm_s)
 
     #print("max_array = ", max_array)
     #print("idx_max = ", idx_max)
@@ -2335,6 +2490,7 @@ def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_
     #norm_s_conj = np.max(np.abs(ueig_conj_vec))
 
     if (normalize==1):
+        #print("ueig_vec = ", ueig_vec)
         ueig_vec = ueig_vec/norm_s
         veig_vec = veig_vec/norm_s
         weig_vec = weig_vec/norm_s
@@ -2343,14 +2499,25 @@ def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_
         if (rt_flag):
             reig_vec    = reig_vec/norm_s
 
-    return ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
+    if (multiply_by_1j==1):
+        print("")
+        print("Multiplying eigenfunctions by 1j in normalize_eigenvectors")
+        print("")
+        ueig_vec = ueig_vec*1j
+        veig_vec = veig_vec*1j
+        weig_vec = weig_vec*1j
+        reig_vec = reig_vec*1j
+        peig_vec = peig_vec*1j
+        
+
+    return norm_s, ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
 
 
 
 
 
 
-def energy_balance_terms(npts, y, t1, t2, t3, filename):
+def write_energy_balance_terms(npts, y, t1, t2, t3, filename):
     
     work_dir      = "./"
     save_path     = work_dir #+ '/' + folder1
@@ -2369,6 +2536,197 @@ def energy_balance_terms(npts, y, t1, t2, t3, filename):
 
 
 
+
+def build_total_flow_field(reig, Rho, alpha, beta, omega, z):
+    
+    x = 0.0
+    y = 0.0
+    # time
+    t = 0.0
+
+    ny = len(reig)
+
+    amp_r    = np.abs(reig)
+    phase_r  = np.arctan2(reig.imag, reig.real)
+    #print("phase_r = ", phase_r)
+
+    # Compute the maximum of baseflow and eigenfunction amplitude
+    max_bsfl = Rho[-1]-Rho[0] #np.max(Rho)
+    #max_eigf = np.max(amp_r)
+
+    shift_val = Rho[0]
+
+    #print("shift_val = ", shift_val)
+
+    #print("max_bsfl = ", max_bsfl)
+    #print("")
+
+    # Set ref val used to scale the disturbance flow field
+    ref_val  = 0.10*max_bsfl
+
+    #print("ref_val = ", ref_val)
+    #amp_r    = amp_r/max_eigf*ref_val
+
+    #print("max(amp_r) = ", np.max(amp_r))
+
+    for k in range(0, ny):
+        cmplx_fct_loc = np.exp( 1j*( alpha*x + beta*y - omega*t + phase_r[k] )  )
+        rho_prime_loc = np.real( amp_r[k]*cmplx_fct_loc )
+
+        if ( np.abs(rho_prime_loc) > 1.e-3):
+            print("cmplx_fct_loc, rho_prime_loc = ", cmplx_fct_loc, rho_prime_loc)
+        
+    input("Check this data 1111111")
+
+    cmplx_fct = np.exp( 1j*( alpha*x + beta*y - omega*t + phase_r )  )
+    rho_prime = np.real( amp_r*cmplx_fct )
+
+    #print("rho_prime = ", rho_prime)
+
+    #print("np.max(rho_prime) = ", np.max(rho_prime))
+
+    rho_prime = rho_prime/np.max(np.abs(rho_prime))*ref_val
+
+    print("")
+    print("Max. rho_prime = ", np.amax(rho_prime))
+    print("Min. rho_prime = ", np.amin(rho_prime))
+
+    dist_perc = np.max(np.abs(rho_prime))/max_bsfl*100
+    print("Max of disturbance density is %15.10f %% of max. baseflow density" % dist_perc)
+
+    #print("cmplx_fct = ", cmplx_fct)
+    #print("max(rho_prime) = ", np.max(rho_prime))
+    
+    rho_total = Rho + rho_prime
+
+    ptn = plt.gcf().number + 1
+
+    label_dist = "Disturbance density (shifted, %s %%)" % str('{:.2f}'.format(dist_perc)) 
+    
+    f = plt.figure(ptn)
+    plt.plot(Rho, z, 'k', linewidth=1.5, label=r"Baseflow density")
+    plt.plot(rho_prime+shift_val, z, 'r', linewidth=1.5, label=label_dist)
+    plt.plot(rho_total, z, 'g--', linewidth=1.5, label=r"Total density")
+    #
+    plt.xlabel("Density", fontsize=18)
+    plt.ylabel("z", fontsize=18)
+    
+    plt.gcf().subplots_adjust(left=0.18)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    #plt.xlim([0.45, 1.7])
+    #plt.ylim([-0.00025, 0.00025])
+    
+    plt.legend(loc="upper center", fontsize = 11)
+    f.show()
+        
+    input("R-T: Density plots")
+
+
+def write_2d_eigenfunctions(weig, reig, alpha, beta, omega, z, bsfl, mob):
+    
+    nx = 501
+    nz = len(z)
+
+    amp_r    = np.abs(reig)
+    phase_r  = np.arctan2(reig.imag, reig.real)
+
+    amp_w    = np.abs(weig)
+    phase_w  = np.arctan2(weig.imag, weig.real)
+
+    t    = 0.0
+    xmin = 0.0
+    xmax = 0.05
+
+    x = np.linspace(xmin, xmax, nx)
+    y = 0.0
+
+    # Get baseflow
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+
+    # Compute the maximum of baseflow and eigenfunction amplitude
+    max_bsfl = Rho[-1]-Rho[0] #np.max(Rho)
+
+    # Set ref val used to scale the disturbance flow field
+    ref_val  = 0.50*max_bsfl
+    
+    # ii=21
+    # for k in range(0, nz):
+    #     cmplx_fct_loc = np.exp( 1j*( alpha*x[ii] + beta*y[k] - omega*t + phase_r[k] )  )
+    #     rho_prime_loc = np.real( amp_r[k]*cmplx_fct_loc )
+
+    #     if ( np.abs(rho_prime_loc) > 1.e-3):
+    #         print("cmplx_fct_loc, rho_prime_loc = ", cmplx_fct_loc, rho_prime_loc)
+        
+    # input("Check this data")
+
+    cmplx_fct_w = np.zeros((nx,nz), dpc)
+    cmplx_fct_r = np.zeros((nx,nz), dpc)
+
+    w_prime = np.zeros((nx,nz), dp)
+    r_prime = np.zeros((nx,nz), dp)
+    
+    for k in range(0, nz):
+        for i in range(0, nx):
+
+            cmplx_fct_r[i,k] = np.exp( 1j*( alpha*x[i] + beta*y - omega*t + phase_r[k] )  )
+            r_prime[i,k] = np.real( amp_r[k]*cmplx_fct_r[i,k] )
+            
+            cmplx_fct_w[i,k] = np.exp( 1j*( alpha*x[i] + beta*y - omega*t + phase_w[k] )  )
+            w_prime[i,k] = np.real( amp_w[k]*cmplx_fct_w[i,k] )
+
+
+    scale_fac = 1/np.amax(np.abs(r_prime))*ref_val
+    
+    r_prime = r_prime*scale_fac
+    w_prime = w_prime*scale_fac
+
+    print("")
+    print("Max (r_prime) = ", np.amax(np.abs(r_prime)))
+            
+    filename      = 'Eigenfunction_2d_wr.dat'
+    filename1     = 'Baseflow_density.dat'
+
+    work_dir      = "./"
+    save_path     = work_dir #+ '/' + folder1
+    
+    completeName  = os.path.join(save_path, filename)
+    fileoutFinal  = open(completeName,'w')
+    
+    zname2D       = 'ZONE T="2-D Zone", I = ' + str(nx) + ', J = ' + str(nz) + '\n'
+    fileoutFinal.write('TITLE     = "2D DATA"\n')
+    fileoutFinal.write('VARIABLES = "X" "Z" "dens dist" "w-vel dist"\n')
+    fileoutFinal.write(zname2D)
+    
+    for k in range(0, nz):
+        for i in range(0, nx):
+            #cmplx_fct_loc = np.exp( 1j*( alpha*x[i] + beta*y[k] - omega*t + phase_r[k] )  )
+            #rho_prime_loc = np.real( amp_r[k]*cmplx_fct_loc )
+
+            #rho_prime_loc = rho_prime_loc/np.max(np.abs(rho_prime))*ref_val
+
+            #cmplx_fct_w_loc = np.exp( 1j*( alpha*x[i] + beta*y[k] - omega*t + phase_w[k] )  )
+            #w_prime_loc = np.real( amp_w[k]*cmplx_fct_w_loc )
+
+            #print("rho_prime_loc = ", rho_prime_loc)
+            fileoutFinal.write("%25.15e %25.15e %25.15e %25.15e \n" % ( x[i], z[k], w_prime[i,k], r_prime[i,k] ) )
+
+    fileoutFinal.close()
+
+    # Now write baseflow to file
+    completeName1  = os.path.join(save_path, filename1)
+    fileoutFinal1  = open(completeName1,'w')
+
+    zname2D       = 'ZONE T="2-D Zone", I = ' + str(nx) + ', J = ' + str(nz) + '\n'
+    fileoutFinal1.write('TITLE     = "2D DATA"\n')
+    fileoutFinal1.write('VARIABLES = "X" "Z" "dens baseflow"\n')
+    fileoutFinal1.write(zname2D)
+    
+    for k in range(0, nz):
+        for i in range(0, nx):
+            
+            fileoutFinal1.write("%25.15e %25.15e %25.15e \n" % ( x[i], z[k], Rho[k] ) )
+
+    fileoutFinal1.close()
 
 
 # using Test

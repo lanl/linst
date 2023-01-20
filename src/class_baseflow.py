@@ -7,6 +7,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
+import module_utilities as mod_util
+
 dp = np.dtype('d')  # double precision
 i4 = np.dtype('i4') # integer 4
 i8 = np.dtype('i8') # integer 8
@@ -147,13 +149,22 @@ class RayleighTaylorBaseflow(Baseflow):
     def __init__(self, size, y, map, bsfl_ref, mtmp): # here I pass ny
         
         self.size = size
-
-        #zdim = y
-        #zcoord = zdim #y/bsfl_ref.Lref
         
+        UseConstantMu = True
+        UseNumericalDerivatives = False
+        plot = True
+        opt  = 1
+
+        if ( mtmp.boussinesq == -555 ): # compressible inviscid solver
+            opt = 3
+            print("")
+            print("Swithching to opt = 3 for compressible inviscid solver")
+            print("")
+
         if ( mtmp.boussinesq == -2 ): # dimensional solver
             # Baseflow coordinate
             zdim = y
+            znondim = y/bsfl_ref.Lref
             # Plotting coordinate
             zcoord = y
         else:                         # non-dimensional solvers
@@ -171,24 +182,21 @@ class RayleighTaylorBaseflow(Baseflow):
         Lref = bsfl_ref.Lref 
         nuref = bsfl_ref.nuref
 
+        # Numerical differentiation operators (to compare with analytical baseflow derivatives)
+        if ( mtmp.boussinesq == -2 ): # dimensional solver
+            D1_dim = map.D1
+            D2_dim = map.D2
+
+            D1_nondim = Lref*D1_dim
+            D2_nondim = Lref**2.*D2_dim
+        else:
+            D1_dim = 1/Lref*map.D1    # non-dimensional solvers
+            D2_dim = 1/Lref**2.*map.D2
+
+            D1_nondim = map.D1
+            D2_nondim = map.D2
+
         #print("At, Re, Uref, grav, Lref, nuref = ", At, Re, Uref, grav, Lref, nuref)
-
-        # 
-        # delta_star = 0.01 ==> delta_star is dimensionless delta ======> see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
-        #
-
-        # Here I take delta as dimensionless, and delta_dim is its dimensional value
-        delta     = 0.02
-        delta_dim = delta*Lref
-        
-        # Note: delta is the characteristic thickness of the diffusion layer
-        print("Setting up R-T baseflow")
-        print("-----------------------")
-        print("delta     = ", delta)
-        print("delta_dim = ", delta_dim)
-                    
-        plot = True
-        opt  = 1
 
         if (opt==0):
 
@@ -208,6 +216,20 @@ class RayleighTaylorBaseflow(Baseflow):
             self.Mup  = 1.0e-5*np.abs(y)
             
         elif(opt==1):
+
+            # 
+            # delta_star = 0.01 ==> delta_star is dimensionless delta ======> see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
+            #
+            
+            # Here I take delta as dimensionless, and delta_dim is its dimensional value
+            delta     = 0.00005 #0.02
+            delta_dim = delta*Lref
+            
+            # Note: delta is the characteristic thickness of the diffusion layer
+            print("Setting up R-T baseflow")
+            print("-----------------------")
+            print("delta     = ", delta)
+            print("delta_dim = ", delta_dim)
 
             fac   = (1.+At)/(1.-At)
             div   = 1. + fac
@@ -251,7 +273,7 @@ class RayleighTaylorBaseflow(Baseflow):
 
             # To Match Chandrasekhar and simplified Sandoval Equations, I need to use constant mu
             # in Chandrasekhar equations, i.e. mu = muref
-            UseConstantMu = True
+            
             if (UseConstantMu):
                 print("")
                 print("Using constant dynamic viscosity in baseflow setup")
@@ -259,6 +281,16 @@ class RayleighTaylorBaseflow(Baseflow):
                 self.Mu  = muref*np.ones(size)
                 self.Mup = 0.0*self.Mu
             else:
+                print("")
+                print("Using non-constant dynamic viscosity in baseflow setup")
+                print("")
+
+                if ( mtmp.boussinesq == 1 ): 
+                    sys.exit("Boussinesq equations were derived considering mu = constant")
+
+                if ( mtmp.boussinesq == -3 ): 
+                    sys.exit("Sandoval equations were derived considering mu = constant")
+                
                 # Compute dimensional viscosity and its derivatives
                 self.Mu  = muref*( 1. + At*erf(zdim/delta_dim) )
                 self.Mup = muref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
@@ -269,7 +301,7 @@ class RayleighTaylorBaseflow(Baseflow):
 
             if ( np.abs(nu0-nuref) > tol_c ):
                sys.exit("Kinematic viscosity inconsistency!!!!!!!")
-            
+               
             # Compute non-dimensional density and its derivatives (d/dy and d^2/dy^2)
             self.Rho_nd   = 1/rhoref*self.Rho
             # drho_dim/dy_dim = rhoref/Lref*(drho/dy) ==> drho/dy = Lref/rhoref*(drho_dim/dy_dim)
@@ -281,25 +313,39 @@ class RayleighTaylorBaseflow(Baseflow):
             self.Mu_nd  = 1/muref*self.Mu
             self.Mup_nd = Lref/muref*self.Mup
 
+            # Compute numerical derivatives and compare with analytical ones
+            Rhop_num     = np.matmul(D1_dim, self.Rho)
+            Rhopp_num    = np.matmul(D2_dim, self.Rho)
+            
+            Rhop_num_nd  = np.matmul(D1_nondim, self.Rho_nd)
+            Rhopp_num_nd = np.matmul(D2_nondim, self.Rho_nd)
+            
+            Mup_num      = np.matmul(D1_dim, self.Mu)
+
             # Compute Chandrasekhar length and time scales
-            self.Tscale = (nu0/grav**2.)**(1./3.)
-            self.Lscale = (nu0**2./grav)**(1./3.)
+            print("Computing Chandrasekhar length and time scales")
+            print("==============================================")
+            print("using nu0  = ", nu0)
+            print("using grav = ", grav)
+            bsfl_ref.Tscale_Chandra = (nu0/grav**2.)**(1./3.)
+            bsfl_ref.Lscale_Chandra = (nu0**2./grav)**(1./3.)
+            print("Chandrasekhar time scale   = ", bsfl_ref.Tscale_Chandra)
+            print("Chandrasekhar length scale = ", bsfl_ref.Lscale_Chandra)
+
 
             for iblk in range(0,1):
                 print("")
             
             # Check Reynolds number
             if ( np.abs(Re-Uref*Lref/nu0) > tol_c ):
-                sys.exit("Reynolds number inconsistency!!!!!!!")
+                print("np.abs(Re-Uref*Lref/nu0) = ", np.abs(Re-Uref*Lref/nu0))
+                warnings.warn("Reynolds number inconsistency!!!!!!!")
             
             #print("Input Reynolds number                = ", Re)
             #print("Re-computed Reynolds number          = ", Uref*Lref/nu0)
             
             #print("Atwood number At                     = ", At)
             #print("Atwood number (viscosity) Amu        = ", At)
-            print("Chandrasekhar time scale   = ", self.Tscale)
-            print("Chandrasekhar length scale = ", self.Lscale)
-            print("nu0                        = ", nu0)
 
             # Check that kinematic viscosity is constant
             for ii in range(0, size):
@@ -317,37 +363,70 @@ class RayleighTaylorBaseflow(Baseflow):
             #print("k_nondim                             = ", k_nondim)
             #print("delta_nondim (Lref*)                 = ", Lref/self.Lscale)
             #print
+
+        elif(opt==3):
+
+            x = y
+            nx = len(y)
+            xmin = x[0]
+
+            print("xmin = ", xmin)
+
+            delta  = At/( 2.0*( 1.0-np.sqrt(1-At**2.) ) )
+            pres_c = 50
+            x_c = xmin
+            
+            self.Rho_nd  = (1.0-At*np.tanh(delta*x))/(1.0+At)
+            self.Rhop_nd = -At/(1.0+At)*delta/np.cosh(delta*x)**2.
+            
+            pres_bsfl_num = mod_util.trapezoid_integration_cum(self.Rho_nd, x)
+            pres_bsfl_num = pres_bsfl_num + pres_c
+            
+            self.Pres_nd = pres_c + 1.0/(1.0+At)*( x-x_c + At/delta*np.log( np.cosh(delta*x_c)/np.cosh(delta*x) ) )
+
+            # Take derivative of pressure and plot (see if you recover density)
+            dpdx = np.zeros(nx, dp)
+            for i in range(1, nx-1):
+                dx = x[i+1]-x[i-1]
+                dpdx[i] = ( self.Pres_nd[i+1] - self.Pres_nd[i-1] )/dx
+        
+            ptn = plt.gcf().number + 1
+            
+            f = plt.figure(ptn)
+            plt.plot(x, self.Rho_nd, 'k', linewidth=1.5, label="Baseflow density")
+            plt.plot(x[1:nx-2], dpdx[1:nx-2], 'r-.', linewidth=1.5, label="Numerical derivative of pressure")
+            plt.xlabel("x", fontsize=14)
+            plt.ylabel('density', fontsize=16)
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            #plt.ylim([xmin, xmax])
+            plt.legend(loc="upper right")
+            f.show()    
+            
+            ptn = ptn + 1
+            
+            f = plt.figure(ptn)
+            plt.plot(x, self.Pres_nd, 'k', linewidth=1.5, label="Analytic integration")
+            plt.plot(x, pres_bsfl_num, 'r-.', linewidth=1.5, label="Numerical integration")
+            plt.xlabel(r"x", fontsize=14)
+            plt.ylabel('pressure', fontsize=16)
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            #plt.ylim([xmin, xmax])
+            plt.legend(loc="upper right")
+            f.show()
+            
+            input("Plots for compressible inviscid solver")
+            
         else:
             sys.exit("Not a proper value for flag opt in RT baseflow")
-
-        # Compute numerical derivatives to compare with analytical ones
-        if ( mtmp.boussinesq == -2 ): # dimensional solver
-            D1_dim = map.D1
-            D2_dim = map.D2
-
-            D1_nondim = Lref*D1_dim
-            D2_nondim = Lref**2.*D2_dim
-        else:
-            D1_dim = 1/Lref*map.D1    # non-dimensional solvers
-            D2_dim = 1/Lref**2.*map.D2
-
-            D1_nondim = map.D1
-            D2_nondim = map.D2
-
-        Rhop_num     = np.matmul(D1_dim, self.Rho)
-        Rhopp_num    = np.matmul(D2_dim, self.Rho)
-
-        Rhop_num_nd  = np.matmul(D1_nondim, self.Rho_nd)
-        Rhopp_num_nd = np.matmul(D2_nondim, self.Rho_nd)
-        
-        Mup_num      = np.matmul(D1_dim, self.Mu)
 
         #if (Re > 1e10):
         #    warnings.warn("RT baseflow: Re > 1e10 ==> setting viscosity to zero")
         #    self.Mu   = 0.0*self.Mu
         #    self.Mup  = 0.0*self.Mup
 
-        if (plot):
+        if (plot and not opt == 3):
 
             ViewFullDom = True
             
@@ -478,11 +557,54 @@ class RayleighTaylorBaseflow(Baseflow):
             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             f.show()
 
+
+            if ( mtmp.boussinesq == -2 ): # dimensional solver
+
+                ptn = ptn + 1
+                # Baseflow coordinate
+                zdim = y
+                # Plotting coordinate
+                zcoord = y
+
+                f = plt.figure(ptn)
+                plt.plot(self.Rho, znondim, 'k', markerfacecolor='none', label="density")
+                plt.xlabel(r"$\rho$", fontsize=20)
+                plt.ylabel('z (non-dimensional)', fontsize=20)
+                #plt.legend(loc="upper right")
+                plt.gcf().subplots_adjust(left=0.16)
+                plt.gcf().subplots_adjust(bottom=0.15)
+                if (not ViewFullDom):
+                    plt.ylim([zmin, zmax])
+                plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+                plt.title(r"$\rho$")
+                f.show()
+
+            
             print("")
             input('RT baseflow plots ... strike any key to proceed')
 
             #sys.exit("Debug RT baseflow")
 
+            if (UseNumericalDerivatives):
+                print("")
+                print("Using numerical derivatives in RayleighTaylorBaseflow")
+                self.Rhop  = np.matmul(D1_dim, self.Rho)
+                self.Rhopp = np.matmul(D2_dim, self.Rho)
+                self.Mup   = np.matmul(D1_dim, self.Mu)
+
+                self.Rhop_nd  = np.matmul(D1_nondim, self.Rho_nd)
+                self.Rhopp_nd = np.matmul(D2_nondim, self.Rho_nd)
+                self.Mup_nd   = np.matmul(D1_nondim, self.Mu_nd)
+                
+            else:
+                print("")
+                print("Using analytical derivatives in RayleighTaylorBaseflow")
+                
+
+
+                
+
+                
 
 
 

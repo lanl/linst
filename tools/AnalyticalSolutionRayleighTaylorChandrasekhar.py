@@ -9,6 +9,9 @@ import numpy as np
 plt.rcParams['font.size'] = '14'
 plt.rc('font', family='serif')
 
+print("")
+print("Chandrasekhar analytical stability solution of R-T")
+print("==================================================")
 
 rho1  = 1.0
 rho2  = 3.*rho1 # that way I get Atw = 0.5
@@ -17,8 +20,9 @@ alpha1 = rho1/(rho1+rho2)
 alpha2 = rho2/(rho1+rho2)
 
 # alpha2-alpha1 = (rho2-rho1)/(rho1+rho2) = Atwood number
+print("")
 print("alpha1 + alpha2 (answer should be 1) = ",alpha1+alpha2)
-print("alpha2 - alpha1 (answer should be 0.5)= ",alpha2-alpha1)
+print("Atwood number: alpha2 - alpha1 (answer should be 0.5) = ",alpha2-alpha1)
 
 ymin = 1
 ymax = 100
@@ -27,11 +31,14 @@ npts = 10001
 
 y = np.linspace(ymin+eps, ymax, npts)
 
+# Two equivalent ways to compute Q
 Q  = (y-1.0)/(alpha2-alpha1)*( y**3. + (1.+4*alpha1*alpha2)*y**2 +(3.-8.*alpha1*alpha2)*y - (1.-4*alpha1*alpha2)  )
 Q2 = 1/(alpha2-alpha1)*( y**4. + 4*alpha1*alpha2*y**3. + 2*(1-6*alpha1*alpha2)*y**2 - 4*(1-3*alpha1*alpha2)*y + 1 - 4*alpha1*alpha2 )
 
 diff = np.abs(Q2-Q)
 
+print("")
+print("Comparing two different ways to compute Q:")
 print("max(diff) = ", np.max(diff))
 
 # Compute k and n (see Chandrasekhar page 444)

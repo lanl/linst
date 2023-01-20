@@ -27,8 +27,8 @@ class BuildMatrices:
 
                 size = 5*ny
 
-                # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval
-                self.boussinesq = 1
+                # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval, -4 -> modified Sandoval, -555 -> comp.
+                self.boussinesq = -555
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -50,6 +50,20 @@ class BuildMatrices:
                     # print('-----------------------------------------------------')
                     # print('Equations for Rayleight-Taylor set to "Sandoval"')
                     # print('-----------------------------------------------------')
+                    # print("")
+                elif (self.boussinesq == -4 ):
+                    pass
+                    # print("")
+                    # print('---------------------------------------------------------')
+                    # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
+                    # print('---------------------------------------------------------')
+                    # print("")
+                elif (self.boussinesq == -555 ): # compressible inviscid
+                    size = 4*ny
+                    # print("")
+                    # print('---------------------------------------------------------')
+                    # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
+                    # print('---------------------------------------------------------')
                     # print("")
                 else:
                     sys.exit("Not a proper value for boussinesq flag!")
@@ -325,7 +339,11 @@ class BuildMatrices:
         """
         This function assemble the lhs matrix mat_lhs
         """
-        self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
+
+        if ( self.boussinesq == -555 ):
+            self.mat_lhs = self.mat_a1
+        else:
+            self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
 
         check_norms = 0
 
@@ -358,8 +376,7 @@ class BuildMatrices:
             
             input("Check norms!")
             
-
-        if ( self.boussinesq == -3 ):
+        if ( self.boussinesq == -3 or self.boussinesq == -4 ):
             self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab 
         
         if (Tracking and Local):
@@ -842,8 +859,9 @@ class BuildMatrices:
         #rhs[idx_u_ymin  ] = 1.0 + 1.0*1j
         #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
 
+        # From global solver real part was zero that is why I use here rhs = 1j
         lhs[4*ny+mid_idx,:] = 0.0
-        rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0 + 1.0*1j
+        rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
         lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
 
         # ymax
@@ -1222,7 +1240,7 @@ class BuildMatrices:
             self.mat_d1[imin:imax, imin:imax]           = 0.0
             
         
-    def call_to_build_matrices(self, rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map):
+    def call_to_build_matrices(self, rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in):
 
         # Call proper matrix building
         if (rt_flag == True):
@@ -1234,6 +1252,10 @@ class BuildMatrices:
                     self.set_matrices_rayleigh_taylor(ny, bsfl, bsfl_ref, map)
                 elif ( self.boussinesq == -3 ):
                     self.set_matrices_rayleigh_taylor_sandoval_equations(ny, bsfl, bsfl_ref, map)
+                elif ( self.boussinesq == -4 ):
+                    self.set_matrices_rayleigh_taylor_sandoval_equations_VAR_MU(ny, bsfl, bsfl_ref, map)
+                elif ( self.boussinesq == -555 ):
+                    self.set_matrices_rayleigh_taylor_compressible_inviscid(ny, bsfl, bsfl_ref, map, alpha_in)
             
             else:
                 self.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
@@ -1245,11 +1267,355 @@ class BuildMatrices:
 
         if (rt_flag):
             if (prim_form==1):
-                #if   ( self.boussinesq == 1 ):
-                self.set_bc_rayleigh_taylor(self.mat_lhs, self.mat_rhs, ny, map)
-                #elif ( self.boussinesq == -2 ):
+                if   ( self.boussinesq == -555 ):
+                    self.set_bc_rayleigh_taylor_compressible_inviscid(self.mat_lhs, self.mat_rhs, ny, map)
+                else:
+                    self.set_bc_rayleigh_taylor(self.mat_lhs, self.mat_rhs, ny, map)
             else:
                 self.set_bc_rayleigh_taylor_inviscid(self.mat_lhs, self.mat_rhs, ny, map)
         else:
             self.set_bc_shear_layer(self.mat_lhs, self.mat_rhs, ny, map)            
 
+
+
+
+
+    def set_matrices_rayleigh_taylor_sandoval_equations_VAR_MU(self, ny, bsfl, bsfl_ref, map):
+        """
+        Modified Sandoval Equations (variable mu)
+        """
+
+        # non-dimensional set of equations
+        grav = bsfl_ref.gref/bsfl_ref.gref
+
+        if ( grav != 1. ):
+            print("")
+            print("Modified Sandoval R-T solver: gravity should be non-dimensional, g = ", grav)
+            input("Check gravity")
+
+        Fr2      = bsfl_ref.Fr**2.
+        Sc       = bsfl_ref.Sc
+        Re       = bsfl_ref.Re
+
+        # To match Chandrasekhar equations
+        MatchChandrasekhar = 0
+
+        r13 = 1./3.
+        r23 = 2./3.
+
+        SetDivergenceToZero = 0
+        SetOtherReScTermsToZero = 0
+        
+        if (MatchChandrasekhar==1): # we want to match data from solver boussinesq = -2
+
+            r13 = 0.
+            r23 = 0.
+
+            print("Modified Sandoval Equations: Matching Chandrasekhar Equations...")
+            SetDivergenceToZero = 1
+            SetOtherReScTermsToZero = 1
+
+            
+        D1 = map.D1
+        D2 = map.D2
+        
+        # Identity matrix id
+        id      = np.identity(ny)
+
+        # Create diagonal matrices from baseflow vectors
+        dRho    = np.diag(bsfl.Rho_nd)
+        dRhop   = np.diag(bsfl.Rhop_nd)
+        dRhopp  = np.diag(bsfl.Rhopp_nd)
+
+        dMu     = np.diag(bsfl.Mu_nd)
+        dMup    = np.diag(bsfl.Mup_nd)
+
+        rho2    = np.multiply(bsfl.Rho_nd, bsfl.Rho_nd)
+        rho3    = np.multiply(rho2, bsfl.Rho_nd)
+
+        #print("bsfl.Rho_nd = ", bsfl.Rho_nd)
+        #print("rho2 = ", rho2)
+        
+        rho_inv  = 1/bsfl.Rho_nd
+        rho2_inv = 1/rho2
+        rho3_inv = 1/rho3
+
+        drho_inv   = np.diag(rho_inv)
+        drho2_inv  = np.diag(rho2_inv)
+        drho3_inv  = np.diag(rho3_inv)
+
+
+        # 1st block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = r13*1j*np.matmul(dMu,D1)/Re + 1j*dMup/Re
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu/Re -r13*dMu/Re
+
+        self.mat_b2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_ab[imin:imax, imin+1*ny:imax+1*ny] = -r13*dMu/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = np.matmul(dMu,D2)/Re + np.matmul(dMup,D1)/Re
+        
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 2nd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu/Re -r13*dMu/Re
+
+        self.mat_b1[imin:imax, imin+1*ny:imax+1*ny] = r13*1j*np.matmul(dMu,D1)/Re + 1j*dMup/Re
+        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
+                
+        self.mat_b2[imin:imax, imin:imax]           = -dMu/Re - r13*dMu/Re
+
+        self.mat_ab[imin:imax, imin-1*ny:imax-1*ny] = -r13*dMu/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = np.matmul(dMu,D2)/Re + np.matmul(dMup,D1)/Re
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 3rd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = r13*1j*np.matmul(dMu,D1)/Re - r23*1j*dMup/Re
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_b1[imin:imax, imin-1*ny:imax-1*ny] = r13*1j*np.matmul(dMu,D1)/Re - r23*1j*dMup/Re
+
+        self.mat_b2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = np.matmul(dMu,D2)/Re + r13*np.matmul(dMu,D2)/Re + 2.*np.matmul(dMup,D1)/Re - r23*np.matmul(dMup,D1)/Re
+        
+        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1 
+        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/Fr2 
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 4th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = -1j*id
+
+        self.mat_a2[imin:imax, imin+1*ny:imax+1*ny] = drho_inv/(Re*Sc)
+
+        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = -1j*id
+
+        self.mat_b2[imin:imax, imin+1*ny:imax+1*ny] = drho_inv/(Re*Sc)
+
+        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = -D1
+
+        mat_tmp1 = 2.*np.matmul(drho2_inv, np.matmul(dRhop,D1))
+        mat_tmp2 = np.matmul(drho2_inv, dRhopp)
+        mat_tmp3 = -np.matmul(drho_inv, D2)
+        mat_tmp4 = -2.*np.matmul(drho3_inv, np.matmul(dRhop,dRhop))
+
+        # BUGGY ===============> #self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( 2.*drho2_inv*dRhop*D1 + drho2_inv*dRhopp - drho_inv*D2 -2.*drho3_inv*dRhop*dRhop )/(Re*Sc)
+        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = ( mat_tmp1 + mat_tmp2 + mat_tmp3 + mat_tmp4 )/(Re*Sc)
+
+        # Match Chandrasekhar Equations Trick
+        if (SetDivergenceToZero==1):
+            self.mat_a2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
+            self.mat_b2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
+            self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = 0.0
+
+        # 5th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id/(Re*Sc)
+
+        self.mat_b2[imin:imax, imin:imax]           = -id/(Re*Sc)
+
+        # BUGGY ================> self.mat_d1[imin:imax, imin:imax]           = ( D2 + drho2_inv*dRhop*dRhop - 2.*drho_inv*dRhop*D1 )/(Re*Sc)
+        mat_tmp5 = np.matmul(drho2_inv, np.matmul(dRhop,dRhop))
+        mat_tmp6 = -2.*np.matmul(drho_inv, np.matmul(dRhop,D1))
+                    
+        self.mat_d1[imin:imax, imin:imax]           = ( D2 + mat_tmp5 + mat_tmp6 )/(Re*Sc)
+        
+        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # Match Chandrasekhar Equations Trick
+        if (SetOtherReScTermsToZero == 1):
+            self.mat_a2[imin:imax, imin:imax]           = 0.0
+            self.mat_b2[imin:imax, imin:imax]           = 0.0
+            self.mat_d1[imin:imax, imin:imax]           = 0.0
+
+
+    def set_matrices_rayleigh_taylor_compressible_inviscid(self, ny, bsfl, bsfl_ref, map, alpha_in): # here I pas ny
+        """
+        This system is build for a vertical interface with heavy fluid on left side, light fluid on right side,
+        x-axis towards the right and gravity towards the right
+        """
+        Gamma = 5./3.
+
+        # Create diagonal matrices from baseflow vectors
+        dRho    = np.diag(bsfl.Rho_nd)
+        dRhop   = np.diag(bsfl.Rhop_nd)
+
+        dPres   = np.diag(bsfl.Pres_nd)
+        
+        # Identity matrix id
+        id      = np.identity(ny)
+
+        # First derivative matrix
+        D1      = map.D1
+        
+        # non-dimensional set of equations
+        grav = bsfl_ref.gref/bsfl_ref.gref
+
+        if ( grav != 1. ):
+            print("")
+            print("Compressible inviscid solver: gravity should be non-dimensional, g = ", grav)
+            input("Check gravity")
+
+        opt_real = 0
+
+        if (opt_real==1):
+            print("")
+            print("opt_real is set to 1 in set_matrices_rayleigh_taylor_compressible_inviscid")
+            print("")
+
+        # 1st block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = D1
+
+        if (opt_real==1):
+            self.mat_rhs[imin:imax, imin:imax]          = dRho
+        else:
+            self.mat_rhs[imin:imax, imin:imax]          = 1j*dRho
+
+        # 2nd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        if (opt_real==1):
+            self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = alpha_in*id
+        else:
+            self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = 1j*alpha_in*id
+
+        if (opt_real==1):
+            self.mat_rhs[imin:imax, imin:imax]          = dRho
+        else:
+            self.mat_rhs[imin:imax, imin:imax]          = 1j*dRho
+
+        # 3rd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = dRhop + np.matmul(dRho, D1)
+        if (opt_real==1):
+            self.mat_a1[imin:imax, imin-1*ny:imax-1*ny] = alpha_in*dRho
+        else:
+            self.mat_a1[imin:imax, imin-1*ny:imax-1*ny] = 1j*alpha_in*dRho
+
+        if (opt_real==1):
+            self.mat_rhs[imin:imax, imin:imax]          = id
+        else:
+            self.mat_rhs[imin:imax, imin:imax]          = 1j*id
+
+        # 4th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = dRho + Gamma*np.matmul(dPres, D1)
+
+        if (opt_real==1):
+            self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = alpha_in*Gamma*dPres
+        else:
+            self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = 1j*alpha_in*Gamma*dPres
+
+        if (opt_real==1):
+            self.mat_rhs[imin:imax, imin:imax]          = id
+        else:
+            self.mat_rhs[imin:imax, imin:imax]          = 1j*id
+            
+
+    def set_bc_rayleigh_taylor_compressible_inviscid(self, lhs, rhs, ny, map):
+        """
+        """
+        ######################################
+        # (1) FREESTREAM BOUNDARY-CONDITIONS #
+        ######################################
+        
+        ##################
+        # u-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny
+        idx_u_ymax = 1*ny-1
+
+        # ymin
+        lhs[idx_u_ymin,:] = 0.0
+        rhs[idx_u_ymin,:] = 0.0        
+        lhs[idx_u_ymin, idx_u_ymin] = 1.0
+
+        # ymax
+        lhs[idx_u_ymax,:] = 0.0
+        rhs[idx_u_ymax,:] = 0.0
+        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        
+        ##################
+        # v-velocity BCs #
+        ##################
+        idx_v_ymin = 1*ny
+        idx_v_ymax = 2*ny-1
+
+        # ymin
+        lhs[idx_v_ymin,:] = 0.0
+        rhs[idx_v_ymin,:] = 0.0        
+        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+
+        # ymax
+        lhs[idx_v_ymax,:] = 0.0
+        rhs[idx_v_ymax,:] = 0.0
+        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+
+        ##################
+        # density BCs   #
+        ##################
+        set_dens = 1
+
+        if (set_dens==1):
+            idx_r_ymin = 2*ny
+            idx_r_ymax = 3*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0        
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
+
+        ##################
+        # pressure BCs #
+        ##################
+        set_pres = 1
+
+        if (set_pres==1):
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0        
+            lhs[idx_p_ymin, idx_p_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_p_ymax,:] = 0.0
+            rhs[idx_p_ymax  ] = 0.0
+            lhs[idx_p_ymax, idx_p_ymax] = 1.0

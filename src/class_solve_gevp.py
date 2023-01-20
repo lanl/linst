@@ -17,13 +17,14 @@ class SolveGeneralizedEVP:
     This class define a solution object and contain the main function that provides the solution 
     to the generalized eigenvalue problem (GEVP)
     """
-    def __init__(self, ny, rt_flag, prim_form):
+    def __init__(self, ny, rt_flag, prim_form, boussi):
         """
         Constructor of class SolveGeneralizedEVP
         """
         if (rt_flag == True):
             if (prim_form==1):
                 size = 5*ny
+                if (boussi == -555): size = 4*ny 
             else:
                 size = ny
         else:
@@ -79,7 +80,7 @@ class SolveGeneralizedEVP:
                 mob = mbm.BuildMatrices(ny, rt_flag, prim_form)
                 
                 # Build main stability matrices
-                mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map)
+                mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha[i])
 
                 # Assemble matrices
                 if (prim_form==1):
@@ -99,6 +100,8 @@ class SolveGeneralizedEVP:
                 q_eigenvects     = self.EigVec
 
                 if (rt_flag==True and prim_form==0):
+                    input("In here")
+                    
                     neigs = len(eigvals_filtered)
                     eigvals_filtered_tmp = eigvals_filtered
                     eigvals_filtered = np.zeros(2*neigs, dpc)
@@ -110,11 +113,15 @@ class SolveGeneralizedEVP:
                 
                 if (rt_flag):
                     if   ( mob.boussinesq == -2 ):
-                        print("omega (dimensional)     = ", omega)
-                        print("omega (non-dimensional) = ", omega*bsfl_ref.Lref/bsfl_ref.Uref)
+                        iarr.omega_dim = omega
+                        iarr.omega_nondim = omega*bsfl_ref.Lref/bsfl_ref.Uref
+                        print("omega (dimensional)     = ", iarr.omega_dim)
+                        print("omega (non-dimensional) = ", iarr.omega_nondim)
                     else:
-                        print("omega (dimensional)     = ", omega*bsfl_ref.Uref/bsfl_ref.Lref)
-                        print("omega (non-dimensional) = ", omega)
+                        iarr.omega_dim = omega*bsfl_ref.Uref/bsfl_ref.Lref
+                        iarr.omega_nondim = omega
+                        print("omega (dimensional)     = ", iarr.omega_dim)
+                        print("omega (non-dimensional) = ", iarr.omega_nondim)
                 else:
                     pass
                     
@@ -127,6 +134,9 @@ class SolveGeneralizedEVP:
         Function of class SolveGeneralizedEVP that solves the GEVP using linalg.eig (no guess needed)
         """
         self.EigVal, self.EigVec = linalg.eig(lhs, rhs)
+
+        #print("self.EigVec.shape = ", self.EigVec.shape)
+        #print("self.EigVal.shape = ", self.EigVal.shape)
         #return self.EigVal, self.EigVec
 
         #evalue, evect = linalg.eig(lhs, rhs)
