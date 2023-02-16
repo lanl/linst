@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 from scipy.special import erf
 import matplotlib
+matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
@@ -37,7 +38,7 @@ class Baseflow:
 
         self.At    = riist.At
         self.Fr    = riist.Fr
-        self.Sc    = riist.Sc
+        self.Sc    = riist.Sc # based on nu_ref because nu might not be constant
         
         self.gref  = riist.gref
         self.Uref  = riist.Uref
@@ -276,13 +277,19 @@ class RayleighTaylorBaseflow(Baseflow):
             
             if (UseConstantMu):
                 print("")
-                print("Using constant dynamic viscosity in baseflow setup")
+                print("             ----------------------------------------------------")
+                print("==========> | Using constant dynamic viscosity in baseflow setup |")
+                print("             ----------------------------------------------------")
                 print("")
                 self.Mu  = muref*np.ones(size)
                 self.Mup = 0.0*self.Mu
             else:
                 print("")
-                print("Using non-constant dynamic viscosity in baseflow setup")
+                print("             --------------------------------------------------------")
+                print("==========> | Using non-constant dynamic viscosity in baseflow setup |")
+                print("             --------------------------------------------------------")
+
+                print("")
                 print("")
 
                 if ( mtmp.boussinesq == 1 ): 

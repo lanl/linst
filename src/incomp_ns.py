@@ -8,6 +8,8 @@ import class_baseflow as mbf
 import class_build_matrices as mbm
 import class_solve_gevp as msg
 import class_mapping as mma
+import matplotlib
+matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 
 import module_utilities as mod_util
@@ -146,12 +148,12 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
     if (not Local): solve.EigVec = solve.EigVec/norm_s
 
-    mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob)
+    #mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob)
 
     #####
     #idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.578232), 0.0+1j*0.578232)
@@ -174,7 +176,12 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     Shift = 0
     ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps = mod_util.unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_flag)
 
-        
+
+    
+    ptn = plt.gcf().number
+    for i in range(1, ptn-1):
+        plt.close(i)
+
     # Energy balance for Rayleigh-Taylor + Check that equations fullfilled by eigenfunctions
     if (rt_flag):
         if (Local):
@@ -235,12 +242,23 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             # For these solvers the wavenumber is non-dimensional (non-dimensionalized by Lref)
             print("Nondimensional wave-number (Chandrasekhar length scale) k = ",riist.alpha/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra)
 
-            reig_nd = reig
+            ueig_nd = ueig
+            veig_nd = veig
             weig_nd = weig
+
+            peig_nd = peig
+            reig_nd = reig
+            
             alpha_nd = alpha_cur
             beta_nd = beta_cur
+            
             mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y)
             mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y, bsfl, mob)
+
+            mod_util.compute_disturbance_dissipation(bsfl_ref.Re, ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.y, alpha_nd, beta_nd, map.D1, bsfl, mob)
+
+            mod_util.compute_a_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+            mod_util.compute_b_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
             
         elif ( mob.boussinesq == -2):                         # dimensional solver
             print("Chandrasekhar R-T solver")
@@ -299,7 +317,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     # mod_util.write_eigvects_out(q_glob, map.y, -666, ny)
     
     # # Energy balance computations
-    # #mod_util.compute_growth_rate_from_energy_balance(ueig, veig, peig, bsfl.U, bsfl.Up, map.D1, map.y, alpha, Re)
+    #mod_util.compute_growth_rate_from_energy_balance(ueig, veig, peig, bsfl.U, bsfl.Up, map.D1, map.y, alpha, Re)
     
     # input("Press any key to continue.........")
 
@@ -310,8 +328,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
 
     
-#for i in range(1, 10):
-#    plt.close(i)
 
 # # Number of discretization points in wall-normal direction
 # ny = 201

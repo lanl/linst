@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 from scipy.special import erf
 import matplotlib
+matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 

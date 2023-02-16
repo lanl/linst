@@ -4,8 +4,11 @@ import math
 import warnings
 import numpy as np
 import matplotlib
+matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 import module_utilities as mod_util
+
+import pickle
 
 from collections import Counter
 
@@ -1213,6 +1216,8 @@ def compute_growth_rate_from_energy_balance(ueig, veig, peig, U, Uy, D1, y, alph
     Dissipation_integrand_other = -1/Re*( term1_other + term2_other + term3_other + term4_other + term5_other )
     Dissipation_other = trapezoid_integration(Dissipation_integrand_other, y)
 
+    print("OLD -----> Dissipation_other = ", Dissipation_other)
+
     # Dissipation ----- Other way 333
     term1_other333 = compute_inner_prod(1j*alpha*ueig, 1j*alpha*ueig)
     term2_other333 = compute_inner_prod(np.matmul(D1, ueig), np.matmul(D1, ueig))
@@ -2047,8 +2052,8 @@ def compute_important_terms_rayleigh_taylor(ueig, veig, weig, peig, reig, map, m
         
         plt.legend(loc="upper center")
 
-    print("")
-    input("R-T: LHS/RHS Kinetic Energy Equation")
+    #print("")
+    #input("R-T: LHS/RHS Kinetic Energy Equation")
     
     # # a_i (see Boussinesq paper by D. Israel page 17)
     # rhoxw = compute_inner_prod(reig, weig)
@@ -2156,14 +2161,6 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
         RHS_mass  = (  compute_inner_prod(reig, ia2*reig) \
                       +compute_inner_prod(reig, ib2*reig) \
                       +compute_inner_prod(reig, D2r) )/(Re*Sc)
-
-        # Equation for b
-        LHS_bEq = 2*omega_i*np.multiply(rho2_inv, compute_inner_prod(reig, reig))
-
-        bsfl_t1 = -2.*np.multiply(rho2_inv, Rhop)
-        
-        RHS_bEq = np.multiply(bsfl_t1, compute_inner_prod(reig, weig))
-        -2.*np.multiply(rho_inv, compute_inner_prod(reig, ia*ueig) + compute_inner_prod(reig, ib*veig) + compute_inner_prod(reig, Dw))
         
         #print("omega_i = ", omega_i)
         #print("max ( LHS_mass, RHS_mass ) = ", np.max(np.abs(LHS_mass)), np.max(np.abs(RHS_mass)))
@@ -2265,11 +2262,6 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
     energy_bal_cont = np.amax(np.abs(LHS_conti-RHS_conti))
     energy_bal_mass = np.amax(np.abs(LHS_mass-RHS_mass))
 
-    energy_bal_bEq  = np.amax(np.abs(LHS_bEq-RHS_bEq))
-    print("Energy balance (RT) continuity equation = ", energy_bal_cont)
-    print("Energy balance (RT) mass equation       = ", energy_bal_mass)
-
-    print("Energy balance (RT) b-equation       = ", energy_bal_bEq)
     if ( mob.boussinesq == -2 ):
         energy_bal_mass_nd = np.amax(np.abs(LHS_mass_nd-RHS_mass_nd))
         print("boussinesq == -2")
@@ -2277,7 +2269,7 @@ def check_mass_continuity_satisfied_rayleigh_taylor(ueig, veig, weig, peig, reig
         
     print("")
 
-    input("R-T: LHS/RHS for Continuity and Mass Equations")
+    #input("R-T: LHS/RHS for Continuity and Mass Equations")
     print("")
 
     #####################################################################
@@ -2573,8 +2565,8 @@ def build_total_flow_field(reig, Rho, alpha, beta, omega, z):
         cmplx_fct_loc = np.exp( 1j*( alpha*x + beta*y - omega*t + phase_r[k] )  )
         rho_prime_loc = np.real( amp_r[k]*cmplx_fct_loc )
 
-        if ( np.abs(rho_prime_loc) > 1.e-3):
-            print("cmplx_fct_loc, rho_prime_loc = ", cmplx_fct_loc, rho_prime_loc)
+        #if ( np.abs(rho_prime_loc) > 1.e-3):
+            #print("cmplx_fct_loc, rho_prime_loc = ", cmplx_fct_loc, rho_prime_loc)
         
     input("Check this data 1111111")
 
@@ -2729,6 +2721,482 @@ def write_2d_eigenfunctions(weig, reig, alpha, beta, omega, z, bsfl, mob):
     fileoutFinal1.close()
 
 
+
+def compute_baseflow_dissipation(visc, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz):
+
+    # If non-dimensional equations, visc = 1/Re
+
+    # The vertical direction is z
+
+    # Baseflow terms
+
+    term1 = 2*( np.multiply(dudx, dudx) + np.multiply(dvdy, dvdy) + np.multiply(dwdz, dwdz) )
+    term2 = -2./3.*np.multiply(dudx+dvdy+dwdz, dudx+dvdy+dwdz)
+    term3 = np.multiply(dudy+dvdx, dudy+dvdx) + np.multiply(dvdz+dwdy, dvdz+dwdy) + np.multiply(dudz+dwdx, dudz+dwdx)
+    
+    Dissip_baseflow = visc*( term1 + term2 + term3 )
+
+    #1/Re*( np.multiply(Uy, Uy) )
+
+
+
+def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha, beta, D1, bsfl, mob):
+
+    testing = 0
+
+    ny = len(ueig)
+    
+    # If non-dimensional equations, visc = 1/Re
+
+    # Here I compute the dissipation (not the pseudo dissipation)
+    
+    # The vertical direction is z
+
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+
+    if (testing == 1):
+
+        nz = len(ueig)
+
+        dudx = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dudy = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dudz = np.random.rand(nz) + 1j*np.random.rand(nz)
+        
+        dvdx = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dvdy = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dvdz = np.random.rand(nz) + 1j*np.random.rand(nz)
+        
+        dwdx = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dwdy = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dwdz = np.random.rand(nz) + 1j*np.random.rand(nz)
+
+    else:
+        
+        dudx = 1j*alpha*ueig
+        dudy = 1j*beta*ueig
+        dudz = np.matmul(D1, ueig)
+        
+        dvdx = 1j*alpha*veig
+        dvdy = 1j*beta*veig
+        dvdz = np.matmul(D1, veig)
+        
+        dwdx = 1j*alpha*weig
+        dwdy = 1j*beta*weig
+        dwdz = np.matmul(D1, weig)
+
+    #print("dudx = ", dudx)
+    #print("dwdz = ", dwdz)
+    
+    term1 = 2.0*( compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) )
+        
+    div = dudx + dvdy + dwdz
+    term2 = -2./3.*compute_inner_prod(div, div)
+    
+    # term2_v2 =  compute_inner_prod(dudx, dudx) + compute_inner_prod(dudx, dvdy) + compute_inner_prod(dudx, dwdz) \
+    #            +compute_inner_prod(dvdy, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdy, dwdz) \
+    #            +compute_inner_prod(dwdz, dudx) + compute_inner_prod(dwdz, dvdy) + compute_inner_prod(dwdz, dwdz)
+    
+    # term2_v2 = -2./3.*term2_v2
+
+    # for ii in range(0,nz):
+    #     print("ii, term2[ii], term2_v2[ii]: ", ii, term2[ii], term2_v2[ii])
+
+    sub1 = dudy+dvdx
+    sub2 = dvdz+dwdy
+    sub3 = dudz+dwdx
+    term3 = compute_inner_prod(sub1, sub1) + compute_inner_prod(sub2, sub2) + compute_inner_prod(sub3, sub3)
+
+    epsilon = visc*( term1 + term2 + term3 )
+
+    #print("epsilon = ", epsilon)
+    #print("visc = ", visc)
+
+    # Compute dissipation for b-equation
+    vp = -np.divide(reig, rho2)
+    epsilon_b = np.divide(compute_inner_prod(vp, div), rho2)
+
+    #print("epsilon =", epsilon)
+    #print("")
+    #print("epsilon_b =", epsilon_b)
+    
+    #print("vp=", vp)
+
+    # Disturbance kinetic energy
+    uu = compute_inner_prod(ueig, ueig)
+    vv = compute_inner_prod(veig, veig)
+    ww = compute_inner_prod(weig, weig)
+    KE_dist = 0.5*( uu + vv + ww ) + 1.0e-10
+
+    # Density self correlation b
+    b = np.divide( compute_inner_prod(reig, reig), rho2)
+
+    # Check that quantities are real
+    Check_eps  = np.max(np.abs(epsilon.imag))
+    Check_epsb = np.max(np.abs(epsilon_b.imag))
+    Check_KE   = np.max(np.abs(KE_dist.imag))
+    Check_b    = np.max(np.abs(b.imag))
+    
+    if ( Check_eps == 0. and Check_epsb == 0. and Check_KE == 0. and Check_b == 0. ):
+        KE_dist = KE_dist.real
+        epsilon = epsilon.real
+        epsilon_b = epsilon_b.real
+        b = b.real
+    else:
+        print("np.max(np.abs(b.imag))         = ", np.max(np.abs(b.imag)))
+        print("np.max(np.abs(epsilon.imag))   = ", np.max(np.abs(epsilon.imag)))
+        print("np.max(np.abs(epsilon_b.imag)) = ", np.max(np.abs(epsilon_b.imag)))
+        print("np.max(np.abs(KE_dist.imag))   = ", np.max(np.abs(KE_dist.imag)))
+        print("")
+        sys.exit("Error: some quantities are not real")
+        #
+
+    # Integrate in vertical direction
+    epsilon_int = trapezoid_integration(epsilon, y)
+    print("NEW: ----> epsilon_int = ", epsilon_int)
+    
+    # Compute turbulence length scale
+    S = np.divide(KE_dist**(1.5), epsilon)
+
+    # Compute model dissipation for b-equation
+    Cb1 = 2.0
+    t1_ = np.divide(epsilon, KE_dist)
+    t2_ = np.divide(b, Rho)
+    epsilon_b_model = Cb1/2.0*np.multiply(t1_, t2_)
+    #print("Dissip_disturb = ", Dissip_disturb)
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    plt.plot(epsilon_b, y, 'k', linewidth=1.5, label=r"\epsilon_b")
+    plt.plot(epsilon_b_model, y, 'g', linewidth=1.5, label=r"\epsilon_b (model)")
+        
+    plt.xlabel(r"dissipation for b-equation", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.legend(loc="upper right")
+    #plt.ylim([ymin, ymax])
+    f.show()
+
+    input("Last plot")
+
+    #ptn = ptn + 1
+
+
+
+def compute_a_equation_energy_balance(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, bsfl_ref, mob, rt_flag):
+
+    #plt.close('all') 
+    
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+    ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
+    
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+    Fr = bsfl_ref.Fr
+
+    Lref = bsfl_ref.Lref
+    Uref = bsfl_ref.Uref
+    muref = bsfl_ref.muref
+    rhoref = bsfl_ref.rhoref
+
+    div = ( 1j*alpha*ueig + 1j*beta*veig + Dw )
+
+    omega_i_dim = omega_i*Uref/Lref
+
+    d2udxdz = 1j*alpha*Du
+    d2wdx2  = (1j*alpha)**2.*weig
+    d2vdydz = 1j*beta*Dv
+    d2wdy2  = (1j*beta)**2.*weig
+    d2wdz2  = D2w
+
+    dPdz = -Rho*1./Fr**2.
+    dpprimedz = np.matmul(D1, peig)
+
+    # NONDIM BALANCE
+
+    b_ = np.divide(compute_inner_prod(reig, reig), rho2)
+    v_ = -np.divide(reig, rho2)
+
+    LHS_aEq_non_dim = 2*omega_i*compute_inner_prod(reig, weig)
+
+    ddivdz = ( d2udxdz + d2vdydz + d2wdz2 )
+
+    #print("ddivdz_dim = ", ddivdz_dim)
+    
+    dTau13primedx = np.multiply(1/Re, d2udxdz + d2wdx2)
+    dTau23primedy = np.multiply(1/Re, d2vdydz + d2wdy2)
+    dTau33primedz = np.multiply(1/Re, 2.*D2w - 2./3.*ddivdz)
+
+    pres_term_non_dim = compute_inner_prod(v_, dpprimedz)
+    visc_term_non_dim = compute_inner_prod(v_, -dTau13primedx -dTau23primedy -dTau33primedz)
+
+    
+    R1_non_dim = np.multiply(b_, dPdz)
+    R2_non_dim = -np.multiply(compute_inner_prod(weig, weig), Rhop)
+    R3_non_dim = np.multiply(Rho, pres_term_non_dim)
+    R4_non_dim = np.multiply(Rho, visc_term_non_dim)
+    R5_non_dim = -np.multiply(Rho, compute_inner_prod(weig, div))
+    RHS_aEq_non_dim = R1_non_dim + R2_non_dim + R3_non_dim + R4_non_dim + R5_non_dim
+    
+    energy_bal_aEq_non_dim  = np.amax(np.abs(LHS_aEq_non_dim-RHS_aEq_non_dim))
+    print("Energy balance (RT) a-equation ---- NONDIM = ", energy_bal_aEq_non_dim)
+
+    # Make eigenfunctions dimensional
+    ueig = ueig*Uref
+    veig = veig*Uref
+    weig = weig*Uref
+
+    peig = peig*rhoref*Uref**2.
+    reig = reig*rhoref
+
+    # Compute dimensional baseflow
+    Rho_dim = Rho*rhoref
+    Rhop_dim = Rhop*rhoref/Lref
+
+    Rho2_dim = np.multiply(Rho_dim, Rho_dim)
+
+    Mu_dim = Mu*muref
+
+    #print("Mu_dim = ", Mu_dim)
+
+    # Baseflow pressure gradient
+    dPdz_dim = dPdz*rhoref*Uref**2./Lref
+
+    #print("dPdz_dim = ", dPdz_dim)
+    #print("")
+    #print("Rho_dim*9.81 = ", Rho_dim*9.81)
+
+    # Dimensional b
+    b_dim = np.divide(compute_inner_prod(reig, reig), Rho2_dim)
+    v_dim = -np.divide(reig, Rho2_dim)
+
+    # LHS of a-Equation i=3 =====> third component of a-Equation
+    LHS_aEq = 2*omega_i_dim*compute_inner_prod(reig, weig)
+
+    # RHS of a-Equation
+    scale = Uref/Lref**2.
+    
+    d2udxdz_dim = d2udxdz*scale
+    d2wdx2_dim  = d2wdx2*scale
+    d2vdydz_dim = d2vdydz*scale
+    d2wdy2_dim  = d2wdy2*scale
+    d2wdz2_dim  = d2wdz2*scale
+
+    D2w_dim = D2w*scale
+
+    div_dim = div*Uref/Lref
+    ddivdz_dim = ( d2udxdz_dim + d2vdydz_dim + d2wdz2_dim )
+
+    #print("ddivdz_dim = ", ddivdz_dim)
+    
+    dTau13primedx_dim = np.multiply(Mu_dim, d2udxdz_dim + d2wdx2_dim)
+    dTau23primedy_dim = np.multiply(Mu_dim, d2vdydz_dim + d2wdy2_dim)
+    dTau33primedz_dim = np.multiply(Mu_dim, 2.*D2w_dim - 2./3.*ddivdz_dim)
+
+    dpprimedz_dim = dpprimedz*rhoref*Uref**2./Lref
+
+    pres_term = compute_inner_prod(v_dim, dpprimedz_dim)
+    visc_term = compute_inner_prod(v_dim, -dTau13primedx_dim -dTau23primedy_dim -dTau33primedz_dim)
+
+    LHS_aEq = 2*omega_i_dim*compute_inner_prod(reig, weig)
+    
+    R1 = np.multiply(b_dim, dPdz_dim)
+    R2 = -np.multiply(compute_inner_prod(weig, weig), Rhop_dim)
+    R3 = np.multiply(Rho_dim, pres_term)
+    R4 = np.multiply(Rho_dim, visc_term)
+    R5 = -np.multiply(Rho_dim, compute_inner_prod(weig, div_dim))
+    RHS_aEq = R1 + R2 + R3 + R4 + R5
+
+    energy_bal_aEq  = np.amax(np.abs(LHS_aEq-RHS_aEq))
+    print("Energy balance (RT) a-equation       = ", energy_bal_aEq)
+    
+    #print("LHS_aEq = ", LHS_aEq)
+
+    #print("R1 = ", R1)
+    #print("R2 = ", R2)
+    #print("R3 = ", R3)
+    #print("R4 = ", R4)
+    #print("R5 = ", R5)
+
+    ymin = -0.0002
+    ymax = -ymin
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+    
+    plt.plot(np.real(R1), y, 'b--', linewidth=1.5, label=r"$b\dfrac{\partial \overline{p}}{\partial z}$")
+    plt.plot(np.real(R2), y, 'g', linewidth=1.5, label=r"$-\overline{w'w'}\dfrac{\partial \overline{\rho}}{\partial z}$")
+    plt.plot(np.real(R3), y, 'b', linewidth=1.5, label=r"$\overline{\rho}\overline{v'\dfrac{\partial p'}{\partial z}}$")    
+    plt.plot(np.real(R4), y, 'm', linewidth=1.5, label=r"$-\overline{\rho}\overline{v'\dfrac{\partial \tau'_{ni}}{\partial x_n}}$")    
+    plt.plot(np.real(R5), y, 'c--', linewidth=1.5, label=r"$-\overline{\rho}\overline{w'\dfrac{\partial u'_i}{\partial x_i}}$")
+    plt.plot(np.real(RHS_aEq), y, 'r', linewidth=1.5, label="RHS")
+
+    plt.plot(np.real(LHS_aEq), y, 'k--', linewidth=1.5, label=r"LHS: $\dfrac{\partial \left( \overline{\rho} a_3 \right)}{\partial t}$")
+    
+    plt.xlabel("a-equation terms", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4, fancybox=True, shadow=True, fontsize=10)
+
+    #plt.legend(loc="upper right")
+    #plt.legend(fontsize=10)#, ncol = 7)
+    
+    f.show()
+
+
+    ptn = ptn + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+    ax.plot(np.real(R1_non_dim), y, 'b--', linewidth=1.5, label=r"$b\dfrac{\partial \overline{p}}{\partial z}$")
+    ax.plot(np.real(R2_non_dim), y, 'g', linewidth=1.5, label=r"$-\overline{w'w'}\dfrac{\partial \overline{\rho}}{\partial z}$")
+    ax.plot(np.real(R3_non_dim), y, 'b', linewidth=1.5, label=r"$\overline{\rho}\overline{v'\dfrac{\partial p'}{\partial z}}$")    
+    ax.plot(np.real(R4_non_dim), y, 'm', linewidth=1.5, label=r"$-\overline{\rho}\overline{v'\dfrac{\partial \tau'_{ni}}{\partial x_n}}$")    
+    ax.plot(np.real(R5_non_dim), y, 'c--', linewidth=1.5, label=r"$-\overline{\rho}\overline{w'\dfrac{\partial u'_i}{\partial x_i}}$")
+
+    ax.plot(np.real(RHS_aEq_non_dim), y, 'r', linewidth=1.5, label="RHS")
+
+    ax.plot(np.real(LHS_aEq_non_dim), y, 'k--', linewidth=1.5, label=r"LHS: $\dfrac{\partial \left( \overline{\rho} a_3 \right)}{\partial t}$")
+    
+    plt.xlabel("a-equation terms ---- NONDIMENSIONAL", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+
+    #plt.legend(bbox_to_anchor=(1.05, 1.05), ncol=4, borderaxespad=0)
+    #plt.legend(loc="upper right")
+    #plt.legend(fontsize=8)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
+              ncol=4, fancybox=True, shadow=True, fontsize=10)
+    
+    f.show()
+
+
+    
+    #plt.savefig('/Users/aph/Desktop/test_fig.png')
+
+    input("Final last check")
+
+
+def compute_b_equation_energy_balance(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, bsfl_ref, mob, rt_flag):
+
+    #plt.close('all')
+
+    #print("omega_i = ", omega_i)
+    
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+    ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
+
+    # b-Equation balance
+    bsfl_t1 = 2.*np.multiply(rho2_inv, Rhop)
+    
+    LHS_bEq = 2*omega_i*np.multiply(rho2_inv, compute_inner_prod(reig, reig))
+    RHS_bEq = -np.multiply(bsfl_t1, compute_inner_prod(reig, weig)) #+ 2.*np.multiply(Rho_dim, compute_inner_prod(v_dim, div_dim))
+    
+    energy_bal_bEq  = np.amax(np.abs(LHS_bEq-RHS_bEq))
+    print("Energy balance (RT) b-equation NONDIM       = ", energy_bal_bEq)
+    
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+    Fr = bsfl_ref.Fr
+
+    Lref = bsfl_ref.Lref
+    Uref = bsfl_ref.Uref
+    muref = bsfl_ref.muref
+    rhoref = bsfl_ref.rhoref
+
+    div = ( 1j*alpha*ueig + 1j*beta*veig + Dw )
+
+    omega_i_dim = omega_i*Uref/Lref
+
+    # Make eigenfunctions dimensional
+    ueig = ueig*Uref
+    veig = veig*Uref
+    weig = weig*Uref
+
+    peig = peig*rhoref*Uref**2.
+    reig = reig*rhoref
+
+    # Compute dimensional baseflow
+    Rho_dim = Rho*rhoref
+    Rhop_dim = Rhop*rhoref/Lref
+
+    Rho2_dim = np.multiply(Rho_dim, Rho_dim)
+
+    Rho_dim_inv = 1/Rho_dim
+    Rho2_dim_inv = 1/Rho2_dim
+
+    Mu_dim = Mu*muref
+
+    # Dimensional v (v=1/rho)
+    v_dim = -np.divide(reig, Rho2_dim)
+
+    div_dim = div*Uref/Lref
+
+    #print("div = ", div)
+    #print("")
+    #print("div_dim = ", div_dim)
+    
+    # b-Equation balance
+    LHS_bEq = 2*omega_i_dim*np.multiply(Rho2_dim_inv, compute_inner_prod(reig, reig))
+
+    bsfl_t1 = 2.*np.multiply(Rho2_dim_inv, Rhop_dim)
+    R1 = -np.multiply(bsfl_t1, compute_inner_prod(reig, weig))
+    R2 = 2.*np.multiply(Rho_dim, compute_inner_prod(v_dim, div_dim))
+    RHS_bEq = R1 + R2
+
+    #print("LHS_bEq = ", LHS_bEq)
+    #print("")
+    #print("")
+    #print("RHS_bEq = ", RHS_bEq)
+    energy_bal_bEq  = np.amax(np.abs(LHS_bEq-RHS_bEq))
+    energy_bal_bEq222  = np.amax(np.abs(LHS_bEq[1:-2]-RHS_bEq[1:-2]))
+    print("Energy balance (RT) b-equation       = ", energy_bal_bEq)
+    print("Energy balance (RT) b-equation 222   = ", energy_bal_bEq222)
+
+
+
+    
+    ymin = -0.0002
+    ymax = -ymin
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+    
+    plt.plot(np.real(R1), y, 'bs', markerfacecolor='none', markevery=2, linewidth=1.5, label=r"$-\dfrac{2}{\overline{\rho}^2} \dfrac{\partial \overline{\rho}}{\partial z} \overline{\rho'w'}$")
+    plt.plot(np.real(R2), y, 'g', linewidth=1.5, label=r"$2\overline{\rho} \overline{ v'\dfrac{\partial u'_i}{\partial x_i}}$") ### R2 = 2.*np.multiply(Rho_dim, compute_inner_prod(v_dim, div_dim))
+    plt.plot(np.real(RHS_bEq), y, 'r', linewidth=1.5, label="RHS")
+
+    plt.plot(np.real(LHS_bEq), y, 'k--', linewidth=1.5, label=r"LHS: $\dfrac{\partial b}{\partial t}$")
+    
+    plt.xlabel("b-equation terms", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4, fancybox=True, shadow=True, fontsize=10)
+
+    #plt.legend(loc="upper right")
+    #plt.legend(fontsize=10)#, ncol = 7)
+    
+    f.show()
+
+    input("After b-equation checks")
+    
+    
 # using Test
 # using Plots
 # using LinearAlgebra: norm

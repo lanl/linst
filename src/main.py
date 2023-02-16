@@ -10,7 +10,11 @@ import class_build_matrices as mbm
 import class_solve_gevp as msg
 import class_mapping as mma
 import class_readinput as rinput
+
+import matplotlib
+matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
+
 
 import module_utilities as mod_util
 import incomp_ns as mod_incomp

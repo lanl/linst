@@ -28,7 +28,7 @@ class BuildMatrices:
                 size = 5*ny
 
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval, -4 -> modified Sandoval, -555 -> comp.
-                self.boussinesq = -555
+                self.boussinesq = -3
 
                 if   (self.boussinesq == 1 ):
                     pass
