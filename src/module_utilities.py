@@ -1213,6 +1213,8 @@ def compute_growth_rate_from_energy_balance(ueig, veig, peig, U, Uy, D1, y, alph
     Dissipation_integrand_other = -1/Re*( term1_other + term2_other + term3_other + term4_other + term5_other )
     Dissipation_other = trapezoid_integration(Dissipation_integrand_other, y)
 
+    print("OLD -----> Dissipation_other = ", Dissipation_other)
+
     # Dissipation ----- Other way 333
     term1_other333 = compute_inner_prod(1j*alpha*ueig, 1j*alpha*ueig)
     term2_other333 = compute_inner_prod(np.matmul(D1, ueig), np.matmul(D1, ueig))
@@ -2573,8 +2575,8 @@ def build_total_flow_field(reig, Rho, alpha, beta, omega, z):
         cmplx_fct_loc = np.exp( 1j*( alpha*x + beta*y - omega*t + phase_r[k] )  )
         rho_prime_loc = np.real( amp_r[k]*cmplx_fct_loc )
 
-        if ( np.abs(rho_prime_loc) > 1.e-3):
-            print("cmplx_fct_loc, rho_prime_loc = ", cmplx_fct_loc, rho_prime_loc)
+        #if ( np.abs(rho_prime_loc) > 1.e-3):
+            #print("cmplx_fct_loc, rho_prime_loc = ", cmplx_fct_loc, rho_prime_loc)
         
     input("Check this data 1111111")
 
@@ -2729,6 +2731,169 @@ def write_2d_eigenfunctions(weig, reig, alpha, beta, omega, z, bsfl, mob):
     fileoutFinal1.close()
 
 
+
+def compute_baseflow_dissipation(visc, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz):
+
+    # If non-dimensional equations, visc = 1/Re
+
+    # The vertical direction is z
+
+    # Baseflow terms
+
+    term1 = 2*( np.multiply(dudx, dudx) + np.multiply(dvdy, dvdy) + np.multiply(dwdz, dwdz) )
+    term2 = -2./3.*np.multiply(dudx+dvdy+dwdz, dudx+dvdy+dwdz)
+    term3 = np.multiply(dudy+dvdx, dudy+dvdx) + np.multiply(dvdz+dwdy, dvdz+dwdy) + np.multiply(dudz+dwdx, dudz+dwdx)
+    
+    Dissip_baseflow = visc*( term1 + term2 + term3 )
+
+    #1/Re*( np.multiply(Uy, Uy) )
+
+
+
+def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha, beta, D1, bsfl, mob):
+
+    testing = 0
+
+    ny = len(ueig)
+    
+    # If non-dimensional equations, visc = 1/Re
+
+    # Here I compute the dissipation (not the pseudo dissipation)
+    
+    # The vertical direction is z
+
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+
+    if (testing == 1):
+
+        nz = len(ueig)
+
+        dudx = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dudy = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dudz = np.random.rand(nz) + 1j*np.random.rand(nz)
+        
+        dvdx = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dvdy = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dvdz = np.random.rand(nz) + 1j*np.random.rand(nz)
+        
+        dwdx = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dwdy = np.random.rand(nz) + 1j*np.random.rand(nz)
+        dwdz = np.random.rand(nz) + 1j*np.random.rand(nz)
+
+    else:
+        
+        dudx = 1j*alpha*ueig
+        dudy = 1j*beta*ueig
+        dudz = np.matmul(D1, ueig)
+        
+        dvdx = 1j*alpha*veig
+        dvdy = 1j*beta*veig
+        dvdz = np.matmul(D1, veig)
+        
+        dwdx = 1j*alpha*weig
+        dwdy = 1j*beta*weig
+        dwdz = np.matmul(D1, weig)
+
+    #print("dudx = ", dudx)
+    #print("dwdz = ", dwdz)
+    
+    term1 = 2.0*( compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) )
+        
+    div = dudx + dvdy + dwdz
+    term2 = -2./3.*compute_inner_prod(div, div)
+    
+    # term2_v2 =  compute_inner_prod(dudx, dudx) + compute_inner_prod(dudx, dvdy) + compute_inner_prod(dudx, dwdz) \
+    #            +compute_inner_prod(dvdy, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdy, dwdz) \
+    #            +compute_inner_prod(dwdz, dudx) + compute_inner_prod(dwdz, dvdy) + compute_inner_prod(dwdz, dwdz)
+    
+    # term2_v2 = -2./3.*term2_v2
+
+    # for ii in range(0,nz):
+    #     print("ii, term2[ii], term2_v2[ii]: ", ii, term2[ii], term2_v2[ii])
+
+    sub1 = dudy+dvdx
+    sub2 = dvdz+dwdy
+    sub3 = dudz+dwdx
+    term3 = compute_inner_prod(sub1, sub1) + compute_inner_prod(sub2, sub2) + compute_inner_prod(sub3, sub3)
+
+    epsilon = visc*( term1 + term2 + term3 )
+
+    #print("epsilon = ", epsilon)
+    #print("visc = ", visc)
+
+    # Compute dissipation for b-equation
+    vp = -np.divide(reig, rho2)
+    epsilon_b = np.divide(compute_inner_prod(vp, div), rho2)
+
+    #print("epsilon =", epsilon)
+    #print("")
+    #print("epsilon_b =", epsilon_b)
+    
+    #print("vp=", vp)
+
+    # Disturbance kinetic energy
+    uu = compute_inner_prod(ueig, ueig)
+    vv = compute_inner_prod(veig, veig)
+    ww = compute_inner_prod(weig, weig)
+    KE_dist = 0.5*( uu + vv + ww ) + 1.0e-10
+
+    # Density self correlation b
+    b = np.divide( compute_inner_prod(reig, reig), rho2)
+
+    # Check that quantities are real
+    Check_eps  = np.max(np.abs(epsilon.imag))
+    Check_epsb = np.max(np.abs(epsilon_b.imag))
+    Check_KE   = np.max(np.abs(KE_dist.imag))
+    Check_b    = np.max(np.abs(b.imag))
+    
+    if ( Check_eps == 0. and Check_epsb == 0. and Check_KE == 0. and Check_b == 0. ):
+        KE_dist = KE_dist.real
+        epsilon = epsilon.real
+        epsilon_b = epsilon_b.real
+        b = b.real
+    else:
+        print("np.max(np.abs(b.imag))         = ", np.max(np.abs(b.imag)))
+        print("np.max(np.abs(epsilon.imag))   = ", np.max(np.abs(epsilon.imag)))
+        print("np.max(np.abs(epsilon_b.imag)) = ", np.max(np.abs(epsilon_b.imag)))
+        print("np.max(np.abs(KE_dist.imag))   = ", np.max(np.abs(KE_dist.imag)))
+        print("")
+        sys.exit("Error: some quantities are not real")
+        #
+
+    # Integrate in vertical direction
+    epsilon_int = trapezoid_integration(epsilon, y)
+    print("NEW: ----> epsilon_int = ", epsilon_int)
+    
+    # Compute turbulence length scale
+    S = np.divide(KE_dist**(1.5), epsilon)
+
+    # Compute model dissipation for b-equation
+    Cb1 = 2.0
+    t1_ = np.divide(epsilon, KE_dist)
+    t2_ = np.divide(b, Rho)
+    epsilon_b_model = Cb1/2.0*np.multiply(t1_, t2_)
+    #print("Dissip_disturb = ", Dissip_disturb)
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    plt.plot(epsilon_b, y, 'k', linewidth=1.5, label=r"\epsilon_b")
+    plt.plot(epsilon_b_model, y, 'g', linewidth=1.5, label=r"\epsilon_b (model)")
+        
+    plt.xlabel(r"dissipation for b-equation", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.legend(loc="upper right")
+    #plt.ylim([ymin, ymax])
+    f.show()
+
+    input("Last plot")
+
+    #ptn = ptn + 1
+
+    
 # using Test
 # using Plots
 # using LinearAlgebra: norm
