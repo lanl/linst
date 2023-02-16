@@ -2884,7 +2884,6 @@ def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha
     #ptn = ptn + 1
 
 
-
 def compute_a_equation_energy_balance(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, bsfl_ref, mob, rt_flag):
 
     #plt.close('all') 
