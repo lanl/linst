@@ -269,7 +269,7 @@ class RayleighTaylorBaseflow(Baseflow):
                 
             # Compute dimensional density and its derivatives (d/dy_dim and d^2/dy_dim^2)
             self.Rho   = rhoref*( 1. + At*erf(zdim/delta_dim) )
-            self.Rhop  = rhoref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
+            self.Rhop  = rhoref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/( delta_dim*np.sqrt(pi) ) )
             self.Rhopp = 2.0*rhoref*At/(delta_dim*np.sqrt(pi))*(-2.*zdim/delta_dim**2.)*np.exp( -zdim**2/delta_dim**2 )
 
             # To Match Chandrasekhar and simplified Sandoval Equations, I need to use constant mu

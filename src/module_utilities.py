@@ -2721,8 +2721,60 @@ def write_2d_eigenfunctions(weig, reig, alpha, beta, omega, z, bsfl, mob):
     fileoutFinal1.close()
 
 
+def check_baseflow_divergence(bsfl, bsfl_ref, mob, y):
 
-def compute_baseflow_dissipation(visc, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz):
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+
+    drhodz2 = np.multiply(Rhop, Rhop)
+
+    term1 = 1/(Re*Sc)*( np.multiply(rho2_inv, drhodz2) )
+    term2 = -1/(Re*Sc)*np.multiply(rho_inv, Rhopp)
+    
+    div = term1 + term2
+
+    velocity = trapezoid_integration_cum(div, y)
+
+    #######################################
+    # PLOTS
+    #######################################
+    
+    ymin = -0.005
+    ymax = -ymin
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    plt.plot(term1, y, 'k', linewidth=1.5, label=r"$\dfrac{1}{Re Sc} \dfrac{1}{\rho^2} \dfrac{\partial \rho}{\partial z} \dfrac{\partial \rho}{\partial z}$")
+    plt.plot(term2, y, 'r', linewidth=1.5, label=r"$-\dfrac{1}{Re Sc} \dfrac{1}{\rho} \dfrac{\partial^2 \rho}{\partial z^2}$")
+    plt.plot(div, y, 'b', linewidth=1.5, label=r"total")
+        
+    plt.xlabel(r"baseflow divergence", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.legend(loc="upper right")
+    plt.ylim([ymin, ymax])
+    f.show()
+
+    ptn = ptn + 1
+    
+    f = plt.figure(ptn)
+    plt.plot(velocity, y, 'b', linewidth=1.5, label=r"total")
+        
+    plt.xlabel(r"velocity induced by density gradients", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.legend(loc="upper right")
+    plt.ylim([ymin, ymax])
+    f.show()
+
+    input("plot baseflow divergence and velocity")
+
+def compute_baseflow_dissipation(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, y, bsfl_ref, mob):
 
     # If non-dimensional equations, visc = 1/Re
 
@@ -2730,19 +2782,92 @@ def compute_baseflow_dissipation(visc, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx,
 
     # Baseflow terms
 
-    term1 = 2*( np.multiply(dudx, dudx) + np.multiply(dvdy, dvdy) + np.multiply(dwdz, dwdz) )
-    term2 = -2./3.*np.multiply(dudx+dvdy+dwdz, dudx+dvdy+dwdz)
-    term3 = np.multiply(dudy+dvdx, dudy+dvdx) + np.multiply(dvdz+dwdy, dvdz+dwdy) + np.multiply(dudz+dwdx, dudz+dwdx)
+    testing = 1
+
+    if testing == 1:
+        print("")
+        print("---------------> testing in compute_baseflow_dissipation")
+        print("")
+
+    if (mob.boussinesq == -2 ):
+        visc = bsfl_ref.muref
+    else:
+        visc = 1/bsfl_ref.Re
     
-    Dissip_baseflow = visc*( term1 + term2 + term3 )
+    if (testing == 1):
+
+        nz = len(dudx)
+
+        dudx = np.random.rand(nz)
+        dudy = np.random.rand(nz)
+        dudz = np.random.rand(nz)
+        
+        dvdx = np.random.rand(nz)
+        dvdy = np.random.rand(nz)
+        dvdz = np.random.rand(nz)
+        
+        dwdx = np.random.rand(nz)
+        dwdy = np.random.rand(nz)
+        dwdz = np.random.rand(nz)
+
+
+    sub1 = dudy+dvdx
+    sub2 = dvdz+dwdy
+    sub3 = dudz+dwdx
+
+    div  = dudx+dvdy+dwdz
+
+    term1 = 2.*( np.multiply(dudx, dudx) + np.multiply(dvdy, dvdy) + np.multiply(dwdz, dwdz) )
+    term2 = -2./3.*np.multiply(div, div)
+    term3 = np.multiply(sub1, sub1) + np.multiply(sub2, sub2) + np.multiply(sub3, sub3)
+
+    epsilon_check = visc*( term1 + term2 + term3 )
+
+    ########################################
+    # Various components of the dissipation
+    ########################################
+
+    # 1) visc*(du_i/dx_j)*(du_i/dx_j)
+    epsilon_tilde_base = np.multiply(dudx, dudx) + np.multiply(dudy, dudy) + np.multiply(dudz, dudz) \
+        + np.multiply(dvdx, dvdx) + np.multiply(dvdy, dvdy) + np.multiply(dvdz, dvdz) \
+        + np.multiply(dwdx, dwdx) + np.multiply(dwdy, dwdy) + np.multiply(dwdz, dwdz)
+    epsilon_tilde_base = visc*epsilon_tilde_base
+
+    # 2) visc*(du_i/dx_j)*(du_j/dx_i)
+    epsilon_2tilde_base = np.multiply(dudx, dudx) + np.multiply(dvdy, dvdy) + np.multiply(dwdz, dwdz) \
+        + 2.*np.multiply(dudy, dvdx) + 2.*np.multiply(dudz, dwdx) + 2.*np.multiply(dvdz, dwdy)
+    epsilon_2tilde_base = visc*epsilon_2tilde_base
+
+    # 3) incompressible dissipation
+    epsilon_incomp_base = epsilon_tilde_base + epsilon_2tilde_base
+
+    # 4) compressible part of dissipation
+    epsilon_comp_base = visc*term2
+
+    # 4) full dissipation
+    epsilon_base = epsilon_incomp_base + epsilon_comp_base
+
+    # Integrate in vertical direction
+    epsilon_int = trapezoid_integration(epsilon_base, y)
+    epsilon_int_check = trapezoid_integration(epsilon_check, y)
+    print("NEW (baseflow): ----> epsilon_int, epsilon_check = ", epsilon_int, epsilon_int_check)
+    print("")
 
     #1/Re*( np.multiply(Uy, Uy) )
 
-
-
-def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha, beta, D1, bsfl, mob):
+def compute_disturbance_dissipation(ueig, veig, weig, peig, reig, y, alpha, beta, D1, bsfl, bsfl_ref, mob):
 
     testing = 0
+
+    if testing == 1:
+        print("")
+        print("---------------> testing in compute_disturbance_dissipation")
+        print("")
+
+    if (mob.boussinesq == -2 ):
+        visc = bsfl_ref.muref
+    else:
+        visc = 1/bsfl_ref.Re
 
     ny = len(ueig)
     
@@ -2787,30 +2912,47 @@ def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha
 
     #print("dudx = ", dudx)
     #print("dwdz = ", dwdz)
-    
-    term1 = 2.0*( compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) )
-        
-    div = dudx + dvdy + dwdz
-    term2 = -2./3.*compute_inner_prod(div, div)
-    
-    # term2_v2 =  compute_inner_prod(dudx, dudx) + compute_inner_prod(dudx, dvdy) + compute_inner_prod(dudx, dwdz) \
-    #            +compute_inner_prod(dvdy, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdy, dwdz) \
-    #            +compute_inner_prod(dwdz, dudx) + compute_inner_prod(dwdz, dvdy) + compute_inner_prod(dwdz, dwdz)
-    
-    # term2_v2 = -2./3.*term2_v2
-
-    # for ii in range(0,nz):
-    #     print("ii, term2[ii], term2_v2[ii]: ", ii, term2[ii], term2_v2[ii])
 
     sub1 = dudy+dvdx
     sub2 = dvdz+dwdy
     sub3 = dudz+dwdx
+
+    div = dudx+dvdy+dwdz
+    
+    term1 = 2.*( compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) )
+    term2 = -2./3.*compute_inner_prod(div, div)
     term3 = compute_inner_prod(sub1, sub1) + compute_inner_prod(sub2, sub2) + compute_inner_prod(sub3, sub3)
 
-    epsilon = visc*( term1 + term2 + term3 )
+    epsilon_check = visc*( term1 + term2 + term3 )
 
-    #print("epsilon = ", epsilon)
-    #print("visc = ", visc)
+    ########################################
+    # Various components of the dissipation
+    ########################################
+
+    # 1) visc*(du_i/dx_j)*(du_i/dx_j)
+    epsilon_tilde_dist = compute_inner_prod(dudx, dudx) + compute_inner_prod(dudy, dudy) + compute_inner_prod(dudz, dudz) \
+                       + compute_inner_prod(dvdx, dvdx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdz, dvdz) \
+                       + compute_inner_prod(dwdx, dwdx) + compute_inner_prod(dwdy, dwdy) + compute_inner_prod(dwdz, dwdz)
+    epsilon_tilde_dist = visc*epsilon_tilde_dist
+
+    # 2) visc*(du_i/dx_j)*(du_j/dx_i)
+    epsilon_2tilde_dist = compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) \
+                        + 2.*compute_inner_prod(dudy, dvdx) + 2.*compute_inner_prod(dudz, dwdx) + 2.*compute_inner_prod(dvdz, dwdy)
+    epsilon_2tilde_dist = visc*epsilon_2tilde_dist
+
+    # 3) incompressible dissipation
+    epsilon_incomp_dist = epsilon_tilde_dist + epsilon_2tilde_dist
+
+    # 4) compressible part of dissipation
+    epsilon_comp_dist = visc*term2
+
+    # 5) full dissipation
+    epsilon_dist = epsilon_incomp_dist + epsilon_comp_dist 
+
+
+
+
+
 
     # Compute dissipation for b-equation
     vp = -np.divide(reig, rho2)
@@ -2832,38 +2974,49 @@ def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha
     b = np.divide( compute_inner_prod(reig, reig), rho2)
 
     # Check that quantities are real
-    Check_eps  = np.max(np.abs(epsilon.imag))
+    Check_eps  = np.max(np.abs(epsilon_dist.imag))
     Check_epsb = np.max(np.abs(epsilon_b.imag))
     Check_KE   = np.max(np.abs(KE_dist.imag))
     Check_b    = np.max(np.abs(b.imag))
+
+    tol = 1e-20
     
-    if ( Check_eps == 0. and Check_epsb == 0. and Check_KE == 0. and Check_b == 0. ):
+    if ( Check_eps < tol and Check_epsb < tol and Check_KE < tol and Check_b < tol ):
         KE_dist = KE_dist.real
-        epsilon = epsilon.real
         epsilon_b = epsilon_b.real
+        epsilon_dist = epsilon_dist.real
         b = b.real
     else:
-        print("np.max(np.abs(b.imag))         = ", np.max(np.abs(b.imag)))
-        print("np.max(np.abs(epsilon.imag))   = ", np.max(np.abs(epsilon.imag)))
-        print("np.max(np.abs(epsilon_b.imag)) = ", np.max(np.abs(epsilon_b.imag)))
-        print("np.max(np.abs(KE_dist.imag))   = ", np.max(np.abs(KE_dist.imag)))
+        print("np.max(np.abs(b.imag))            = ", np.max(np.abs(b.imag)))
+        print("np.max(np.abs(epsilon_dist.imag)) = ", np.max(np.abs(epsilon_dist.imag)))
+        print("np.max(np.abs(epsilon_b.imag))    = ", np.max(np.abs(epsilon_b.imag)))
+        print("np.max(np.abs(KE_dist.imag))      = ", np.max(np.abs(KE_dist.imag)))
         print("")
-        sys.exit("Error: some quantities are not real")
+        sys.exit("Error: some quantities have a nonzero imaginary part")
         #
 
     # Integrate in vertical direction
-    epsilon_int = trapezoid_integration(epsilon, y)
-    print("NEW: ----> epsilon_int = ", epsilon_int)
+    epsilon_int = trapezoid_integration(epsilon_dist, y)
+    epsilon_int_check = trapezoid_integration(epsilon_check, y)
+    print("NEW (disturbance): ----> epsilon_int, epsilon_check = ", epsilon_int, epsilon_int_check)
     
     # Compute turbulence length scale
-    S = np.divide(KE_dist**(1.5), epsilon)
+    S = np.divide(KE_dist**(1.5), epsilon_dist)
 
     # Compute model dissipation for b-equation
     Cb1 = 2.0
-    t1_ = np.divide(epsilon, KE_dist)
+    t1_ = np.divide(epsilon_dist, KE_dist)
     t2_ = np.divide(b, Rho)
     epsilon_b_model = Cb1/2.0*np.multiply(t1_, t2_)
     #print("Dissip_disturb = ", Dissip_disturb)
+
+
+    #######################################
+    # PLOTS
+    #######################################
+    
+    ymin = -0.005
+    ymax = -ymin
 
     ptn = plt.gcf().number + 1
     
@@ -2879,7 +3032,32 @@ def compute_disturbance_dissipation(visc, ueig, veig, weig, peig, reig, y, alpha
     #plt.ylim([ymin, ymax])
     f.show()
 
-    input("Last plot")
+    #########################################
+    # Plot various components of dissipation
+    ptn = ptn + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+    ax.plot(np.real(epsilon_dist),        y, 'k', linewidth=1.5, label=r"$\epsilon = \epsilon_{incomp} + \epsilon_{comp}$")
+    ax.plot(np.real(epsilon_incomp_dist), y, 'g--', linewidth=1.5, dashes=[5, 5], label=r"$\epsilon_{incomp} = \tilde{\epsilon} + \tilde{\tilde{\epsilon}}$")
+    ax.plot(np.real(epsilon_comp_dist),   y, 'm', linewidth=1.5, label=r"$\epsilon_{comp}$")
+    #
+    ax.plot(np.real(epsilon_tilde_dist),  y, 'r', linewidth=1.5, label=r"$\tilde{\epsilon}$")    
+    ax.plot(np.real(epsilon_2tilde_dist), y, 'b--', linewidth=1.5, dashes=[5, 5], label=r"$\tilde{\tilde{\epsilon}}$")    
+
+    plt.xlabel("dissipation components", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
+              ncol=3, fancybox=True, shadow=True, fontsize=10)
+    
+    f.show()
+
+
+    input("dissipation plot + other")
 
     #ptn = ptn + 1
 
@@ -2931,7 +3109,6 @@ def compute_a_equation_energy_balance(ueig, veig, weig, peig, reig, D1, D2, y, a
 
     pres_term_non_dim = compute_inner_prod(v_, dpprimedz)
     visc_term_non_dim = compute_inner_prod(v_, -dTau13primedx -dTau23primedy -dTau33primedz)
-
     
     R1_non_dim = np.multiply(b_, dPdz)
     R2_non_dim = -np.multiply(compute_inner_prod(weig, weig), Rhop)
@@ -3095,15 +3272,6 @@ def compute_b_equation_energy_balance(ueig, veig, weig, peig, reig, D1, D2, y, a
     # Get some quantities to compute the balances
     Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
     ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
-
-    # b-Equation balance
-    bsfl_t1 = 2.*np.multiply(rho2_inv, Rhop)
-    
-    LHS_bEq = 2*omega_i*np.multiply(rho2_inv, compute_inner_prod(reig, reig))
-    RHS_bEq = -np.multiply(bsfl_t1, compute_inner_prod(reig, weig)) #+ 2.*np.multiply(Rho_dim, compute_inner_prod(v_dim, div_dim))
-    
-    energy_bal_bEq  = np.amax(np.abs(LHS_bEq-RHS_bEq))
-    print("Energy balance (RT) b-equation NONDIM       = ", energy_bal_bEq)
     
     Sc = bsfl_ref.Sc
     Re = bsfl_ref.Re
@@ -3114,8 +3282,22 @@ def compute_b_equation_energy_balance(ueig, veig, weig, peig, reig, D1, D2, y, a
     muref = bsfl_ref.muref
     rhoref = bsfl_ref.rhoref
 
-    div = ( 1j*alpha*ueig + 1j*beta*veig + Dw )
+    #
+    # Compute non-dimensional b-equation balance
+    #
 
+    v = -np.divide(reig, rho2)
+    div = ( 1j*alpha*ueig + 1j*beta*veig + Dw )
+    
+    bsfl_t1 = 2.*np.multiply(rho2_inv, Rhop)
+    
+    LHS_bEq = 2*omega_i*np.multiply(rho2_inv, compute_inner_prod(reig, reig))
+    RHS_bEq = -np.multiply(bsfl_t1, compute_inner_prod(reig, weig)) + 2.*np.multiply(Rho, compute_inner_prod(v, div))
+    
+    energy_bal_bEq  = np.amax(np.abs(LHS_bEq-RHS_bEq))
+    print("Energy balance (RT) b-equation NONDIM       = ", energy_bal_bEq)
+    
+    # Dimensional growth rate
     omega_i_dim = omega_i*Uref/Lref
 
     # Make eigenfunctions dimensional

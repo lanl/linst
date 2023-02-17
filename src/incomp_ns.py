@@ -255,7 +255,25 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y)
             mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y, bsfl, mob)
 
-            mod_util.compute_disturbance_dissipation(bsfl_ref.Re, ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.y, alpha_nd, beta_nd, map.D1, bsfl, mob)
+
+            # Check if baseflow is divergence free
+            mod_util.check_baseflow_divergence(bsfl, bsfl_ref, mob, map.y)
+
+            mod_util.compute_disturbance_dissipation(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.y, alpha_nd, beta_nd, map.D1, bsfl, bsfl_ref, mob)
+
+            dudx = 0.0*ueig
+            dudy = 0.0*ueig
+            dudz = 0.0*ueig
+            #
+            dvdx = 0.0*ueig
+            dvdy = 0.0*ueig
+            dvdz = 0.0*ueig
+            #
+            dwdx = 0.0*ueig
+            dwdy = 0.0*ueig
+            dwdz = 0.0*ueig
+            
+            mod_util.compute_baseflow_dissipation(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, map.y, bsfl_ref, mob)
 
             mod_util.compute_a_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
             mod_util.compute_b_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
