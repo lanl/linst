@@ -223,8 +223,10 @@ class RayleighTaylorBaseflow(Baseflow):
             #
             
             # Here I take delta as dimensionless, and delta_dim is its dimensional value
-            delta     = 0.00005 #0.02
+            delta     = 0.0005 #0.00005 #0.02
             delta_dim = delta*Lref
+
+            self.delta = delta
             
             # Note: delta is the characteristic thickness of the diffusion layer
             print("Setting up R-T baseflow")

@@ -105,6 +105,10 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     if plot_grid_bsfl == 1:
         mod_util.plot_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up, map.D1)
 
+
+    # Check if baseflow is divergence free
+    mod_util.check_baseflow_divergence(bsfl, bsfl_ref, mtmp, map)
+        
     #################################################
     #            Solve stability problem            # 
     #################################################
@@ -118,7 +122,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
     
     # Build matrices and solve global/local problem
-    omega_all, eigvals_filtered, mob, q_eigvect = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
+    omega_all,eigvals_filtered,mob,q_eigvect = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
 
 
     #################################################
@@ -230,7 +234,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ): # non-dimensional solvers
 
             if   ( mob.boussinesq == 1 ):  # Boussinesq solver
-                print("Boussinesq R-T solver")                
+                print("Boussinesq R-T solver")
 
             elif ( mob.boussinesq == -3 ): # Sandoval solver
                 print("Sandoval R-T solver")
@@ -255,10 +259,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y)
             mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y, bsfl, mob)
 
-
-            # Check if baseflow is divergence free
-            mod_util.check_baseflow_divergence(bsfl, bsfl_ref, mob, map.y)
-
             mod_util.compute_disturbance_dissipation(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.y, alpha_nd, beta_nd, map.D1, bsfl, bsfl_ref, mob)
 
             dudx = 0.0*ueig
@@ -275,8 +275,21 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             
             mod_util.compute_baseflow_dissipation(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, map.y, bsfl_ref, mob)
 
-            mod_util.compute_a_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
-            mod_util.compute_b_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+            # Sandoval equations balances
+            if ( mob.boussinesq == -3 ): # Sandoval solver
+                mod_util.compute_dsc_eq_bal_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
+                mod_util.compute_b_eq_bal_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
+
+            goThere = False
+            if (goThere):
+                mod_util.compute_a_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                mod_util.compute_b_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+
+            # Boussinesq equations balances
+            if   ( mob.boussinesq == 1 ):  # Boussinesq solver
+                mod_util.compute_b_eq_boussinesq_ener_bal(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                mod_util.compute_density_self_correlation_equation_energy_balance_boussinesq(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
+                                                                                alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
             
         elif ( mob.boussinesq == -2):                         # dimensional solver
             print("Chandrasekhar R-T solver")
