@@ -28,7 +28,7 @@ class BuildMatrices:
                 size = 5*ny
 
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval, -4 -> modified Sandoval, -555 -> comp.
-                self.boussinesq = 1
+                self.boussinesq = -3
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -667,14 +667,14 @@ class BuildMatrices:
             # ymin
             lhs[idx_p_ymin,:] = 0.0
             rhs[idx_p_ymin  ] = 0.0        
-            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            #lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
             
             # ymax
             lhs[idx_p_ymax,:] = 0.0
             rhs[idx_p_ymax  ] = 0.0
-            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            #lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
 
         ##################
         # density BCs #
@@ -1186,6 +1186,11 @@ class BuildMatrices:
         self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/Fr2 
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # # To match Boussinesq === THIS DID NOT WORK
+        # dRhop   = 0.0*dRhop
+        # dRhopp   = 0.0*dRhopp
+        # SetDivergenceToZero = 1
 
         # 4th block indices
         imin = imin + ny
