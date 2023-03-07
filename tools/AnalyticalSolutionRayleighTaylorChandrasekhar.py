@@ -1,5 +1,6 @@
 
 import matplotlib
+matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 
 from scipy.special import erf
@@ -13,8 +14,12 @@ print("")
 print("Chandrasekhar analytical stability solution of R-T")
 print("==================================================")
 
-rho1  = 1.0
-rho2  = 3.*rho1 # that way I get Atw = 0.5
+At   = 0.05
+rho1 = 1.0
+
+rho2 = rho1*(1.+At)/(1.-At) #3.*rho1 # that way I get Atw = 0.5
+
+# 
 
 alpha1 = rho1/(rho1+rho2)
 alpha2 = rho2/(rho1+rho2)
@@ -25,7 +30,7 @@ print("alpha1 + alpha2 (answer should be 1) = ",alpha1+alpha2)
 print("Atwood number: alpha2 - alpha1 (answer should be 0.5) = ",alpha2-alpha1)
 
 ymin = 1
-ymax = 100
+ymax = 50#100
 eps  = 1.e-14
 npts = 10001
 
@@ -62,6 +67,7 @@ n_solver = np.array([0.15916831, 0.21856004, 0.27011286, 0.28346694, 0.25362894,
 
 
 ptn = plt.gcf().number
+print("ptn = ", ptn)
 
 f = plt.figure(ptn)
 plt.plot(k_sorted, n_sorted, 'b-', markerfacecolor='none', label="Chandrasekhar")
@@ -76,9 +82,54 @@ plt.ylim([0, 0.5])
 plt.gcf().subplots_adjust(left=0.16)
 plt.gcf().subplots_adjust(bottom=0.13)
 
-input("")
 
-data_out = np.column_stack([k_sorted, n_sorted])
-datafile_path = "./Chandrasekhar_exact_rayleigh_taylor_ratio2.txt" #+ str(ny) + ".dat" 
-np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e'])
+# DIMENSIONAL GROWTH RATES AND WAVENUMBERS
+ptn = ptn + 1
+
+g = 9.81
+nu = 1.2262500044390254e-06
+
+Lscale = (g/nu**2.)**(-1./3.)
+Tscale = (g**2./nu)**(-1./3.)
+
+kdim2 = k_sorted/Lscale
+ndim2 = n_sorted/Tscale
+
+kdim = k_sorted*(g/nu**2.)**(1./3.)
+ndim = n_sorted*(g**2./nu)**(1./3.)
+
+Idx_max_ndim = np.argmax(ndim)
+
+#print("")
+#print("ndim[Idx_max_ndim-1], ndim[Idx_max_ndim], ndim[Idx_max_ndim+1] = ",\
+#      ndim[Idx_max_ndim-1], ndim[Idx_max_ndim], ndim[Idx_max_ndim+1])
+
+print("")
+print("Wavenumber with max. growth rate, k = ", kdim[Idx_max_ndim])
+print("")
+
+f = plt.figure(ptn)
+plt.plot(kdim, ndim, 'b', label="Chandrasekhar (dimensional)")
+plt.plot(kdim2, ndim2, 'r--', label="Chandrasekhar (dimensional)")
+plt.xlabel('k (dimensional)', fontsize=20)
+plt.ylabel('n (dimensional)', fontsize=20)
+plt.legend(loc="best")
+f.show()
+plt.xlim([0, 5.*kdim[Idx_max_ndim]])
+#plt.ylim([0, 0.5])
+
+plt.gcf().subplots_adjust(left=0.16)
+plt.gcf().subplots_adjust(bottom=0.13)
+
+
+
+input("End of program")
+
+
+WriteOut = False
+
+if (WriteOut):
+    data_out = np.column_stack([k_sorted, n_sorted])
+    datafile_path = "./Chandrasekhar_exact_rayleigh_taylor_ratio2.txt" #+ str(ny) + ".dat" 
+    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e'])
 
