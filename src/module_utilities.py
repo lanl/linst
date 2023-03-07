@@ -7,7 +7,6 @@ import matplotlib
 matplotlib.use('TkAgg') #----> Specify the backend
 from scipy import linalg
 import matplotlib.pyplot as plt
-import module_utilities as mod_util
 
 import pickle
 
