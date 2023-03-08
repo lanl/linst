@@ -105,9 +105,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     if plot_grid_bsfl == 1:
         mod_util.plot_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up, map.D1)
 
-
-    # Check if baseflow is divergence free
-    mod_util.check_baseflow_divergence(bsfl, bsfl_ref, mtmp, map)
         
     #################################################
     #            Solve stability problem            # 
@@ -263,7 +260,8 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                                                                          alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
 
             # Check if disturbance field is divergence free
-            mod_util.check_disturbance_flow_divergence(ueig_nd, veig_nd, weig_nd, alpha_nd, beta_nd, map.D1)
+            mod_util.check_baseflow_disturbance_flow_divergence_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, alpha_nd, beta_nd, bsfl, bsfl_ref, map, mob)
+
         
             mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y)
             mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y, bsfl, mob)

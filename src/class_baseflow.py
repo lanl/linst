@@ -178,6 +178,8 @@ class RayleighTaylorBaseflow(Baseflow):
 
         At   = bsfl_ref.At
         Re   = bsfl_ref.Re
+        Sc   = bsfl_ref.Sc
+        
         Uref = bsfl_ref.Uref
         grav = bsfl_ref.gref
         Lref = bsfl_ref.Lref 
@@ -324,6 +326,24 @@ class RayleighTaylorBaseflow(Baseflow):
             # d^2rho/dy^2 = Lref^2/rhoref*(d^2rho_dim/dy_dim^2) 
             self.Rhopp_nd = Lref**2./rhoref*self.Rhopp
 
+            ##############################
+            # COMPUTE BASEFLOW W-VELOCITY
+            ##############################
+
+            # Non-dimensional baseflow w-velocity and its z-derivative
+            self.Wvel_nd  = -1./(Re*Sc)*np.divide(self.Rhop_nd, self.Rho_nd)
+
+            div_bsfl = -1./(Re*Sc)*( -np.divide( np.multiply(self.Rhop_nd, self.Rhop_nd), np.multiply(self.Rho_nd, self.Rho_nd) ) + np.divide(self.Rhopp_nd, self.Rho_nd) )
+            self.Wvelp_nd  = div_bsfl
+
+            Wvel_nd_num = mod_util.trapezoid_integration_cum(div_bsfl, zcoord)
+
+            # Dimensional baseflow w-velocity (to check that non-dimensionalization is consistent)
+            self.Wvel = -bsfl_ref.Dref*np.divide(self.Rhop, self.Rho)
+            self.Wvel_nd_after = self.Wvel/Uref
+
+            self.Wvelp_nd_num = np.matmul(D1_nondim, self.Wvel_nd)
+
             # Compute non-dimensional viscosity and its derivatives
             self.Mu_nd  = 1/muref*self.Mu
             self.Mup_nd = Lref/muref*self.Mup
@@ -378,6 +398,40 @@ class RayleighTaylorBaseflow(Baseflow):
             #print("k_nondim                             = ", k_nondim)
             #print("delta_nondim (Lref*)                 = ", Lref/self.Lscale)
             #print
+
+            # PLOT W-VELOCITY
+            
+            ptn = plt.gcf().number + 1
+            
+            f = plt.figure(ptn)
+            #plt.plot(self.Wvel_nd_after, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim after)")
+            plt.plot(Wvel_nd_num, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim, numerical)")
+            plt.plot(self.Wvel_nd, zcoord, 'r--', linewidth=1.5, label="Baseflow wvel (nondim)")
+                        
+            plt.xlabel("w-velocity [-]", fontsize=14)
+            plt.ylabel('z', fontsize=16)
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            #plt.ylim([xmin, xmax])
+            plt.legend(loc="upper right")
+            f.show()
+
+            ptn = plt.gcf().number + 1
+            
+            f = plt.figure(ptn)
+            plt.plot(self.Wvelp_nd, zcoord, 'k', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, exact)")
+            plt.plot(self.Wvelp_nd_num, zcoord, 'r--', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, numerical)")
+                        
+            plt.xlabel("d(w-velocity)/dz [-]", fontsize=14)
+            plt.ylabel('z', fontsize=16)
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+            #plt.ylim([xmin, xmax])
+            plt.legend(loc="upper right")
+            f.show()
+
+            input("Check baseflow w-velocity!!!!!")
+
 
         elif(opt==3):
 
@@ -440,7 +494,6 @@ class RayleighTaylorBaseflow(Baseflow):
         #    warnings.warn("RT baseflow: Re > 1e10 ==> setting viscosity to zero")
         #    self.Mu   = 0.0*self.Mu
         #    self.Mup  = 0.0*self.Mup
-
 
         zmin = -0.005
         zmax = 0.005

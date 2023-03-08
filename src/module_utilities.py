@@ -595,7 +595,7 @@ def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_fla
     print("Reference phase taken from v-velocity")
     print("")
 
-    mid_idx       = mod_util.get_mid_idx(ny)
+    mid_idx       = get_mid_idx(ny)
     phase_ref     = phase_v_uwrap[mid_idx]
     
     phase_u_uwrap = phase_u_uwrap - phase_ref
@@ -652,15 +652,15 @@ def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_fla
     
     #ueig_from_continuity = -np.matmul(map.D1, veig_ps)/(1j*alpha)
     
-    mod_util.plot_real_imag_part(ueig_ps, "u", map.y, rt_flag, mob)
-    #mod_util.plot_real_imag_part(veig_ps, "v", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(weig_ps, "w", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(peig_ps, "p", map.y, rt_flag, mob)
-    mod_util.plot_real_imag_part(reig_ps, "r", map.y, rt_flag, mob)
+    plot_real_imag_part(ueig_ps, "u", map.y, rt_flag, mob)
+    #plot_real_imag_part(veig_ps, "v", map.y, rt_flag, mob)
+    plot_real_imag_part(weig_ps, "w", map.y, rt_flag, mob)
+    plot_real_imag_part(peig_ps, "p", map.y, rt_flag, mob)
+    plot_real_imag_part(reig_ps, "r", map.y, rt_flag, mob)
     
     #input("Check real imag parts + PHASE")
     
-    mod_util.plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
+    plot_five_vars_amplitude(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, "u", "v", "w", "p", "r", map.y)
 
     return ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps
     
@@ -668,7 +668,7 @@ def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_fla
 def plot_eigvcts(ny, eigvects, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
 
     # Compute phase for v-eigenfunction
-    #mid_idx = mod_util.get_mid_idx(ny)
+    #mid_idx = get_mid_idx(ny)
     
     #phase_vvel = np.arctan2( veig_vec.imag, veig_vec.real)    
     #phase_vvel = phase_vvel - phase_vvel[mid_idx]
@@ -957,7 +957,7 @@ def compute_stream_function_check(ueig, veig, alpha, D1, y, ny):
 
     phase_Phi_uwrap = np.unwrap(phase_Phi)
 
-    mid_idx   = mod_util.get_mid_idx(ny)
+    mid_idx   = get_mid_idx(ny)
     phase_ref = phase_Phi_uwrap[mid_idx]
 
     #print("phase_Phi_uwrap = ", phase_Phi_uwrap)
@@ -1042,8 +1042,8 @@ def compute_stream_function_check(ueig, veig, alpha, D1, y, ny):
     #plot_real_imag_part(ueig, "u", y)
     #plot_real_imag_part(ueig_fct_check, "u (indirectly from Phi)", y)
 
-    #mod_util.plot_amplitude(ueig, "u", y)
-    #mod_util.plot_amplitude(ueig_fct_check, "u (indirectly from Phi)", y)
+    #plot_amplitude(ueig, "u", y)
+    #plot_amplitude(ueig_fct_check, "u (indirectly from Phi)", y)
 
     return Phi_eig_cc
 
@@ -2906,8 +2906,7 @@ def write_2d_eigenfunctions(weig, reig, alpha, beta, omega, z, bsfl, mob):
 
     fileoutFinal1.close()
 
-
-def check_baseflow_divergence(bsfl, bsfl_ref, mob, map):
+def check_baseflow_disturbance_flow_divergence_boussinesq(ueig, veig, weig, peig, reig, alpha, beta, bsfl, bsfl_ref, map, mob):
 
     y = map.y
     ny = len(y)
@@ -2917,62 +2916,91 @@ def check_baseflow_divergence(bsfl, bsfl_ref, mob, map):
     Sc = bsfl_ref.Sc
     Re = bsfl_ref.Re
 
-    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
-
-    drhodz2 = np.multiply(Rhop, Rhop)
-
-    term1 = 1/(Re*Sc)*( np.multiply(rho2_inv, drhodz2) )
-    term2 = -1/(Re*Sc)*np.multiply(rho_inv, Rhopp)
-    
-    div = term1 + term2
-
-    w_vel_base = trapezoid_integration_cum(div, y)
-    w_vel_base2 = -1/(Re*Sc)*np.multiply(rho_inv, Rhop)
-
-    w_vel_base_lst_steady = -np.divide( np.multiply(Rho, div), Rhop)
-    w_vel_base_lst_steady_exact = 1/(Re*Sc)*( -np.multiply(rho_inv, Rhop) -2.*y/bsfl.delta**2.)
-
-    dwdz = np.matmul(D1, w_vel_base)
-
     # velocity induced for Boussinesq LST
-    vel_boussi_lst = 1/(Re*Sc)*np.divide(Rhopp, Rhop)
-    vel_boussi_lst_exact = 1/(Re*Sc)*(-2.*y/bsfl.delta**2.)
+    wvel_base_lst_steady_boussi = 1/(Re*Sc)*np.divide(Rhopp, Rhop)
+    wvel_base_lst_steady_exact_boussi = 1/(Re*Sc)*(-2.*y/bsfl.delta**2.)
 
-    # This does not work with spectral matrix because vel_boussi_lst has some nan's
-    #dwdz_boussi_lst = np.matmul(D1, vel_boussi_lst)
+    # This does not work with spectral matrix because vel_boussi_lst_steady has some nan's
+    #dwdz_boussi_lst = np.matmul(D1, vel_boussi_lst_steady)
     dwdz_boussi_lst_exact = 1/(Re*Sc)*(-2./bsfl.delta**2.)*np.ones(ny)
     dwdz_boussi_lst = np.zeros(ny, dp)
-    dwdz_boussi_lst[0] = ( vel_boussi_lst[1]-vel_boussi_lst[0] )/(y[1]-y[0])
-    dwdz_boussi_lst[-1] = ( vel_boussi_lst[-1]-vel_boussi_lst[-2] )/(y[-1]-y[-2])
+    dwdz_boussi_lst[0] = ( vel_boussi_lst_steady[1]-vel_boussi_lst_steady[0] )/(y[1]-y[0])
+    dwdz_boussi_lst[-1] = ( vel_boussi_lst_steady[-1]-vel_boussi_lst_steady[-2] )/(y[-1]-y[-2])
     
     for i in range(1, ny-1):
-        dwdz_boussi_lst[i] = ( vel_boussi_lst[i+1]-vel_boussi_lst[i-1] )/(y[i+1]-y[i-1])
-
-    #print("vel_boussi_lst = ", vel_boussi_lst)
-    #print("dwdz_boussi_lst = ", dwdz_boussi_lst)
+        dwdz_boussi_lst[i] = ( vel_boussi_lst_steady[i+1]-vel_boussi_lst_steady[i-1] )/(y[i+1]-y[i-1])
 
     array_nan_check = np.isnan(vel_boussi_lst)
 
     i=0
     while ( array_nan_check[i] == True ):
         i = i+1
+        ibeg = i
         #print("i, array_nan_check[i] = ", i, array_nan_check[i])
 
-    ibeg = i
-    #print("ibeg = ", ibeg)
-
-    
     i=-1
     while ( array_nan_check[i] == True ):
         i = i-1
+        ifin = i
         #print("i, array_nan_check[i] = ", i, array_nan_check[i])
 
-    ifin = i
+    #print("ibeg = ", ibeg)
     #print("ifin = ", ifin)
 
     #print("array_nan_check[ibeg:ifin+1]", array_nan_check[ibeg:ifin+1])
+
+
     
+def check_baseflow_disturbance_flow_divergence_sandoval(ueig, veig, weig, peig, reig, alpha, beta, bsfl, bsfl_ref, map, mob):
+
+    y = map.y
+    ny = len(y)
+    
+    D1 = map.D1
+
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+
+    ################
+    # 1) BASEFLOW
+    ################
+    
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+
+    drhodz2 = np.multiply(Rhop, Rhop)
+
+    term1 = 1/(Re*Sc)*( np.multiply(rho2_inv, drhodz2) )
+    term2 = -1/(Re*Sc)*np.multiply(rho_inv, Rhopp)
+
+    # Baseflow divergence for sandoval equations
+    div = term1 + term2
+
+    wvel_base_sando = trapezoid_integration_cum(div, y)
+    wvel_base_sando_exact = -1/(Re*Sc)*np.multiply(rho_inv, Rhop)
+
+    dwdz_sando = np.matmul(D1, wvel_base_sando_exact)
+
+    RhopRhop = np.multiply(Rhop, Rhop)
         
+    wvel_base_lst_steady_sando = -np.divide( np.multiply(Rho, div), Rhop)
+    #wvel_base_lst_steady_sando22 = np.divide( -np.multiply(rho_inv, RhopRhop) + Rhopp, Rhop*Re*Sc )
+    wvel_base_lst_steady_exact_sando = 1/(Re*Sc)*( -np.multiply(rho_inv, Rhop) -2.*y/bsfl.delta**2.)
+
+    drhodz_dist = np.matmul(D1, reig)
+    wvel_base_drhodz_dist = np.multiply(wvel_base_sando_exact, drhodz_dist)
+    
+    wvel_dist_drhodz_base = np.multiply(weig, Rhop)
+
+    ######################
+    # 2) DISTURBANCE FLOW
+    ######################
+
+    #div_dist = 1j*alpha*ueig + 1j*beta*veig + np.matmul(D1, weig)
+    #print("")
+    #print("Max. value of divergence of disturbance field, max(div_dist) = ", np.amax(np.abs(div_dist)))
+    #print("")
+
+    
     #######################################
     # PLOTS
     #######################################
@@ -2986,10 +3014,10 @@ def check_baseflow_divergence(bsfl, bsfl_ref, mob, map):
     ax = plt.subplot(111)
     ax.plot(term1, y, 'k', linewidth=1.5, label=r"$\dfrac{1}{Re Sc} \dfrac{1}{\rho^2} \dfrac{\partial \rho}{\partial z} \dfrac{\partial \rho}{\partial z}$")
     ax.plot(term2, y, 'r', linewidth=1.5, label=r"$-\dfrac{1}{Re Sc} \dfrac{1}{\rho} \dfrac{\partial^2 \rho}{\partial z^2}$")
-    ax.plot(div, y, 'b', linewidth=1.5, label=r"total")
-    ax.plot(dwdz, y, 'm--', linewidth=1.5, label=r"dwdz")
-    ax.plot(dwdz_boussi_lst[ibeg:ifin+1], y[ibeg:ifin+1], 'g', linewidth=1.5, label=r"dwdz (Boussinesq LST)")
-    ax.plot(dwdz_boussi_lst_exact, y, 'k--', linewidth=1.5, label=r"dwdz (Boussinesq LST, exact)")
+    ax.plot(div, y, 'b', linewidth=1.5, label=r"$\dfrac{\partial \bar{u}}{\partial x} + \dfrac{\partial \bar{v}}{\partial y} + \dfrac{\partial \bar{w}}{\partial z}$")
+    ax.plot(dwdz_sando, y, 'm--', linewidth=1.5, label=r"$\dfrac{\partial w}{\partial z}$ (numerical after computing w)")
+    #ax.plot(dwdz_boussi_lst[ibeg:ifin+1], y[ibeg:ifin+1], 'g', linewidth=1.5, label=r"dwdz (Boussinesq LST)")
+    #ax.plot(dwdz_boussi_lst_exact, y, 'k--', linewidth=1.5, label=r"dwdz (Boussinesq LST, exact)")
         
     plt.xlabel(r"baseflow divergence", fontsize=14)
     plt.ylabel('y', fontsize=16)
@@ -3008,13 +3036,14 @@ def check_baseflow_divergence(bsfl, bsfl_ref, mob, map):
     
     f = plt.figure(ptn)
     ax = plt.subplot(111)
-    ax.plot(w_vel_base, y, 'b', linewidth=1.5, label=r"w-vel")
-    ax.plot(w_vel_base2, y, 'g--', linewidth=1.5, label=r"w-vel (other way)")
-    ax.plot(w_vel_base_lst_steady, y, 'm', linewidth=1.5, label=r"w-vel (lst, steady baseflow)")
-    ax.plot(w_vel_base_lst_steady_exact, y, 'c--', linewidth=1.5, label=r"w-vel (lst, steady baseflow, exact)")
+    ax.plot(wvel_base_sando, y, 'b', linewidth=1.5, label=r"w-vel (numerical)")
+    ax.plot(wvel_base_sando_exact, y, 'g--', linewidth=1.5, label=r"w-vel (exact)")
+    ax.plot(wvel_base_lst_steady_sando, y, 'm', linewidth=1.5, label=r"w-vel (lst, steady baseflow)")
+    #ax.plot(wvel_base_lst_steady_sando22, y, 'y', linewidth=1.5, label=r"w-vel (lst, steady baseflow TODAY)")
+    ax.plot(wvel_base_lst_steady_exact_sando, y, 'c--', linewidth=1.5, label=r"w-vel (lst, steady baseflow, exact)")
     
-    ax.plot(vel_boussi_lst[ibeg:ifin+1], y[ibeg:ifin+1], 'k', linewidth=1.5, label=r"w-vel (Boussinesq LST)")
-    ax.plot(vel_boussi_lst_exact, y, 'r--', linewidth=1.5, label=r"w-vel (Boussinesq LST, exact)")
+    #ax.plot(wvel_base_lst_steady_boussi[ibeg:ifin+1], y[ibeg:ifin+1], 'k', linewidth=1.5, label=r"w-vel (Boussinesq LST)")
+    #ax.plot(wvel_base_lst_steady_exact_boussi, y, 'r--', linewidth=1.5, label=r"w-vel (Boussinesq LST, exact)")
         
     plt.xlabel(r"velocity induced by density gradients", fontsize=14)
     plt.ylabel('y', fontsize=16)
@@ -3027,15 +3056,34 @@ def check_baseflow_divergence(bsfl, bsfl_ref, mob, map):
 
     f.show()
 
+
+
+    ptn = ptn + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+    ax.plot(np.real(wvel_base_drhodz_dist), y, 'k', linewidth=1.5, label=r"$\bar{w} \dfrac{\partial \hat{\rho}}{\partial z}$ (real)")
+    ax.plot(np.real(wvel_dist_drhodz_base), y, 'c--', linewidth=1.5, label=r"$\hat{w} \dfrac{\partial \bar{\rho}}{\partial z}$ (real)")
+
+    ax.plot(np.imag(wvel_base_drhodz_dist), y, 'b', linewidth=1.5, label=r"$\bar{w} \dfrac{\partial \hat{\rho}}{\partial z}$ (imag)")
+    ax.plot(np.imag(wvel_dist_drhodz_base), y, 'r--', linewidth=1.5, label=r"$\hat{w} \dfrac{\partial \bar{\rho}}{\partial z}$ (imag)")
+
+    plt.xlabel(r"check validity of not keeping $\bar{w}$", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.legend(loc="upper right")
+    plt.ylim([ymin, ymax])
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
+              ncol=2, fancybox=True, shadow=True, fontsize=10)
+
+    f.show()
+
+
+
+    
     input("plot baseflow divergence and velocity")
 
-
-def check_disturbance_flow_divergence(u, v, w, alp, bet, D1):
-
-    div = 1j*alp*u + 1j*bet*v + np.matmul(D1, w)
-    print("")
-    print("Max. value of divergence of disturbance field, max(div) = ", np.amax(np.abs(div)))
-    print("")
 
 
 def compute_baseflow_dissipation(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, y, bsfl_ref, mob):
