@@ -28,7 +28,7 @@ class BuildMatrices:
                 size = 5*ny
 
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval, -4 -> modified Sandoval, -555 -> comp.
-                self.boussinesq = 1
+                self.boussinesq = -3
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -667,14 +667,14 @@ class BuildMatrices:
             # ymin
             lhs[idx_p_ymin,:] = 0.0
             rhs[idx_p_ymin  ] = 0.0        
-            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            #lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
             
             # ymax
             lhs[idx_p_ymax,:] = 0.0
             rhs[idx_p_ymax  ] = 0.0
-            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            #lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
 
         ##################
         # density BCs #
@@ -1066,6 +1066,13 @@ class BuildMatrices:
         variables are taken here as (u, v, w, p, rho)^T
         """
 
+        # Flag to add terms that arise when I do not neglect the w-vel of the baseflow
+        AddWTerms = 0
+        if (AddWTerms==1):
+            print("==============================================================================")
+            print("Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
+            print("==============================================================================")
+
         # non-dimensional set of equations
         grav = bsfl_ref.gref/bsfl_ref.gref
 
@@ -1130,8 +1137,21 @@ class BuildMatrices:
         drho2_inv  = np.diag(rho2_inv)
         drho3_inv  = np.diag(rho3_inv)
 
+        if (AddWTerms==1):
+            w2_bsfl = np.multiply(bsfl.Wvel_nd, bsfl.Wvel_nd)
+            rhow_bsfl = np.multiply(bsfl.Rho_nd, bsfl.Wvel_nd)
+            wdwdz_bsfl = np.multiply(bsfl.Wvel_nd, bsfl.Wvelp_nd)
+            trm_wvel_bsfl = np.multiply(bsfl.Rho_nd, bsfl.Wvelp_nd) + np.multiply(bsfl.Wvel_nd, bsfl.Rhop_nd)
+            # diagonal matrices
+            dtrm_wvel_bsfl = np.diag(trm_wvel_bsfl)
+            dwdwdz_bsfl = np.diag(wdwdz_bsfl)
+            drhow_bsfl = np.diag(rhow_bsfl)
+            dw2_bsfl = np.diag(w2_bsfl)
+            dw_bsfl = np.diag(bsfl.Wvel_nd)
 
-        # 1st block indices
+        ############################################
+        # 1st block indices ==> x-momentum equation
+        ############################################
         imin = 0
         imax = ny
 
@@ -1149,7 +1169,13 @@ class BuildMatrices:
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
 
-        # 2nd block indices
+        if (AddWTerms==1):
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -dtrm_wvel_bsfl
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -np.matmul(drhow_bsfl, D1)
+
+        ############################################
+        # 2nd block indices ==> y-momentum equation
+        ############################################
         imin = imin + ny
         imax = imax + ny
 
@@ -1167,7 +1193,13 @@ class BuildMatrices:
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
 
-        # 3rd block indices
+        if (AddWTerms==1):
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -dtrm_wvel_bsfl
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -np.matmul(drhow_bsfl, D1)
+
+        ############################################
+        # 3rd block indices ==> z-momentum equation
+        ############################################
         imin = imin + ny
         imax = imax + ny
 
@@ -1187,7 +1219,26 @@ class BuildMatrices:
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
 
-        # 4th block indices
+        if (AddWTerms==1):
+            self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] = self.mat_a1[imin:imax, imin-2*ny:imax-2*ny] -1j*drhow_bsfl
+            self.mat_b1[imin:imax, imin-1*ny:imax-1*ny] = self.mat_b1[imin:imax, imin-1*ny:imax-1*ny] -1j*drhow_bsfl
+
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -2.*np.matmul(drhow_bsfl, D1)
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -2.*drhow_bsfl
+            
+            self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] -2.*dwdwdz_bsfl
+            self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] -np.matmul(dw2_bsfl, D1)
+            
+            self.mat_rhs[imin:imax, imin+2*ny:imax+2*ny] = -1j*dw_bsfl
+
+        # # To match Boussinesq === THIS DID NOT WORK
+        # dRhop   = 0.0*dRhop
+        # dRhopp   = 0.0*dRhopp
+        # SetDivergenceToZero = 1
+
+        ############################################################################
+        # 4th block indices ==> equation: du/dx + dv/dy + dw/dz = 1/(Re*Sc)*( ... )
+        ############################################################################
         imin = imin + ny
         imax = imax + ny
 
@@ -1215,7 +1266,9 @@ class BuildMatrices:
             self.mat_b2[imin:imax, imin+1*ny:imax+1*ny] = 0.0
             self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = 0.0
 
-        # 5th block indices
+        ###################################################################################
+        # 5th block indices ==> equation for mass: drho/dt + u_j*drho/dx_j + rho*du_j/dx_j
+        ###################################################################################
         imin = imin + ny
         imax = imax + ny
 
@@ -1232,6 +1285,9 @@ class BuildMatrices:
         self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        if (AddWTerms==1):
+            self.mat_d1[imin:imax, imin:imax] = self.mat_d1[imin:imax, imin:imax] -np.matmul(dw_bsfl, D1)
 
         # Match Chandrasekhar Equations Trick
         if (SetOtherReScTermsToZero == 1):

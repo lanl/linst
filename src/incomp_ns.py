@@ -105,9 +105,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     if plot_grid_bsfl == 1:
         mod_util.plot_baseflow(ny, map.y, yi, bsfl.U, bsfl.Up, map.D1)
 
-
-    # Check if baseflow is divergence free
-    mod_util.check_baseflow_divergence(bsfl, bsfl_ref, mtmp, map)
         
     #################################################
     #            Solve stability problem            # 
@@ -200,10 +197,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             alpha_cur = alpha
             beta_cur  = beta
             omega_cur = omega_all[0]
-            
-        mod_util.compute_important_terms_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, map, mob, \
-        bsfl, map.D1, map.D2, map.y, alpha_cur, beta_cur, Re, np.imag(omega_cur), bsfl_ref, rt_flag, riist, Local)
-        
+                    
         mod_util.check_mass_continuity_satisfied_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
         map.D1, map.D2, map.y, alpha_cur, beta_cur, np.imag(omega_cur), bsfl, bsfl_ref, mob, rt_flag)
 
@@ -227,6 +221,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         
     # For R-T computations: Compute non-dimensional growth rate and wave-number using Chandrasekhar time and length scales
     if (rt_flag):
+
         print("")
         print("Non-dimensional growth rate and wavenumber using Chandrasekhar time ans length scales")
         print("=====================================================================================")
@@ -255,11 +250,23 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             
             alpha_nd = alpha_cur
             beta_nd = beta_cur
-            
+
+            mod_util.compute_terms_rayleigh_taylor(ueig_nd,veig_nd,weig_nd,peig_nd,reig_nd,map,mob,bsfl,map.D1,map.D2,map.y,alpha_nd,beta_nd,Re,np.imag(iarr.omega_nondim),bsfl_ref,rt_flag,riist,Local)
+
+            #mod_util.IntegrateDistDensity_CompareToPressure(peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, bsfl_ref)
+
+            # Check energy balance for specific-volume-divergence correlation: 2*rho_bsfl*v'*du'_i/dx_i
+            mod_util.compute_ener_bal_specific_volume_divergence_correlation(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
+                                                                         alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+
+            # Check if disturbance field is divergence free
+            mod_util.check_baseflow_disturbance_flow_divergence_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, alpha_nd, beta_nd, bsfl, bsfl_ref, map, mob)
+
+        
             mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y)
             mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y, bsfl, mob)
 
-            mod_util.compute_disturbance_dissipation(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.y, alpha_nd, beta_nd, map.D1, bsfl, bsfl_ref, mob)
+            KE_dist,epsilon_dist,epsil_tild_min_2tild_dist = mod_util.compute_disturbance_dissipation(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.y, alpha_nd, beta_nd, map.D1, bsfl, bsfl_ref, mob)
 
             dudx = 0.0*ueig
             dudy = 0.0*ueig
@@ -277,9 +284,17 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
             # Sandoval equations balances
             if ( mob.boussinesq == -3 ): # Sandoval solver
+                print("a-equation energy balance")
+                print("=========================")
+                print("")
+                mod_util.compute_a_eq_ener_bal_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                print("b-equation energy balance")
+                print("=========================")
+                mod_util.compute_b_eq_bal_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
+                                                   alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map, KE_dist, epsilon_dist)
+                print("density-self-correlation-equation energy balance")
+                print("================================================")                
                 mod_util.compute_dsc_eq_bal_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
-                mod_util.compute_b_eq_bal_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
-
             goThere = False
             if (goThere):
                 mod_util.compute_a_equation_energy_balance(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
@@ -287,10 +302,22 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
             # Boussinesq equations balances
             if   ( mob.boussinesq == 1 ):  # Boussinesq solver
-                mod_util.compute_b_eq_boussinesq_ener_bal(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
-                mod_util.compute_density_self_correlation_equation_energy_balance_boussinesq(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
-                                                                                alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
-            
+                print("a-equation energy balance")
+                print("=========================")
+                mod_util.compute_a_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                mod_util.compute_a_eq_ener_bal_boussi_Sc_1(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
+                                                           alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, KE_dist, epsilon_dist, epsil_tild_min_2tild_dist)
+                print("")
+                print("b-equation energy balance")
+                print("=========================")
+                
+                mod_util.compute_b_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                print("")
+                print("density-self-correlation-equation energy balance")
+                print("================================================")                
+                mod_util.compute_dsc_eq_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y,alpha_nd, beta_nd, np.imag(iarr.omega_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
+                print("")
+                
         elif ( mob.boussinesq == -2):                         # dimensional solver
             print("Chandrasekhar R-T solver")
             print("Nondimensional growth rate (Chandrasekhar time scale)   n = ", iarr.omega_dim*bsfl_ref.Tscale_Chandra)
@@ -303,6 +330,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             beta_nd = beta_cur*bsfl_ref.Lref
             mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y/bsfl_ref.Lref)
             mod_util.write_2d_eigenfunctions(weig_nd, reig_nd, alpha_nd, beta_nd, iarr.omega_nondim, map.y/bsfl_ref.Lref, bsfl, mob)
+
 
 
 
