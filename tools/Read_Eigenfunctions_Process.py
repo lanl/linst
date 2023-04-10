@@ -29,42 +29,6 @@ def fmt(x, pos):
 def major_formatter(x, pos):
     return f'{x:.3f}'
 
-def ReadEigenfunction(filename, ny):
-    
-    # Loading file data into numpy array and storing it in variable called data_collected
-    data_collected = np.loadtxt(filename, skiprows=0, dtype=float)
-
-    y = data_collected[:,0]
-    
-    # amplitude
-    ua = data_collected[:,1]
-    va = data_collected[:,2]
-    wa = data_collected[:,3]
-    pa = data_collected[:,4]
-    ra = data_collected[:,5]
-
-    # real parts
-    ur = data_collected[:,1+5]
-    vr = data_collected[:,2+5]
-    wr = data_collected[:,3+5]
-    pr = data_collected[:,4+5]
-    rr = data_collected[:,5+5]
-
-    # imag parts
-    ui = data_collected[:,1+10]
-    vi = data_collected[:,2+10]
-    wi = data_collected[:,3+10]
-    pi = data_collected[:,4+10]
-    ri = data_collected[:,5+10]
-
-    u = ur+1j*ui
-    v = vr+1j*vi
-    w = wr+1j*wi
-    p = pr+1j*pi
-    r = rr+1j*ri
-
-    return y, u, v, w, p, r
-
 
 #####################################################################################
 #####################################################################################
@@ -80,6 +44,8 @@ import matplotlib.pyplot as plt
 
 from matplotlib import cm
 from matplotlib import ticker
+
+import module_post_proc as module_pp
 
 matplotlib.use('TkAgg') #----> Specify the backend
 
@@ -106,8 +72,8 @@ ny = 351
 filename1 = "/Users/aph/Desktop/Flow2/Eigenfunctions_Global_Solution_Sandoval.txt"
 filename2 = "/Users/aph/Desktop/Flow2/Eigenfunctions_Global_Solution_Boussinesq.txt" 
 
-y, u1, v1, w1, p1, r1 = ReadEigenfunction(filename1, ny)
-y, u2, v2, w2, p2, r2 = ReadEigenfunction(filename2, ny)
+y, u1, v1, w1, p1, r1 = module_pp.ReadEigenfunction(filename1, ny)
+y, u2, v2, w2, p2, r2 = module_pp.ReadEigenfunction(filename2, ny)
 
 # Compute derivative
 dp1dz = compute_der(y, p1)

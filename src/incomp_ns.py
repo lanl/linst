@@ -70,7 +70,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             print("==================================")
             print("")
             # In main.py I make yinf and lmap dimensional for solver boussinesq == -2
-            map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
+            map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
 
         bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, bsfl_ref, mtmp)
 
@@ -81,14 +81,14 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                 print("Mixing-Layer Stability Analysis")
                 print("===============================")
                 print("")
-            map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
+            map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
             bsfl = mbf.HypTan(ny, map.y)
 
             flag_reset = mod_util.check_lmap_val_reset_if_needed(bsfl.Up, map, lmap, ny)
 
             # If the mapping parameter has been reset, we need to re-map!
             if ( flag_reset ):
-                map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref)
+                map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
                 bsfl = mbf.HypTan(ny, map.y)
                 
         elif ( baseflowT == 2 ):
