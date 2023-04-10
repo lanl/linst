@@ -1,6 +1,8 @@
 import sys
 import warnings
 import numpy as np
+import scipy as sp
+import scipy.sparse.linalg
 from scipy import linalg
 import module_utilities as mod_util
 import class_build_matrices as mbm
@@ -47,18 +49,19 @@ class SolveGeneralizedEVP:
         for i in range(0, npts):
 
             print("")
-            print("Solving for wavenumber alpha = %10.5e (%i/%i)" % (alpha[i], i+1, npts) )
+            print("Solving for wavenumber alpha = %10.5e (%i/%i)" % (alpha[i], i, npts-1) )
             print("------------------------------------------------")
             print("")
 
             if Tracking and Local:
                 # Extrapolate omega
                 if (i > 1):
-                    pass
+                    #pass
                     # Extrapolate in alpha space
                     omega = mod_util.extrapolate_in_alpha(iarr, alpha, i, ire)
+                    print("omega extrapolated = ", omega)
                 elif (ire > 1):
-                    pass
+                    #pass
                     # Extrapolate in Reynolds space
                     omega = mod_util.extrapolate_in_reynolds(iarr, i, ire)
 
@@ -109,22 +112,26 @@ class SolveGeneralizedEVP:
                     eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
 
                 idx = mod_util.get_idx_of_max(eigvals_filtered)
-                omega = eigvals_filtered[idx]#*bsfl.Tscale
+                omega = eigvals_filtered[idx]#*bsfl.Tscale                
+
+
+            if (rt_flag):
+                if (not Local): i = 0
+                print("ire, i = ", ire, i)
                 
-                if (rt_flag):
-                    if   ( mob.boussinesq == -2 ):
-                        iarr.omega_dim = omega
-                        iarr.omega_nondim = omega*bsfl_ref.Lref/bsfl_ref.Uref
-                        print("omega (dimensional)     = ", iarr.omega_dim)
-                        print("omega (non-dimensional) = ", iarr.omega_nondim)
-                    else:
-                        iarr.omega_dim = omega*bsfl_ref.Uref/bsfl_ref.Lref
-                        iarr.omega_nondim = omega
-                        print("omega (dimensional)     = ", iarr.omega_dim)
-                        print("omega (non-dimensional) = ", iarr.omega_nondim)
+                if   ( mob.boussinesq == -2 ):
+                    iarr.omega_dim[ire, i] = omega
+                    iarr.omega_nondim[ire, i] = omega*bsfl_ref.Lref/bsfl_ref.Uref
+                    print("omega (dimensional)     = ", iarr.omega_dim[ire, i])
+                    print("omega (non-dimensional) = ", iarr.omega_nondim[ire, i])
                 else:
-                    pass
-                    
+                    iarr.omega_dim[ire, i] = omega*bsfl_ref.Uref/bsfl_ref.Lref
+                    iarr.omega_nondim[ire, i] = omega
+                    print("omega (dimensional)     = ", iarr.omega_dim[ire, i])
+                    print("omega (non-dimensional) = ", iarr.omega_nondim[ire, i])
+            else:
+                pass
+
             omega_all[i] = omega
 
         return omega_all, eigvals_filtered, mob, q_eigvect
@@ -147,8 +154,14 @@ class SolveGeneralizedEVP:
         """
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
+
+        #mid_idx = mod_util.get_mid_idx(ny)
+        
+        #print("omega0, omega00 = ", omega0, omega00)
+        
         if rt_flag == True:
-            tol  = 1.0e-6
+            tol1  = 1.0e-5
+            tol2  = 1.0e-5
         else:
             if baseflowT == 1:
                 tol  = 1.0e-8
@@ -157,19 +170,21 @@ class SolveGeneralizedEVP:
             else:
                 sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
             
-        u0   = 10 + 1j*10.0
+        u0   = 10
         
         iter = 0
         maxiter = 100
 
-        jxu  = 0
+        jxu  = 5*ny-1 # 0
+
+        if (rt_flag): jxu  = 3*ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
 
         #
         # Compute u00
         #
         
         # Build main stability matrices and assemble them
-        mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map)
+        mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
         mob.assemble_mat_lhs(alpha_in, beta_in, omega00, Tracking, Local, bsfl_ref)
 
         if (rt_flag == True):
@@ -186,11 +201,24 @@ class SolveGeneralizedEVP:
             
         # Solve Linear System
         SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
+        #SOL = SOL/np.max(SOL)
+        
         #SOL = np.linalg.lstsq(mob.mat_lhs, mob.vec_rhs, rcond=None)
 
+        #print("mid_idx = ", mid_idx)
+
+        #print("SOL = ", SOL)
         #Extract boundary condition
-        #mid_idx = mod_util.get_mid_idx(ny)
+        #print("SOL[0*ny+mid_idx] = ", SOL[0*ny+mid_idx])
+        #print("SOL[1*ny+mid_idx] = ", SOL[1*ny+mid_idx])
+        #print("SOL[2*ny+mid_idx] = ", SOL[2*ny+mid_idx])
+        #print("SOL[3*ny+mid_idx] = ", SOL[3*ny+mid_idx])
+        #print("SOL[4*ny+mid_idx] = ", SOL[4*ny+mid_idx])
+        
         u00 = SOL[jxu]
+
+        #print("SOL[jxu]=",SOL[jxu])
+        #print("u00 = ", u00)
 
         res = 1
         
@@ -198,7 +226,10 @@ class SolveGeneralizedEVP:
         # Main loop
         #
         
-        while ( ( abs(u0) > tol**2. or abs(res) > tol ) and iter < maxiter ):
+        while ( ( abs(u0) > tol2 or abs(res) > tol1 ) and iter < maxiter ):
+        #while ( ( abs(u0) > tol**1.5 or abs(res) > tol ) and iter < maxiter ):
+        #while ( ( abs(u0) > tol or abs(res) > tol ) and iter < maxiter ):
+        #while ( abs(res) > tol and iter < maxiter ):
         
             iter=iter+1
 
@@ -218,15 +249,21 @@ class SolveGeneralizedEVP:
             
             #Solve Linear System
             SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
+            #SOL = SOL/np.max(SOL)
             #SOL = np.linalg.lstsq(mob.mat_lhs, mob.vec_rhs, rcond=None)
         
             # Extract boundary condition
             u0  = SOL[jxu]
             q   = SOL
+
+            #print("SOL[jxu]=",SOL[jxu])
+            #print("u0=", u0)
             
             #
             # Update
             #
+
+            #print("u0-u00 = ", u0-u00)
             
             omegaNEW = omega0 - u0*(omega0-omega00)/(u0-u00)
             
@@ -243,8 +280,48 @@ class SolveGeneralizedEVP:
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
         # Get final eigenvectors
-        mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking, Local, bsfl_ref)
+        mob.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-8, Tracking, Local, bsfl_ref)
         qfinal = linalg.solve(mob.mat_lhs, mob.vec_rhs)
+
+        UseEigs=0
+        
+        if UseEigs==1:
+            # Build main stability matrices
+            mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
+
+            # Assemble matrices
+            print("omega0 = ",omega0)
+
+            Tracking = False
+            Local = False
+            mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking , Local, bsfl_ref)
+            mob.call_to_set_bc(rt_flag, prim_form, ny, map)
+
+            values, vectors = scipy.sparse.linalg.eigs(mob.mat_lhs, k=1, M=mob.mat_rhs, sigma=omega0, tol=1.e-10)
+            
+            print("values = ", values)
+            print("vectors=",vectors)
+            len_vec = len(vectors)
+            print("The size of vectors is:", len_vec)
+
+            Tracking = True
+            Local = True
+
+            mod_util.plot_real_imag_part(vectors[0*ny:1*ny], "u", map.y, rt_flag, mob)
+            mod_util.plot_real_imag_part(vectors[4*ny:5*ny], "r", map.y, rt_flag, mob)
+
+            input("Pause after ARPACK")
+        
+        plot_eig_vec = 0
+        if (plot_eig_vec==1):
+            mod_util.plot_real_imag_part(qfinal[0*ny:1*ny], "u", map.y, rt_flag, mob)
+            #mod_util.plot_real_imag_part(qfinal[1*ny:2*ny], "v", map.y, rt_flag, mob)
+            mod_util.plot_real_imag_part(qfinal[2*ny:3*ny], "w", map.y, rt_flag, mob)
+            #mod_util.plot_real_imag_part(qfinal[3*ny:4*ny], "p", map.y, rt_flag, mob)
+            mod_util.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, mob)
+            
+            input("Local solver: check eigenfunctions 2222222222222")
+
 
         return omega0, qfinal
 

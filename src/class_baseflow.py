@@ -93,6 +93,7 @@ class Baseflow:
         #self.Up   = np.zeros(size, dp)
         #self.Wp   = np.zeros(size, dp)
 
+        
 class HypTan(Baseflow):
     """
     This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
@@ -148,7 +149,8 @@ class RayleighTaylorBaseflow(Baseflow):
     This child class of class Baseflow defines the "Rayleigh-Taylor" baseflow
     """
     def __init__(self, size, y, map, bsfl_ref, mtmp): # here I pass ny
-        
+
+        ny = size
         self.size = size
         
         UseConstantMu = True
@@ -162,6 +164,7 @@ class RayleighTaylorBaseflow(Baseflow):
             print("Swithching to opt = 3 for compressible inviscid solver")
             print("")
 
+
         if ( mtmp.boussinesq == -2 ): # dimensional solver
             # Baseflow coordinate
             zdim = y
@@ -173,6 +176,7 @@ class RayleighTaylorBaseflow(Baseflow):
             zcoord = y
             # Baseflow coordinate
             zdim = y*bsfl_ref.Lref
+            znondim = y
             
         pi = math.pi
 
@@ -231,10 +235,11 @@ class RayleighTaylorBaseflow(Baseflow):
             #
             
             # Here I take delta as dimensionless, and delta_dim is its dimensional value
-            delta     = 0.0005 #0.0005 #0.00005 #0.02
+            delta     = 0.01 #0.00005 #0.02
             delta_dim = delta*Lref
 
             self.delta = delta
+            self.delta_dim = delta_dim
             
             # Note: delta is the characteristic thickness of the diffusion layer
             print("Setting up R-T baseflow")
@@ -263,6 +268,8 @@ class RayleighTaylorBaseflow(Baseflow):
             print("rhoref = ", rhoref)
             print("muref  = ", muref)
             print("")
+            print("Muref recomputed from Reynolds number: Muref=rhoref*Uref*Lref/Re = ", rhoref*Uref*Lref/Re)
+            print("")
             bsfl_ref.rhoref = rhoref
             bsfl_ref.muref = muref
 
@@ -271,13 +278,18 @@ class RayleighTaylorBaseflow(Baseflow):
 
             #print("np.abs(At-Atw_check), np.abs(At-Amu_check) = ", np.abs(At-Atw_check), np.abs(At-Amu_check))
             
-            tol_c = 1.e-12
+            tol_c = 1.e-10
             if ( np.abs(At-Atw_check) > tol_c or np.abs(At-Amu_check) > tol_c ):
                 sys.exit("Atwood number inconsistency!!!!!!!")
 
             # Since the reference length Lref is dimensional, then zdim needs to be dimensional
                 
             # Compute dimensional density and its derivatives (d/dy_dim and d^2/dy_dim^2)
+            #print("zdim/delta_dim = ", zdim/delta_dim)
+            #print("")
+            #print("znondim/delta = ", znondim/delta)
+            print("np.amax(np.abs(zdim/delta_dim-znondim/delta)) = ", np.amax(np.abs(zdim/delta_dim-znondim/delta)))
+            
             self.Rho   = rhoref*( 1. + At*erf(zdim/delta_dim) )
             self.Rhop  = rhoref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/( delta_dim*np.sqrt(pi) ) )
             self.Rhopp = 2.0*rhoref*At/(delta_dim*np.sqrt(pi))*(-2.*zdim/delta_dim**2.)*np.exp( -zdim**2/delta_dim**2 )
@@ -326,23 +338,34 @@ class RayleighTaylorBaseflow(Baseflow):
             # d^2rho/dy^2 = Lref^2/rhoref*(d^2rho_dim/dy_dim^2) 
             self.Rhopp_nd = Lref**2./rhoref*self.Rhopp
 
+            self.Rhopp_nd_22 = 2*At/(delta*np.sqrt(pi))*(-2.*znondim/delta**2.)*np.exp(-znondim**2./delta**2.)
+
+
             ##############################
             # COMPUTE BASEFLOW W-VELOCITY
             ##############################
 
+            div_bsfl = -1./(Re*Sc)*( -np.divide( np.multiply(self.Rhop_nd, self.Rhop_nd), np.multiply(self.Rho_nd, self.Rho_nd) ) + np.divide(self.Rhopp_nd, self.Rho_nd) )
+            div_bsfl_dim = -bsfl_ref.Dref*( -np.divide( np.multiply(self.Rhop, self.Rhop), np.multiply(self.Rho, self.Rho) ) + np.divide(self.Rhopp, self.Rho) )
+
             # Non-dimensional baseflow w-velocity and its z-derivative
             self.Wvel_nd  = -1./(Re*Sc)*np.divide(self.Rhop_nd, self.Rho_nd)
-
-            div_bsfl = -1./(Re*Sc)*( -np.divide( np.multiply(self.Rhop_nd, self.Rhop_nd), np.multiply(self.Rho_nd, self.Rho_nd) ) + np.divide(self.Rhopp_nd, self.Rho_nd) )
             self.Wvelp_nd  = div_bsfl
 
-            Wvel_nd_num = mod_util.trapezoid_integration_cum(div_bsfl, zcoord)
+            Wvel_nd_num = mod_util.trapezoid_integration_cum(div_bsfl, znondim)
+            Wvel_num = mod_util.trapezoid_integration_cum(div_bsfl_dim, zdim)
 
             # Dimensional baseflow w-velocity (to check that non-dimensionalization is consistent)
             self.Wvel = -bsfl_ref.Dref*np.divide(self.Rhop, self.Rho)
             self.Wvel_nd_after = self.Wvel/Uref
 
+            self.Wvelp = div_bsfl_dim
+            self.Wvelp_nd_after = self.Wvelp*Lref/Uref
+            
             self.Wvelp_nd_num = np.matmul(D1_nondim, self.Wvel_nd)
+
+            # Write baseflow to file
+            mod_util.write_baseflow_out(znondim, zdim, self.Rho_nd, self.Rhop_nd, self.Rhopp_nd, self.Wvel_nd, self.Wvelp_nd, self.Rho, self.Rhop, self.Rhopp, self.Wvel, self.Wvelp)
 
             # Compute non-dimensional viscosity and its derivatives
             self.Mu_nd  = 1/muref*self.Mu
@@ -364,8 +387,11 @@ class RayleighTaylorBaseflow(Baseflow):
             print("using grav = ", grav)
             bsfl_ref.Tscale_Chandra = (nu0/grav**2.)**(1./3.)
             bsfl_ref.Lscale_Chandra = (nu0**2./grav)**(1./3.)
-            print("Chandrasekhar time scale [s]   = ", bsfl_ref.Tscale_Chandra)
-            print("Chandrasekhar length scale [m] = ", bsfl_ref.Lscale_Chandra)
+            Uref_chandra = bsfl_ref.Lscale_Chandra/bsfl_ref.Tscale_Chandra
+            print("Chandrasekhar time scale [s]      = ", bsfl_ref.Tscale_Chandra)
+            print("Chandrasekhar length scale [m]    = ", bsfl_ref.Lscale_Chandra)
+            print("Chandrasekhar velocity scale [m]  = ", Uref_chandra)
+            print("Chandrasekhar Reynolds number [m] = ", rhoref*Uref_chandra*bsfl_ref.Lscale_Chandra/muref)
 
 
             for iblk in range(0,1):
@@ -375,6 +401,7 @@ class RayleighTaylorBaseflow(Baseflow):
             if ( np.abs(Re-Uref*Lref/nu0) > tol_c ):
                 print("np.abs(Re-Uref*Lref/nu0) = ", np.abs(Re-Uref*Lref/nu0))
                 warnings.warn("Reynolds number inconsistency!!!!!!!")
+                print("")
             
             #print("Input Reynolds number                = ", Re)
             #print("Re-computed Reynolds number          = ", Uref*Lref/nu0)
@@ -382,11 +409,17 @@ class RayleighTaylorBaseflow(Baseflow):
             #print("Atwood number At                     = ", At)
             #print("Atwood number (viscosity) Amu        = ", At)
 
+            Flag = 0
             # Check that kinematic viscosity is constant
             for ii in range(0, size):
                 #print("np.abs(nu0-nu[ii]), tol_c = ", np.abs(nu0-nu[ii]), tol_c)
                 if ( np.abs(nu0-nu[ii]) > tol_c ):
-                    warnings.warn("Kinematic viscosity is not constant!!!!!!!!")
+                    Flag=1
+                    break
+
+            if (Flag==1):
+                warnings.warn("Kinematic viscosity is not constant!!!!!!!!")
+                print("")
                     #sys.exit("Kinematic viscosity is not constant!!!!!!!!")
             
             #print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
@@ -400,37 +433,55 @@ class RayleighTaylorBaseflow(Baseflow):
             #print
 
             # PLOT W-VELOCITY
-            
-            ptn = plt.gcf().number + 1
-            
-            f = plt.figure(ptn)
-            #plt.plot(self.Wvel_nd_after, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim after)")
-            plt.plot(Wvel_nd_num, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim, numerical)")
-            plt.plot(self.Wvel_nd, zcoord, 'r--', linewidth=1.5, label="Baseflow wvel (nondim)")
-                        
-            plt.xlabel("w-velocity [-]", fontsize=14)
-            plt.ylabel('z', fontsize=16)
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            #plt.ylim([xmin, xmax])
-            plt.legend(loc="upper right")
-            f.show()
 
-            ptn = plt.gcf().number + 1
+            PlotW = 0
+            if (PlotW==1):
             
-            f = plt.figure(ptn)
-            plt.plot(self.Wvelp_nd, zcoord, 'k', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, exact)")
-            plt.plot(self.Wvelp_nd_num, zcoord, 'r--', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, numerical)")
-                        
-            plt.xlabel("d(w-velocity)/dz [-]", fontsize=14)
-            plt.ylabel('z', fontsize=16)
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            #plt.ylim([xmin, xmax])
-            plt.legend(loc="upper right")
-            f.show()
-
-            input("Check baseflow w-velocity!!!!!")
+                ptn = plt.gcf().number + 1
+                
+                f = plt.figure(ptn)
+                #plt.plot(self.Wvel_nd_after, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim after)")
+                plt.plot(Wvel_nd_num, znondim, 'k', linewidth=1.5, label="Baseflow wvel (nondim, numerical)")
+                plt.plot(self.Wvel_nd, znondim, 'r--', linewidth=1.5, label="Baseflow wvel (nondim)")
+                
+                plt.xlabel("w-velocity [-]", fontsize=14)
+                plt.ylabel('z [-]', fontsize=16)
+                plt.gcf().subplots_adjust(left=0.16)
+                plt.gcf().subplots_adjust(bottom=0.15)
+                #plt.ylim([xmin, xmax])
+                plt.legend(loc="upper right")
+                f.show()
+                
+                ptn = plt.gcf().number + 1
+                
+                f = plt.figure(ptn)
+                plt.plot(Wvel_num, zdim, 'k', linewidth=1.5, label="Baseflow wvel (dimensional, numerical)")
+                plt.plot(self.Wvel, zdim, 'r--', linewidth=1.5, label="Baseflow wvel (dimensional)")
+                
+                plt.xlabel("w-velocity [m/s]", fontsize=14)
+                plt.ylabel('z [m]', fontsize=16)
+                plt.gcf().subplots_adjust(left=0.16)
+                plt.gcf().subplots_adjust(bottom=0.15)
+                #plt.ylim([xmin, xmax])
+                plt.legend(loc="upper right")
+                f.show()
+                
+                ptn = plt.gcf().number + 1
+                
+                f = plt.figure(ptn)
+                plt.plot(self.Wvelp_nd, zcoord, 'k', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, exact)")
+                plt.plot(self.Wvelp_nd_num, zcoord, 'r--', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, numerical)")
+                plt.plot(self.Wvelp_nd_after, zcoord, 'b-.', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, after)")
+                
+                plt.xlabel("d(w-velocity)/dz [-]", fontsize=14)
+                plt.ylabel('z', fontsize=16)
+                plt.gcf().subplots_adjust(left=0.16)
+                plt.gcf().subplots_adjust(bottom=0.15)
+                #plt.ylim([xmin, xmax])
+                plt.legend(loc="upper right")
+                f.show()
+                
+                input("Check baseflow w-velocity!!!!!")
 
 
         elif(opt==3):
@@ -464,6 +515,7 @@ class RayleighTaylorBaseflow(Baseflow):
             f = plt.figure(ptn)
             plt.plot(x, self.Rho_nd, 'k', linewidth=1.5, label="Baseflow density")
             plt.plot(x[1:nx-2], dpdx[1:nx-2], 'r-.', linewidth=1.5, label="Numerical derivative of pressure")
+            
             plt.xlabel("x", fontsize=14)
             plt.ylabel('density', fontsize=16)
             plt.gcf().subplots_adjust(left=0.16)
@@ -489,6 +541,32 @@ class RayleighTaylorBaseflow(Baseflow):
             
         else:
             sys.exit("Not a proper value for flag opt in RT baseflow")
+
+
+        ###################################
+        # Compute layer thickness
+        ###################################
+        thick_crit = 0.01 # criterion
+        
+        delta_rho = rho2-rho1
+        rho_test1 = rho1 + thick_crit*delta_rho
+        rho_test2 = rho2 - thick_crit*delta_rho
+
+        rho_thick1 = rho_test1*np.ones(ny)
+        rho_thick2 = rho_test2*np.ones(ny)
+
+        self.H_thick = mod_util.GetLayerThicknessRT(ny, zdim, rho_test1, rho_test2, self. Rho)
+        self.h_thick = mod_util.GetLayerThicknessRT_CabotCook(ny, zdim, self. Rho, rho1, rho2)
+        print("")
+        print("RT Layer Thickness")
+        print("==================")
+        print("H_thick (x percent criterion), h_thick (Cabot & Cook), H_thick/h_thick = ", self.H_thick, self.h_thick, self.H_thick/self.h_thick)
+
+        self.h_thick2 = mod_util.GetLayerThicknessRT_Other(ny, zdim, self. Rho, rho1, rho2)
+
+        print("h_thick2 (other formula) = ", self.h_thick2)
+        print("2*h_thick2 (other formula) = ", 2*self.h_thick2)
+        print("")
 
         #if (Re > 1e10):
         #    warnings.warn("RT baseflow: Re > 1e10 ==> setting viscosity to zero")
@@ -531,9 +609,12 @@ class RayleighTaylorBaseflow(Baseflow):
             ptn = plt.gcf().number + 1
             
             f = plt.figure(ptn)
-            plt.plot(self.Rho, zcoord, 'k', markerfacecolor='none', label="density")
+            plt.plot(self.Rho, zdim, 'k', markerfacecolor='none', label="density (dimensional)")
+            plt.plot(rho_thick1, zdim, 'r', markerfacecolor='none', label="density (dimensional, rho_thick1)")
+            plt.plot(rho_thick2, zdim, 'b', markerfacecolor='none', label="density (dimensional, rho_thick2)")
+
             plt.xlabel(r"$\rho$", fontsize=20)
-            plt.ylabel('z', fontsize=20)
+            plt.ylabel('z (dimensional)', fontsize=20)
             #plt.legend(loc="upper right")
             plt.gcf().subplots_adjust(left=0.16)
             plt.gcf().subplots_adjust(bottom=0.15)
@@ -541,6 +622,7 @@ class RayleighTaylorBaseflow(Baseflow):
                 plt.ylim([zmin, zmax])
             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
             plt.title(r"$\rho$")
+            plt.legend(loc="upper center")
             f.show()
 
             ptn = ptn+1
@@ -596,7 +678,8 @@ class RayleighTaylorBaseflow(Baseflow):
             
             f = plt.figure(ptn)
             plt.plot(self.Rhopp_nd, zcoord, 'k', markerfacecolor='none', label="d2rho/dz2 (analytical)")
-            plt.plot(Rhopp_num_nd, zcoord, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
+            plt.plot(self.Rhopp_nd_22, zcoord, 'r--', markerfacecolor='none', label="d2rho/dz2 (straight nondim.)")
+            #plt.plot(Rhopp_num_nd, zcoord, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
             plt.xlabel(r"$d^2\rho/dz^2$", fontsize=20)
             plt.ylabel('z', fontsize=20)
             plt.legend(loc="upper right")
@@ -677,6 +760,9 @@ class RayleighTaylorBaseflow(Baseflow):
             
             print("")
             input('RT baseflow plots ... strike any key to proceed')
+
+            # Close all plots so far
+            mod_util.close_previous_plots()
 
             #sys.exit("Debug RT baseflow")
 

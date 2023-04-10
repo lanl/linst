@@ -106,7 +106,7 @@ Re_range            = np.linspace(bsfl_ref.Re_min, bsfl_ref.Re_max, bsfl_ref.npt
 Local, plot_eigvcts = mod_util.set_local_flag_display_sizes(riist.npts_alp, bsfl_ref.npts_re, plot_eigvcts)
 
 # Create instance for main array omega
-iarr = marray.MainArrays(bsfl_ref.npts_re, riist.npts_alp)
+iarr = marray.MainArrays(bsfl_ref.npts_re, riist.npts_alp, riist.ny)
 
 iarr.re_array = Re_range
 

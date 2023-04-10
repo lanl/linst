@@ -18,13 +18,16 @@ class MainArrays:
     """
     This class define a general baseflow object
     """
-    def __init__(self, n_re, n_alp): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
+    def __init__(self, n_re, n_alp, ny): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
         """
         Constructor for class MainArrays
         """
         # Initialize arrays
-        self.omega_array = np.zeros((n_re, n_alp), dpc)
         self.re_array = np.zeros(n_re, dp)
 
-        self.omega_dim = np.zeros(1, dpc)
-        self.omega_nondim = np.zeros(1, dpc)
+        self.omega_array  = np.zeros((n_re, n_alp), dpc)
+        self.omega_dim    = np.zeros((n_re, n_alp), dpc)
+        self.omega_nondim = np.zeros((n_re, n_alp), dpc)
+
+        self.l_taylor_dim = np.zeros(ny, dp)
+        self.l_integr_dim = np.zeros(ny, dp)

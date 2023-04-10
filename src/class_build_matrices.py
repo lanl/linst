@@ -28,7 +28,7 @@ class BuildMatrices:
                 size = 5*ny
 
                 # Boussinesq flag: 1 -> Boussinesq, -2 -> Chandrasekhar, -3 -> Sandoval, -4 -> modified Sandoval, -555 -> comp.
-                self.boussinesq = -3
+                self.boussinesq = 1
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -410,7 +410,7 @@ class BuildMatrices:
 
         # I checked from eigenfunctions from global solver:
         # at y = 0, the real part of pressure is zero, while the imaginary part has a max
-        # that is why I am setting p = 0 + 1j
+        # that is why I am setting p = 0 + 1j        
         lhs[3*ny+mid_idx,:] = 0.0
         rhs[3*ny+mid_idx]   = 0.0 + 1.0*1j
         lhs[3*ny+mid_idx, 3*ny+mid_idx] = 1.0
@@ -836,6 +836,8 @@ class BuildMatrices:
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
         ######################################
+
+        # NOTE: YOU NEED AN INHOMOGENEOUS BC HERE OTHERWISE SOLUTION = 0
         
         ##################
         # u-velocity BCs #
@@ -844,12 +846,16 @@ class BuildMatrices:
         idx_u_ymax = 1*ny-1
 
         # ymin
-        #lhs[idx_u_ymin,:] = 0.0
-        #rhs[idx_u_ymin,:] = 0.0        
-        #lhs[idx_u_ymin, idx_u_ymin] = 1.0
-
+        lhs[idx_u_ymin,:] = 0.0
+        rhs[idx_u_ymin  ] = 0.0        
+        lhs[idx_u_ymin, idx_u_ymin] = 1.0
+        
         mid_idx = mod_util.get_mid_idx(ny)
-
+        
+        #lhs[idx_u_ymin,:] = 0.0
+        #rhs[idx_u_ymin  ] = 1.0 #+ 1.0*1j # 1.0*1j # 
+        #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
+        
         #print("mid_idx = ", mid_idx)
 
         # I checked from eigenfunctions from global solver:
@@ -859,11 +865,26 @@ class BuildMatrices:
         #rhs[idx_u_ymin  ] = 1.0 + 1.0*1j
         #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
 
-        # From global solver real part was zero that is why I use here rhs = 1j
-        lhs[4*ny+mid_idx,:] = 0.0
-        rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+        # This does not work it seems, whatever the IC, it goes really close to it ==>  no convergence towards eigenvalue
+        #lhs[4*ny+mid_idx,:] = 0.0
+        #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+        #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
 
+        # Better it seems
+        #lhs[4*ny+1,:] = 0.0
+        #rhs[4*ny+1  ] = 1. + 1j #+ 1.0*1j # 1.0*1j # 
+        #lhs[4*ny+1, 4*ny+mid_idx] = 1.0
+
+        #print("4*ny+mid_idx = ", 4*ny+mid_idx)
+        
+        #lhs[5*ny-2,:] = 0.0
+        #rhs[5*ny-2  ] = 1.0 + 1.0*1j # 
+        #lhs[5*ny-2, 4*ny+mid_idx] = 1.0
+
+        #lhs[5*ny-3,:] = 0.0
+        #rhs[5*ny-3  ] = 1.0 # 1.0*1j # 
+        #lhs[5*ny-3, 4*ny+mid_idx+1] = 1.0
+        
         # ymax
         lhs[idx_u_ymax,:] = 0.0
         rhs[idx_u_ymax  ] = 0.0
@@ -897,9 +918,15 @@ class BuildMatrices:
         lhs[idx_w_ymin, idx_w_ymin] = 1.0
 
         # ymax
-        lhs[idx_w_ymax,:] = 0.0
-        rhs[idx_w_ymax  ] = 0.0
-        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+        #lhs[idx_w_ymax,:] = 0.0
+        #rhs[idx_w_ymax  ] = 0.0
+        #lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+        # Replace w(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy w(ymax)=0
+        lhs[2*ny+mid_idx,:] = 0.0
+        rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+        lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
+
 
         ##################
         # pressure BCs #
@@ -913,14 +940,14 @@ class BuildMatrices:
             # ymin
             lhs[idx_p_ymin,:] = 0.0
             rhs[idx_p_ymin  ] = 0.0        
-            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            #lhs[idx_p_ymin, idx_p_ymin]      = 1.0
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            lhs[idx_p_ymin, idx_p_ymin]      = 1.0
             
             # ymax
             lhs[idx_p_ymax,:] = 0.0
             rhs[idx_p_ymax  ] = 0.0
-            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            #lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
 
         ##################
         # density BCs #
@@ -933,15 +960,22 @@ class BuildMatrices:
             
             # ymin
             lhs[idx_r_ymin,:] = 0.0
-            rhs[idx_r_ymin  ] = 0.0        
+            rhs[idx_r_ymin  ] = 0.0
+            #lhs[idx_r_ymin, idx_r_ymin:5*ny] = map.D1[0, :]
             lhs[idx_r_ymin, idx_r_ymin] = 1.0
             
             # ymax
             lhs[idx_r_ymax,:] = 0.0
             rhs[idx_r_ymax  ] = 0.0
+            #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
             lhs[idx_r_ymax, idx_r_ymax] = 1.0
+
+            # Replace rho(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy rho(ymax)=0
+            #lhs[4*ny+mid_idx,:] = 0.0
+            #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+            #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+
             
-        
     def set_matrices_rayleigh_taylor_boussinesq_mixing(self, ny, bsfl, bsfl_ref, map):
         """
         Equations from Livescu Annual Review of Fluid Mechanics:
@@ -1072,6 +1106,10 @@ class BuildMatrices:
             print("==============================================================================")
             print("Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
             print("==============================================================================")
+        else:
+            print("==================================================================================")
+            print("NOT Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
+            print("==================================================================================")
 
         # non-dimensional set of equations
         grav = bsfl_ref.gref/bsfl_ref.gref
