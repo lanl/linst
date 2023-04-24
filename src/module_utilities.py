@@ -238,9 +238,12 @@ def plot_phase(phase, str_var, y):
 
     f1.show()
 
-def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob):
+def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
 
     ptn = plt.gcf().number + 1
+
+    # Get ymin-ymax
+    ymin, ymax = FindResonableYminYmax(eig_fct, y)
 
     symbols = 0
 
@@ -282,8 +285,11 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob):
             plt.xlabel("real(" +str_var + ")", fontsize=16)
             print("Not an expected string!!!!!")
 
-    #plt.xlim([-1, 1])
-    #plt.ylim([-mv, mv])
+    if (mv==0.):
+        plt.ylim([ymin, ymax])
+    else:
+        plt.ylim([-mv, mv])
+    
     f1.show()
     f1.subplots_adjust(bottom=0.16)
     f1.subplots_adjust(left=0.19)
@@ -331,8 +337,12 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob):
             plt.xlabel("imag(" +str_var + ")", fontsize=16)
             print("Not an expected string!!!!!")
 
-    #plt.xlim([-1, 1])
-    #plt.ylim([-mv, mv])
+
+    if (mv==0.):
+        plt.ylim([ymin, ymax])
+    else:
+        plt.ylim([-mv, mv])
+
     f2.subplots_adjust(bottom=0.16)
     f2.subplots_adjust(left=0.19)
     f2.show()
@@ -5280,7 +5290,7 @@ def write_baseflow_out(ynondim, ydim, Rho, Rhop, Rhopp, W, Wp, Rho_dim, Rhop_dim
 def GetLayerThicknessRT(ny, z, rho_t1, rho_t2, rho):
 
     # Find zmin
-    for i in range(0, ny):
+    for i in range(0, ny-1):
         
         if ( rho[i] <= rho_t1 and rho[i+1] > rho_t1 ):
             rho1 = rho[i]
@@ -5296,7 +5306,7 @@ def GetLayerThicknessRT(ny, z, rho_t1, rho_t2, rho):
             break
 
     # Find zmax
-    for i in range(0, ny):
+    for i in range(0, ny-1):
         
         if ( rho[i] <= rho_t2 and rho[i+1] > rho_t2 ):
             rho1 = rho[i]
@@ -5651,6 +5661,10 @@ def compute_reynolds_stresses(ueig, veig, weig, peig, reig, y, bsfl_ref, rt_flag
 
     #plt.close('all')
 
+    print("")
+    print("Computation of Reynolds stresses")
+    print("I did not include the constant term pi/alpha, which will not change the shape of the stresses")
+
     ny = len(ueig)
         
     Sc = bsfl_ref.Sc
@@ -5685,6 +5699,14 @@ def compute_reynolds_stresses(ueig, veig, weig, peig, reig, y, bsfl_ref, rt_flag
     print("max(uv) = ", np.amax(np.abs(Rs_uv)))
     print("max(uw) = ", np.amax(np.abs(Rs_uw)))
     print("max(vw) = ", np.amax(np.abs(Rs_vw)))
+
+    max_uu = np.amax(np.abs(Rs_uu))
+    max_vv = np.amax(np.abs(Rs_vv))
+    max_ww = np.amax(np.abs(Rs_ww))
+
+    print("")
+    print("max_uu/max_ww = ", max_uu/max_ww)
+    print("max_vv/max_ww = ", max_vv/max_ww)
 
     ######################################
     # PLOT REYNOLDS STRESSES
@@ -5829,6 +5851,8 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     # Should not have rho_bsfl for Boussinesq!!!!!
     LHS_uu = 2*omega_i*Rs_uu
     #LHS_uu = 2*omega_i*np.multiply(Rho, Rs_uu)
+
+    print("max(LHS_uu) = ", np.amax(LHS_uu))
     
     RHS_uu_t1 = -2.*compute_inner_prod(ueig, dpdx)
     # RHS_uu_t2 = 2.*compute_inner_prod(ueig, dTau1k_dxk)
@@ -5871,6 +5895,37 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
 
     a1 = np.divide(compute_inner_prod(reig, ueig), Rho)
 
+    
+    ############################
+    # Balance Equation for v'v'
+    ############################
+
+    # Should not have rho_bsfl for Boussinesq!!!!!
+    LHS_vv = 2*omega_i*Rs_vv
+    
+    RHS_vv_t1 = -2.*compute_inner_prod(veig, dpdy)
+
+    # Compute Laplacian of u'u'
+    Lap_vv = 2.*( compute_inner_prod(dvdx, dvdx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdz, dvdz) ) + \
+             2.*( compute_inner_prod(veig, d2vdx2) + compute_inner_prod(veig, d2vdy2) + compute_inner_prod(veig, d2vdz2) )
+    Lap_vv = Lap_vv/Re
+
+    # Compute dissipation of v'v'
+    dissip_vv = 2.*( compute_inner_prod(dvdx, dvdx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdz, dvdz) )
+    dissip_vv = dissip_vv/Re
+
+    RHS_vv = RHS_vv_t1 + Lap_vv - dissip_vv
+
+    print("max(LHS_vv), max(RHS_vv_t1), max(Lap_vv), max(dissip_vv), max(RHS_vv)=", \
+          np.amax(np.abs(LHS_vv)), np.amax(np.abs(RHS_vv_t1)), np.amax(np.abs(Lap_vv)), np.amax(np.abs(dissip_vv)), np.amax(np.abs(RHS_vv)) )
+            
+    print("")
+    print("Check energy balancefor v'v' Reynolds stress equation")
+    print("-----------------------------------------------------")
+    energy_bal_vv = np.amax(np.abs(LHS_vv-RHS_vv))
+    print("Energy balance Reynolds stress v'v' = ", energy_bal_vv)
+    print("")
+    
     ############################
     # Balance Equation for w'w'
     ############################
@@ -6386,6 +6441,36 @@ def get_eigenfunction_derivatives(ueig, veig, weig, peig, reig, alpha, beta, D1)
 
 # dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz,dpdx,dpdy,dpdz,drdx,drdy,drdz = get_eigenfunction_derivatives(ueig, veig, weig, peig, reig, alpha, beta, D1)
 
+def get_eigenfunction_2nd_derivatives(ueig, veig, weig, peig, reig, alpha, beta, D2):
+
+    ia2 = ( 1j*alpha )**2.
+    ib2 = ( 1j*beta )**2.
+
+    iab = ( 1j*alpha )*( 1j*beta )
+
+    d2udx2 = ia2*ueig
+    d2udy2 = ib2*ueig
+    d2udz2 = np.matmul(D2, ueig)
+
+    d2vdx2 = ia2*veig
+    d2vdy2 = ib2*veig
+    d2vdz2 = np.matmul(D2, veig)
+
+    d2wdx2 = ia2*weig
+    d2wdy2 = ib2*weig
+    d2wdz2 = np.matmul(D2, weig)
+
+    d2pdx2 = ia2*peig
+    d2pdy2 = ib2*peig
+    d2pdz2 = np.matmul(D2, peig)
+
+    d2rdx2 = ia2*reig
+    d2rdy2 = ib2*reig
+    d2rdz2 = np.matmul(D2, reig)
+
+    return d2udx2, d2udy2, d2udz2, d2vdx2, d2vdy2, d2vdz2, d2wdx2, d2wdy2, d2wdz2, d2pdx2, d2pdy2, d2pdz2, d2rdx2, d2rdy2, d2rdz2
+    
+
 def plot_disturbance_dissipation(y, epsilon_dist, epsilon_incomp_dist, epsilon_comp_dist, epsilon_tilde_dist, epsilon_2tilde_dist, epsilon_b, epsilon_b_tilde):
 
     #######################################
@@ -6430,8 +6515,24 @@ def plot_disturbance_dissipation(y, epsilon_dist, epsilon_incomp_dist, epsilon_c
     input("Components of disturbance dissipation")
 
 
+def calc_min_dy(y, boussi, bsfl_ref):
 
+    ny = len(y)
+    
+    if (boussi==-2): # dimensional solver
+        y = y
+    else:            # nondimensional solvers
+        y = y*bsfl_ref.Lref
 
+    dymin = 1e10   
+    for i in range(0, ny-1):
+        dy = y[i+1]-y[i]
+        if ( dy < dymin ):
+            dymin = dy
+
+    print("")
+    print("dy_min (dimensional) = ", dymin)
+    print("")
 
     # Compute model dissipation for b-equation
     #Cb1 = 2.0

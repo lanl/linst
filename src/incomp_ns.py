@@ -72,6 +72,8 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             # In main.py I make yinf and lmap dimensional for solver boussinesq == -2
             map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
 
+            mod_util.calc_min_dy(map.y, mtmp.boussinesq, bsfl_ref)
+
         bsfl = mbf.RayleighTaylorBaseflow(ny, map.y, map, bsfl_ref, mtmp)
 
     else:
@@ -121,6 +123,9 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     # Build matrices and solve global/local problem
     omega_all,eigvals_filtered,mob,q_eigvect = solve.solve_stability_problem(map, alpha, beta, target1, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap)
 
+    # Switch to another non-dimensionalization
+    
+    
     #################################################
     # Re-scale data
     #################################################
@@ -168,15 +173,16 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
     if (not Local): solve.EigVec = solve.EigVec/norm_s
 
-    OutputEigFct = False
+    OutputEigFct = True
 
     if (OutputEigFct):
-        mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob)
-        mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob)
-        mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob)
-        mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
-        mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob)
-        mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob)
+        ylimp = 0.0
+        mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob, ylimp)
+        mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob, ylimp)
+        mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob, ylimp)
+        #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
+        mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob, ylimp)
+        mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob, ylimp)
 
         input("Pausing for eigenfunction output")
     

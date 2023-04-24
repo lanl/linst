@@ -39,10 +39,19 @@ class Mapping:
         self.D1 = np.matmul(np.diag(dyidy), DM[:,:,0])
         self.D2 = np.matmul(np.diag(d2yidy2), DM[:,:,0]) + np.matmul(np.diag(dyidy**2.), DM[:,:,1])
 
-        if ( boussinesq == -2 ): # dimensional solver
+        if ( boussinesq == -2 or boussinesq == 10 ): # dimensional solver
             # Only for solver boussinesq == -2
             self.D1_nondim = bsfl_ref.Lref*self.D1
             self.D2_nondim = bsfl_ref.Lref**2.*self.D2
+
+            self.D1_dim = self.D1
+            self.D2_dim = self.D2
+        else:
+            self.D1_nondim = self.D1
+            self.D2_nondim = self.D2
+
+            self.D1_dim = 1/bsfl_ref.Lref*self.D1
+            self.D2_dim = 1/bsfl_ref.Lref*self.D2
 
         #return self.y, self.D1, self.D2
 
