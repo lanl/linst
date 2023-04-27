@@ -18,7 +18,7 @@ i8 = np.dtype('i8') # integer 8
 plt.rcParams['font.size'] = '14'
 plt.rc('font', family='serif')
 
-nondim_flag = 0
+nondim_flag = 1
 """ nondim_flag:
         0 -> my old nondimensionalisation
         1 -> nondimensionalization with Uref = sqrt(g*Lref), Lref = h = thickness layer
@@ -59,7 +59,9 @@ class Baseflow:
             print("")
             print("USING NEW NON-DIMENSIONALIZATION")
             print("")
+            # Lref is here the dimensional thickness of the layer
             self.Lref = 0.00025484199796126404 #0.001
+            
             self.nuref = np.sqrt(self.gref)*self.Lref**(3./2.)/self.Re
             print("Setting Lref to: ", self.Lref)
 
@@ -266,12 +268,14 @@ class RayleighTaylorBaseflow(Baseflow):
             #
             
             # delta is dimensionless [-], and delta_dim is dimensional [m]
-            if (nondim_flag==1):
+            if (nondim_flag==1): # this is the "new" non-dimensionalization
+                
                 delta = 1.0 # cannot modify this one here becasue delta = delta_star/Lref = delta_star/delta_star
                 delta_dim = delta*Lref
                 if ( delta != 1.0 ):
                     sys.exit("Non-dimensional layer thickness (delta) must be one in this non-dimensionalization")
-            else:
+                    
+            else:                # this is the "old" non-dimensionalization
                 delta     = 1 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
                 delta_dim = delta*Lref
 
