@@ -2,6 +2,12 @@
 import numpy as np
 from scipy import integrate
 
+print("")
+print("Compute double integrals")
+print("------------------------")
+print("Note: integrate.dblquad returns the value of the integral (float) and an estimate of the error (float)")
+
+
 alpha = 1.0
 beta = 1.0
 
@@ -32,7 +38,6 @@ fother2 = lambda y, x: np.sin(x)**2*np.sin(y)**2
 int_other1 = integrate.dblquad(fother1, 0, 2*np.pi/alpha, 0, 2*np.pi/beta)
 int_other2 = integrate.dblquad(fother2, 0, 2*np.pi/alpha, 0, 2*np.pi/beta)
 
-
 print("")
 print("pi**2/(alpha*beta) = ", np.pi**2/(alpha*beta))
 
@@ -53,3 +58,5 @@ print("")
 print("int_other1 = ", int_other1)
 print("int_other2 = ", int_other2)
 print("")
+
+print("type(int_other1) = ", type(int_other1))

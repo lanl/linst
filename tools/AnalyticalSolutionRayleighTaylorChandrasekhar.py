@@ -14,7 +14,7 @@ print("")
 print("Chandrasekhar analytical stability solution of R-T")
 print("==================================================")
 
-At   = 0.05
+At   = 0.5
 rho1 = 1.0
 
 rho2 = rho1*(1.+At)/(1.-At) #3.*rho1 # that way I get Atw = 0.5
@@ -87,7 +87,7 @@ plt.gcf().subplots_adjust(bottom=0.13)
 ptn = ptn + 1
 
 g = 9.81
-nu = 1.2262500044390254e-06
+nu = 1.2742099898063203e-05 #1.2262500044390254e-06
 
 Lscale = (g/nu**2.)**(-1./3.)
 Tscale = (g**2./nu)**(-1./3.)
