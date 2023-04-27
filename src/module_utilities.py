@@ -285,10 +285,10 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
             plt.xlabel("real(" +str_var + ")", fontsize=16)
             print("Not an expected string!!!!!")
 
-    if (mv==0.):
-        plt.ylim([ymin, ymax])
-    else:
-        plt.ylim([-mv, mv])
+    #if (mv==0.):
+    #    plt.ylim([ymin, ymax])
+    #else:
+    #    plt.ylim([-mv, mv])
     
     f1.show()
     f1.subplots_adjust(bottom=0.16)
@@ -338,10 +338,10 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
             print("Not an expected string!!!!!")
 
 
-    if (mv==0.):
-        plt.ylim([ymin, ymax])
-    else:
-        plt.ylim([-mv, mv])
+    #if (mv==0.):
+    #    plt.ylim([ymin, ymax])
+    #else:
+    #    plt.ylim([-mv, mv])
 
     f2.subplots_adjust(bottom=0.16)
     f2.subplots_adjust(left=0.19)
@@ -2693,7 +2693,7 @@ def get_baseflow_and_derivatives(bsfl, mob):
         Mu       = bsfl.Mu_nd
         Mup      = bsfl.Mup_nd
 
-    elif ( mob.boussinesq == -2 ):
+    elif ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
         Rho   = bsfl.Rho
         Rhop  = bsfl.Rhop
         Rhopp = bsfl.Rhopp
@@ -3255,7 +3255,7 @@ def compute_baseflow_dissipation(dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy,
         print("---------------> testing in compute_baseflow_dissipation")
         print("")
 
-    if (mob.boussinesq == -2 ):
+    if (mob.boussinesq == -2 or mob.boussinesq == 10):
         visc = bsfl_ref.muref
     else:
         visc = 1/bsfl_ref.Re
@@ -3332,7 +3332,7 @@ def compute_disturbance_dissipation(ueig, veig, weig, peig, reig, y, alpha, beta
         print("---------------> testing in compute_disturbance_dissipation")
         print("")
 
-    if (mob.boussinesq == -2 ):
+    if (mob.boussinesq == -2 or mob.boussinesq == 10):
         visc = bsfl_ref.muref/bsfl_ref.rhoref
     else:
         visc = 1/bsfl_ref.Re
@@ -5937,7 +5937,10 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     LHS_ww = 2*omega_i*Rs_ww
 
     # RHS
-    RHS_ww_t1 = -2.*compute_inner_prod(weig, dpdz)
+    #RHS_ww_t1 = -2.*compute_inner_prod(weig, dpdz)
+    RHS_ww_t11 = -2.*( compute_inner_prod(weig, dpdz) + compute_inner_prod(peig, dwdz) )
+    RHS_ww_t12 = 2.*compute_inner_prod(peig, dwdz)
+    
     RHS_ww_t2 = 2.*np.multiply(a3, dpdz_bsfl)
 
     # Compute Laplacian of w'w'
@@ -5968,7 +5971,8 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     #else:
     #    RHS_ww = RHS_ww_t1 + RHS_ww_t2 + RHS_ww_t31 + RHS_ww_t32
 
-    RHS_ww = RHS_ww_t1 + RHS_ww_t2 + Lap_ww - dissip_ww
+    #RHS_ww = RHS_ww_t1 + RHS_ww_t2 + Lap_ww - dissip_ww
+    RHS_ww = RHS_ww_t11 + RHS_ww_t12 + RHS_ww_t2 + Lap_ww - dissip_ww
 
     print("")
     print("Check energy balancefor w'w' Reynolds stress equation")
@@ -6026,9 +6030,14 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     #
     
     pres_strain_mod_ww = -4./3.*Cr1*np.multiply(a3, dpdz_bsfl)
+    pres_strain_mod_ww_girimaji = (-2. + 4./3.*0.54)*a3
 
     B = 1.
     dazdz = np.matmul(D1, a3)
+    #dazdz22 = np.divide( ( compute_inner_prod(reig, dwdz) + compute_inner_prod(weig, Dr) ), Rho ) - np.divide( np.multiply(Rhop, compute_inner_prod(reig, weig)), rho2)
+    #print("np.max(np.abs(dazdz-dazdz22)) = ", np.max(np.abs(dazdz-dazdz22)))
+    #input("checking dadz")
+    
     l_taylor_nondim = iarr.l_taylor_dim/Lref
     l_taylor_nondim2 = np.multiply(l_taylor_nondim, l_taylor_nondim)
 
@@ -6044,7 +6053,7 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
 
     pres_diffusion_mod_ww = 2.*np.multiply( Rho, np.multiply(l_taylor_nondim2, dazdz) )
     pres_diffusion_mod_ww = np.matmul(D1, pres_diffusion_mod_ww)
-
+    
     #pres_diffusion_mod_ww22 = 2.*np.multiply( Rho, np.multiply(l_integr_nondim2, dazdz) )
     #pres_diffusion_mod_ww22 = np.matmul(D1, pres_diffusion_mod_ww22)
     
@@ -6168,19 +6177,41 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     ptn = plt.gcf().number + 1
 
     ymin, ymax = FindResonableYminYmax(Rs_ww, y)
-
-    max_1 = np.amax(np.abs(RHS_ww_t1))
     
     f  = plt.figure(ptn)
     ax = plt.subplot(111)
     ax.plot(np.real(LHS_ww), y, 'k', linewidth=1.5, label=r"LHS $(\overline{w'w'})$")
     ax.plot(np.real(RHS_ww), y, 'g--', linewidth=1.5, label=r"RHS $(\overline{w'w'})$")
 
-    ax.plot(np.real(RHS_ww_t1), y, 'r', linewidth=1.5, label=r"$-2\overline{w'\dfrac{\partial p'}{\partial z}}$ (RHS)")
-    ax.plot(np.real(RHS_ww_t2), y, 'b', linewidth=1.5, label=r"$2a_z \dfrac{\partial \bar{p}}{\partial z}$ (RHS)")
+    max_pd = np.max(np.abs(RHS_ww_t11))
+    max_pd_mod = np.max(np.abs(pres_diffusion_mod_ww))
+
+    scale_pd = max_pd/max_pd_mod
+    print("scale_pd = ", scale_pd)
+    
+    #ax.plot(np.real(RHS_ww_t1), y, 'r', linewidth=1.5, label=r"$-2\overline{w'\dfrac{\partial p'}{\partial z}}$ (RHS)")
+    ax.plot(np.real(RHS_ww_t11), y, 'b', linewidth=1.5, label=r"$-2 \dfrac{\partial}{\partial z} \overline{p'w'}$ (RHS)") # --> pressure diffusion
+    ax.plot(np.real(RHS_ww_t12), y, 'c', linewidth=1.5, label=r"$2\overline{p'\dfrac{\partial w'}{\partial z}}$ (RHS)")   # --> pressure strain
+
+    # mode terms
+    label_pd_mod = "pd model ( scaling = %s )" % str('{:.2e}'.format(scale_pd))
+    
+    ax.plot(np.real(pres_diffusion_mod_ww)*scale_pd, y, 'b-.', linewidth=1.5, label=label_pd_mod)
+    ax.plot(np.real(pres_strain_mod_ww), y, 'c-.', linewidth=1.5, label=r"ps model")
+    ax.plot(np.real(pres_strain_mod_ww_girimaji), y, 'c--', linewidth=1.5, label=r"ps model (Girimaji)")
+
+    ax.plot(np.real(RHS_ww_t2), y, 'm-.', linewidth=1.5, label=r"$2a_z \dfrac{\partial \bar{p}}{\partial z}$ (RHS)")
 
     ax.plot(np.real(Lap_ww), y, 'm', linewidth=1.5, label=r"$\dfrac{1}{Re} \nabla^2 \overline{w'w'}$ (RHS)")
-    ax.plot(np.real(dissip_ww), y, 'c', linewidth=1.5, label=r"$\dfrac{2}{Re} \overline{\nabla w' \cdot \nabla w'}$ (RHS)")    
+    ax.plot(np.real(dissip_ww), y, 'y', linewidth=1.5, label=r"$\dfrac{2}{Re} \overline{\nabla w' \cdot \nabla w'}$ (RHS)")
+
+    #ax.plot(np.real(dazdz), y, 'y', linewidth=1.5, color='orange', label=r"dazdz")
+
+    #try_var = np.multiply(l_taylor_nondim2, np.matmul(D1, dazdz))
+    #try_var = np.multiply(l_integr_nondim2, np.matmul(D1, dazdz))
+    #ax.plot(np.real(try_var), y, 'y', linewidth=3, color='orange', label=r"dazdz")
+
+    #pres_diffusion_mod_ww, pres_strain_mod_ww
 
     #if (opt==1):
     #    ax.plot(np.real(RHS_ww_t3), y, 'm', linewidth=1.5, label=r"$2\overline{w'\dfrac{\partial \tau'_{3k}}{\partial x_k}}$ (RHS)")
@@ -6198,10 +6229,12 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     plt.gcf().subplots_adjust(left=0.17)
     plt.gcf().subplots_adjust(bottom=0.15)
     plt.ylim([ymin, ymax])
+    #plt.ylim([-15, 30])
+    #plt.ylim([-5, 5])
     
     plt.legend(loc="upper right")
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
-              ncol=3, fancybox=True, shadow=True, fontsize=10)
+              ncol=3, fancybox=True, shadow=True, fontsize=8)
     
     f.show()
 
@@ -6326,8 +6359,8 @@ def compute_taylor_and_integral_scales(ke_dim, eps_dim, ke, eps, y, iarr, bsfl_r
     # Get ymin-ymax
     #ymin, ymax = FindResonableYminYmax(iarr.l_taylor_dim, y)
 
-    ymin = -0.04
-    ymax = -ymin
+    # Get ymin-ymax
+    ymin, ymax = FindResonableYminYmax(iarr.l_taylor_dim, y)
 
     ptn = plt.gcf().number + 1
 
@@ -6351,7 +6384,7 @@ def compute_taylor_and_integral_scales(ke_dim, eps_dim, ke, eps, y, iarr, bsfl_r
     #
     
     # Get ymin-ymax
-    #ymin, ymax = FindResonableYminYmax(iarr.l_integr_dim, y)
+    ymin, ymax = FindResonableYminYmax(iarr.l_integr_dim, y)
 
     ptn = plt.gcf().number + 1
 
@@ -6370,6 +6403,8 @@ def compute_taylor_and_integral_scales(ke_dim, eps_dim, ke, eps, y, iarr, bsfl_r
               ncol=2, fancybox=True, shadow=True, fontsize=10)
     
     f.show()
+
+    input("length scales")
 
 
 def compute_disturbance_kin_energy(ueig, veig, weig):
@@ -6542,6 +6577,147 @@ def calc_min_dy(y, boussi, bsfl_ref):
     #print("Dissip_disturb = ", Dissip_disturb)
 
     
+def compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig, veig, weig, peig, reig, D1, D2, y, alpha, beta, omega_i, bsfl, bsfl_ref, mob, rt_flag, KE_dist, epsilon_dist, epsil_tild_min_2tild_dist, iarr):
+
+    #plt.close('all')
+
+    ny = len(ueig)
+    
+    # Get some quantities to compute the balances
+    Mu, Mup, Rho, Rhop, Rhopp, rho2, rho3, rho_inv, rho2_inv, rho3_inv = get_baseflow_and_derivatives(bsfl, mob)
+    ia, ib, ia2, ib2, iab, Du, Dv, Dw, Dr, D2u, D2v, D2w, D2r = get_eigenfunctions_quantities(alpha, beta, D1, D2, ueig, veig, weig, reig)
+    
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+    Fr = bsfl_ref.Fr
+
+    Lref = bsfl_ref.Lref
+    Uref = bsfl_ref.Uref
+    muref = bsfl_ref.muref
+    rhoref = bsfl_ref.rhoref
+
+    div = ( 1j*alpha*ueig + 1j*beta*veig + Dw )
+
+    v = -np.divide(reig, rho2)
+
+    dpdx = (1j*alpha)*peig
+    dpdy = (1j*beta)*peig
+    dpdz = np.matmul(D1, peig) 
+    Dp  = dpdz
+
+    # Specific volume derivatives
+    dvdx = (1j*alpha)*v
+    dvdy = (1j*beta)*v
+    dvdz = np.matmul(D1, v)
+
+    
+    dwdx    = (1j*alpha)*weig
+    dwdy    = (1j*beta)*weig
+    dwdz    = Dw
+
+    drdx    = (1j*alpha)*reig
+    drdy    = (1j*beta)*reig
+    drdz    = Dr
+
+    d2wdx2  = (1j*alpha)**2.*weig
+    d2wdy2  = (1j*beta)**2.*weig
+    d2wdz2  = D2w
+
+    d2rdx2  = (1j*alpha)**2.*reig
+    d2rdy2  = (1j*beta)**2.*reig
+    d2rdz2  = D2r
+
+    # LHS for a-equation
+    LHS_aEq = 2*omega_i*compute_inner_prod(reig, weig)
+
+    # Compute Laplacian of rho'w'
+    Lap_a = 2.0*( compute_inner_prod(drdx, dwdx) + compute_inner_prod(drdy, dwdy) + compute_inner_prod(drdz, dwdz) ) + \
+             compute_inner_prod(reig, d2wdx2) + compute_inner_prod(reig, d2wdy2) + compute_inner_prod(reig, d2wdz2) + \
+             compute_inner_prod(weig, d2rdx2) + compute_inner_prod(weig, d2rdy2) + compute_inner_prod(weig, d2rdz2) 
+    Lap_a = Lap_a/Re
+
+    # Compute "dissipation" of a-equation
+    dissip_a = 2.*( compute_inner_prod(drdx, dwdx) + compute_inner_prod(drdy, dwdy) + compute_inner_prod(drdz, dwdz) )
+    dissip_a = dissip_a/Re
+
+    # RHS: inviscid terms
+    #RHS_a_t1 = -compute_inner_prod(reig, dpdz)
+    RHS_a_t11 = -compute_inner_prod(reig, dpdz)-compute_inner_prod(peig, drdz)
+    RHS_a_t12 = compute_inner_prod(peig, drdz)
+    
+    RHS_a_t2 = -np.multiply(Rhop, compute_inner_prod(weig, weig))
+    RHS_a_t3 = -compute_inner_prod(reig, reig)/Fr**2.
+
+    #RHS_aEq  = RHS_a_t1 + RHS_a_t2 + RHS_a_t3 + Lap_a - dissip_a
+    RHS_aEq  = RHS_a_t11 + RHS_a_t12 + RHS_a_t2 + RHS_a_t3 + Lap_a - dissip_a
+
+    energy_bal_aEq  = np.amax(np.abs(LHS_aEq-RHS_aEq))
+    print("Energy balance (RT) a-equation (BOUSSINESQ ----> ONLY FOR Sc=1 --- NEW):", energy_bal_aEq)
+
+    ####################
+    # Model Terms
+    ####################
+    dpdz_bsfl = -Rho/Fr**2*1
+    
+    az = np.divide(compute_inner_prod(reig, weig), Rho)
+    b  = np.divide(compute_inner_prod(reig, reig), rho2 )
+    dbdz = np.matmul(D1, b)
+
+    l_taylor_nondim = iarr.l_taylor_dim/Lref
+    l_taylor_nondim2 = np.multiply(l_taylor_nondim, l_taylor_nondim)
+
+    pres_dissipation_model = 1./3.*np.multiply(b, dpdz_bsfl)
+    pres_diffusion_model = -np.matmul(D1, np.multiply(l_taylor_nondim2, dbdz))
+
+    ####################
+    # PLOTS
+    ####################
+
+    # GET ymin-ymax
+    ymin, ymax = FindResonableYminYmax(RHS_aEq, y)
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+
+    #plt.plot(np.real(RHS_a_t1), y, 'b--', linewidth=1.5, label=r"$-\overline{ \rho' \dfrac{\partial p'}{\partial z} }$")
+    
+    plt.plot(np.real(RHS_a_t11), y, 'b', linewidth=1.5, label=r"$-\dfrac{\partial}{\partial z} \left( \overline{ \rho'p' } \right)$") ## pressure diffusion
+    plt.plot(np.real(RHS_a_t12), y, 'c', linewidth=1.5, label=r"$\overline{ p'\dfrac{\partial \rho'}{\partial z} }$")                 ## pressure dissipation
+    
+    plt.plot(np.real(RHS_a_t2), y, 'g', linewidth=1.5, label=r"$-\dfrac{\partial \bar{\rho}}{\partial z}\overline{w'w'}$")
+    plt.plot(np.real(RHS_a_t3), y, 'y', linewidth=1.5, label=r"$-\overline{\rho'\rho'}g/Fr^2$")
+    plt.plot(np.real(Lap_a),    y, 'm-.', linewidth=1.5, label=r"$\dfrac{1}{Re}\nabla^2 \overline{\rho'w'}$")
+    plt.plot(np.real(dissip_a), y, 'm', linewidth=1.5, label=r"$2\dfrac{\partial \rho'}{\partial x_j}\dfrac{\partial w'}{\partial x_j}$")    
+
+    plt.plot(np.real(RHS_aEq), y, 'r', linewidth=1.5, label="RHS")
+    plt.plot(np.real(LHS_aEq), y, 'k--', linewidth=1.5, label=r"LHS: $\dfrac{\partial}{\partial t} \overline{\rho'w'}$")
+
+    max_pd = np.max(np.abs(RHS_a_t11))
+    max_pd_model = np.max(np.abs(pres_diffusion_model))
+    scale_pd = max_pd/max_pd_model
+    
+    label_pd_mod = "pd model ( scaling = %s )" % str('{:.2e}'.format(scale_pd))
+    plt.plot(np.real(pres_diffusion_model)*scale_pd, y, 'b-.', linewidth=1.5, label=label_pd_mod)
+    plt.plot(np.real(pres_dissipation_model), y, 'c-.', linewidth=1.5, label="pd model")
+    #plt.plot(np.real(pres_dissipation_model+pres_diffusion_model), y, 'c:', linewidth=1.5, label="pressure dissipation + pressure diffusion model")
+    
+    plt.xlabel(r"a-equation (Boussinesq, Sc=1)", fontsize=14)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    plt.ylim([ymin, ymax])
+    #plt.ylim([-8, 20])
+    #plt.ylim([-5, 5])
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=3, fancybox=True, shadow=True, fontsize=8)
+
+    f.show()
+
+    input("Boussinesq a-equation balance...")
+
+
     
 # using Test
 # using Plots

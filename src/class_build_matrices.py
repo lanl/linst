@@ -36,7 +36,7 @@ class BuildMatrices:
                                  # -555 -> compressible
                 """
                 
-                self.boussinesq = 10
+                self.boussinesq = 1 #-2
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -1736,7 +1736,7 @@ class BuildMatrices:
         """
         """
         nu = bsfl_ref.nuref # 2.54841997961264e-06
-        Diff = bsfl_ref.nuref # 2.54841997961264e-06
+        Diff = bsfl_ref.Dref #bsfl_ref.nuref # 2.54841997961264e-06
         rho0 = bsfl_ref.rhoref # 1.0526315789473686
 
         #nu = bsfl_ref.nuref

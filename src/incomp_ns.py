@@ -129,12 +129,23 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     #################################################
     # Re-scale data
     #################################################
-    if   ( mob.boussinesq == -2 ):  # Only dimensional solver
+    if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):  # Only dimensional solver
         #alpha_dim = alpha/bsfl_ref.Lref
-        sys.exit("Dimensional solver =====> check this!")
+        alpha_dim = alpha
+        beta_dim = beta
+
+        print("alpha = ", alpha_dim*bsfl_ref.Lref)
+        print("alpha_dim = ", alpha_dim)
+        print("alpha_chandra = ", alpha_dim*bsfl_ref.Lscale_Chandra)
+        
     else:
         alpha_dim = alpha/bsfl_ref.Lref
         beta_dim = beta/bsfl_ref.Lref
+
+        print("alpha = ", alpha)
+        print("alpha_dim = ", alpha_dim)
+        print("alpha_chandra = ", alpha_dim*bsfl_ref.Lscale_Chandra)
+        
 
     omega_sol_dim = iarr.omega_dim[-1, -1]
     omega_sol_nondim = iarr.omega_nondim[-1, -1]
@@ -143,7 +154,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     mod_util.ReScale_NonDim1(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
     mod_util.ReScale_NonDim2(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
     mod_util.ReScale_NonDim3(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-    #mod_util.ReScale_NonDim2()
+    
     
 
     #################################################
@@ -183,8 +194,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
         mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob, ylimp)
         mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob, ylimp)
-
-        input("Pausing for eigenfunction output")
     
     #####
     #idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.578232), 0.0+1j*0.578232)
@@ -197,6 +206,11 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     #mod_util.plot_real_imag_part(solve.EigVec[0:1*ny,idx_tar4], "u (mode 4)", map.y, rt_flag, mob)
 
     mod_util.write_eigvects_out_new(map.y, ueig, veig, weig, peig, reig, Local, bsfl_ref)
+
+    input("Pausing for eigenfunction output")
+
+    if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
+        sys.exit("Dimensional solver =====> check this!")
     
     # Plot eigenvectors if needed
     #mod_util.get_eigvcts(ny, solve.EigVec, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
@@ -351,18 +365,23 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             if   ( mob.boussinesq == 1 ):  # Boussinesq solver
                 print("a-equation energy balance")
                 print("=========================")
-                mod_util.compute_a_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag)
-                mod_util.compute_a_eq_ener_bal_boussi_Sc_1(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
+                #mod_util.compute_a_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                #mod_util.compute_a_eq_ener_bal_boussi_Sc_1(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
+                #                                           alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, KE_dist, epsilon_dist, epsil_tild_min_2tild_dist, iarr)
+
+                
+                mod_util.compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
                                                            alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, KE_dist, epsilon_dist, epsil_tild_min_2tild_dist, iarr)
+
                 print("")
                 print("b-equation energy balance")
                 print("=========================")
                 
-                mod_util.compute_b_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag)
+                #mod_util.compute_b_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag)
                 print("")
                 print("density-self-correlation-equation energy balance")
                 print("================================================")                
-                mod_util.compute_dsc_eq_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y,alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
+                #mod_util.compute_dsc_eq_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y,alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
                 print("")
                 
         elif ( mob.boussinesq == -2):                         # dimensional solver
