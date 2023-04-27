@@ -29,31 +29,15 @@ class Baseflow:
     """
     This class define a general baseflow object
     """
-    def __init__(self):
-        pass
+    def __init__(self, Re=1, At=0.01, Fr=1, Sc=1, gref=1, Uref=1):
+        self.Re     = Re
 
-    def set_reference_quantities(self, riist):
-
-        if ( riist.Re_min != riist.Re_max and riist.rt_flag ):
-            sys.exit("R-T not setup for multiple Reynolds number")
-
-        self.Re     = riist.Re_min
-            
-        self.Re_min = riist.Re_min
-        self.Re_max = riist.Re_max
-        self.npts_re = riist.npts_re
-
-        self.At    = riist.At
-        self.Fr    = riist.Fr
-        self.Sc    = riist.Sc # based on nu_ref because nu might not be constant
+        self.At    = At
+        self.Fr    = Fr
+        self.Sc    = Sc # based on nu_ref because nu might not be constant
         
-        self.gref  = riist.gref
-        self.Uref  = riist.Uref
-
-        # To avoid duplicate, I delete the member of class_readinput that I redefine here
-        del riist.Re_min, riist.Re_max, riist.npts_re, riist.At, riist.Fr, riist.Sc, riist.gref, riist.Uref
-
-        #print("self.Fr, self.Re, self.Sc, self.gref, self.Uref = ",self.Fr, self.Re, self.Sc, self.gref, self.Uref)
+        self.gref  = gref
+        self.Uref  = Uref
 
         if (nondim_flag==1):
             print("")
@@ -106,24 +90,6 @@ class Baseflow:
             print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
             print("")
             
-        # self.Re = 0.0
-        # self.Fr = 0.0
-        # self.Sc = 0.0
-        # self.Uref = 0.0
-        # self.gref = 0.0
-        # self.Lref = 0.0
-        # self.Dref = 0.0
-        # self.nuref = 0.0
-
-        # self.Re_min = 0.0
-        # self.Re_max = 0.0
-        # self.npts_re = 0
-        #self.size = size
-        #self.U    = np.zeros(size, dp)
-        #self.W    = np.zeros(size, dp)
-        #self.Up   = np.zeros(size, dp)
-        #self.Wp   = np.zeros(size, dp)
-
         
 class HypTan(Baseflow):
     """

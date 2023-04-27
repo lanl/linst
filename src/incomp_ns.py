@@ -24,10 +24,11 @@ i8  = np.dtype('i8') # integer 8
 #     EXECUTABLE STATEMENTS     #
 #################################
 
-def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, rt_flag, SolverT, \
-                  baseflowT, ny, Re, npts_alp, alpha, beta, mtmp, \
-                  yinf, lmap, target1, alp_mich, ome_mich, npts_re, iarr, ire, bsfl_ref, riist):
+def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, SolverT, \
+                  baseflowT, ny, npts_alp, alpha, beta, mtmp, \
+                  yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag):
 
+    Re = bsfl_ref.Re
     if (rt_flag==False):
         prim_form = 1
 
@@ -278,7 +279,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     
             print("Nondimensional growth rate (Chandrasekhar time scale)   n = ", omega_sol_dim*bsfl_ref.Tscale_Chandra)
             # For these solvers the wavenumber is non-dimensional (non-dimensionalized by Lref)
-            print("Nondimensional wave-number (Chandrasekhar length scale) k = ",riist.alpha/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra)
+            print("Nondimensional wave-number (Chandrasekhar length scale) k = ",alpha/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra)
 
             ueig_nd = ueig
             veig_nd = veig
@@ -295,7 +296,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             # Close previous plots
             mod_util.close_previous_plots()
             
-            mod_util.comp_ke_bal_rt_boussinesq(ueig_nd,veig_nd,weig_nd,peig_nd,reig_nd,map,mob,bsfl,map.D1,map.D2,map.y,alpha_nd,beta_nd,Re,np.imag(omega_sol_nondim),bsfl_ref,rt_flag,riist,Local)
+            #mod_util.comp_ke_bal_rt_boussinesq(ueig_nd,veig_nd,weig_nd,peig_nd,reig_nd,map,mob,bsfl,map.D1,map.D2,map.y,alpha_nd,beta_nd,Re,np.imag(omega_sol_nondim),bsfl_ref,rt_flag,riist,Local)
             
             #mod_util.IntegrateDistDensity_CompareToPressure(peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, bsfl_ref)
 
@@ -388,7 +389,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             print("Chandrasekhar R-T solver")
             print("Nondimensional growth rate (Chandrasekhar time scale)   n = ", omega_sol_dim*bsfl_ref.Tscale_Chandra)
             # Note: For solver -2, the wavenumber is made dimensional in main.py
-            print("Nondimensional wave-number (Chandrasekhar length scale) k = ",riist.alpha*bsfl_ref.Lscale_Chandra)
+            print("Nondimensional wave-number (Chandrasekhar length scale) k = ",alpha*bsfl_ref.Lscale_Chandra)
 
             reig_nd = reig/bsfl_ref.rhoref
             weig_nd = weig/bsfl_ref.Uref
