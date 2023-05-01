@@ -40,55 +40,53 @@ class Baseflow:
         self.Uref  = Uref
 
         if (nondim_flag==1):
+            # Lref is here the dimensional thickness of the layer
+            self.Lref = 0.00025484199796126404
+            self.nuref = np.sqrt(self.gref)*self.Lref**(3./2.)/self.Re
+            self.Uref = np.sqrt(self.gref*self.Lref)
+            self.Fr = self.Uref/np.sqrt(self.gref*self.Lref)
+        else:
+            # Compute reference length (thickness of mixing zone for Rayleigh-Taylor)
+            self.Lref  = self.Uref**2./(self.Fr**2.*self.gref)
+            self.nuref = self.Uref*self.Lref/self.Re
+        # Set dimensional diffusivity reference value
+        self.Dref  = self.nuref/self.Sc
+            
+    def print(self):
+        if (nondim_flag==1):
             print("")
             print("USING NEW NON-DIMENSIONALIZATION")
             print("")
-            # Lref is here the dimensional thickness of the layer
-            self.Lref = 0.00025484199796126404 #0.001
-            
-            self.nuref = np.sqrt(self.gref)*self.Lref**(3./2.)/self.Re
             print("Setting Lref to: ", self.Lref)
 
-            self.Uref = np.sqrt(self.gref*self.Lref)
-            self.Fr = self.Uref/np.sqrt(self.gref*self.Lref)
             print("")
             print("Overwritting Uref and Froude...")
             print("")
-        
         else:
             print("")
             print("USING OLD NON-DIMENSIONALIZATION")
             print("")
 
-            # Compute reference length (thickness of mixing zone for Rayleigh-Taylor)
-            self.Lref  = self.Uref**2./(self.Fr**2.*self.gref)
-            self.nuref = self.Uref*self.Lref/self.Re
-
-        # Set dimensional diffusivity reference value
-        self.Dref  = self.nuref/self.Sc
-            
-        WriteHere = True
-        if (WriteHere):
-            print("")
-            print("Main non-dimensional numbers and corresponding reference quantities:")
-            print("====================================================================")
-            print("Atwood number At               = ", self.At)
-            print("Froude number Fr               = ", self.Fr)
-            print("Schmidt number Sc              = ", self.Sc)
-            print("Reynolds number Re             = ", self.Re)
-            print("Reference gravity gref [m/s^2] = ", self.gref)
-            print("Reference velocity Uref [m/s]  = ", self.Uref)
-            print("")
-            print("Other reference quantities:")
-            print("---------------------------")
-            print("Mass transfer Peclet number ( Pe = Re*Sc )                      = ", self.Re*self.Sc)
-            print("Ref. mass diffusivity Dref [m^2/s] ( Dref = nuref/Sc )          = ", self.Dref)
-            if (nondim_flag==1):
-                print("Ref. length scale Lref [m] set to Lref                      = ", self.Lref)
-            else:
-                print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )     = ", self.Lref)
-            print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
-            print("")
+        print("")
+        print("Main non-dimensional numbers and corresponding reference quantities:")
+        print("====================================================================")
+        print("Atwood number At               = ", self.At)
+        print("Froude number Fr               = ", self.Fr)
+        print("Schmidt number Sc              = ", self.Sc)
+        print("Reynolds number Re             = ", self.Re)
+        print("Reference gravity gref [m/s^2] = ", self.gref)
+        print("Reference velocity Uref [m/s]  = ", self.Uref)
+        print("")
+        print("Other reference quantities:")
+        print("---------------------------")
+        print("Mass transfer Peclet number ( Pe = Re*Sc )                      = ", self.Re*self.Sc)
+        print("Ref. mass diffusivity Dref [m^2/s] ( Dref = nuref/Sc )          = ", self.Dref)
+        if (nondim_flag==1):
+            print("Ref. length scale Lref [m] set to Lref                      = ", self.Lref)
+        else:
+            print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )     = ", self.Lref)
+        print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
+        print("")
             
         
 class HypTan(Baseflow):

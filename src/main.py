@@ -9,7 +9,6 @@ import class_baseflow as mbf
 import class_build_matrices as mbm
 import class_solve_gevp as msg
 import class_mapping as mma
-import class_readinput as rinput
 
 import matplotlib
 matplotlib.use('TkAgg') #----> Specify the backend
@@ -74,6 +73,7 @@ bsfl_ref = mbf.Baseflow(
     Uref=0.05,
     gref=9.81
     )
+#bsfl_ref.print()
 
 ###################################
 # Dimensionalize inputs if needed #
@@ -128,9 +128,12 @@ iarr = marray.MainArrays(1, 1, ny)
 #     print("Main Loop over Reynolds number: solving for Re = %10.5e (%i/%i)" % (Re, i+1, bsfl_ref.npts_re))
 #     print("==================================================================")
 
-mod_incomp.incomp_ns_fct(prim_form, False, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 1, \
-                             1, ny, 1, alpha, beta, mtmp, \
-                             yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag)
+solver = mod_incomp.Solver(
+    prim_form, False, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 1, \
+    1, ny, 1, alpha, beta, mtmp, \
+    yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag
+    )
+solver.solve()
 
     
 ###################################
