@@ -374,7 +374,129 @@ class Boussinesq(BuildMatrices):
             rhs[idx_r_ymax  ] = 0.0
             lhs[idx_r_ymax, idx_r_ymax] = 1.0
         
+class BoussinesqDim(Boussinesq):
+    def __init__(self, ny):
+        super(BoussinesqDim, self).__init__(ny) 
+        self.boussinesq = 10
+    
+    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+        """
+        """
+        nu = bsfl_ref.nuref # 2.54841997961264e-06
+        Diff = bsfl_ref.Dref #bsfl_ref.nuref # 2.54841997961264e-06
+        rho0 = bsfl_ref.rhoref # 1.0526315789473686
 
+        #nu = bsfl_ref.nuref
+        #rho0 = bsfl_ref.rhoref
+        
+        # dimensional set of equations
+        grav = bsfl_ref.gref
+
+        if ( grav != 9.81 ):
+            print("")
+            print("Boussinesq R-T dimensional solver: gravity should be dimensional, g = ", grav)
+            input("Check gravity")
+        
+        D1 = map.D1_dim
+        D2 = map.D2_dim
+        
+        # Identity matrix id
+        id      = np.identity(ny)
+
+        # Create diagonal matrices from baseflow vectors
+        dRho    = np.diag(bsfl.Rho)
+        dRhop   = np.diag(bsfl.Rhop)
+        
+        # 1st block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id/rho0
+
+        self.mat_a2[imin:imax, imin:imax]           = -id*nu
+
+        self.mat_b2[imin:imax, imin:imax]           = -id*nu
+
+        self.mat_d1[imin:imax, imin:imax]           = D2*nu
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # 2nd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id*nu
+
+        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id/rho0
+                
+        self.mat_b2[imin:imax, imin:imax]           = -id*nu
+
+        self.mat_d1[imin:imax, imin:imax]           = D2*nu
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # 3rd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id*nu
+
+        self.mat_b2[imin:imax, imin:imax]           = -id*nu
+
+        self.mat_d1[imin:imax, imin:imax]           = D2*nu
+        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1/rho0
+        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/rho0
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # 4th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+
+        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
+
+        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = D1
+
+        # 5th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id*Diff
+
+        self.mat_b2[imin:imax, imin:imax]           = -id*Diff
+
+        self.mat_d1[imin:imax, imin:imax]           = D2*Diff 
+        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        check_norms = 0
+
+        if (check_norms == 1):
+
+            mat_a1_norm = np.linalg.norm(self.mat_a1)
+            mat_a2_norm = np.linalg.norm(self.mat_a2)
+            
+            mat_b1_norm = np.linalg.norm(self.mat_b1)
+            mat_b2_norm = np.linalg.norm(self.mat_b2)
+            
+            mat_d1_norm = np.linalg.norm(self.mat_d1)
+            
+            mat_rhs_norm = np.linalg.norm(self.mat_rhs)
+
+            print("Dim: norm a1 = ", mat_a1_norm)
+            print("Dim: norm a2 = ", mat_a2_norm)
+            
+            print("Dim: norm b1 = ", mat_b1_norm)
+            print("Dim: norm b2 = ", mat_b2_norm)
+            
+            print("Dim: norm d1 = ", mat_d1_norm)
+            print("Dim: norm rhs = ", mat_rhs_norm)
+
+            print("")
+            input("Checking matrices norms for dimensional Boussinesq solver")
             
 class Stupid(object):
     def set_bc_shear_layer(self, lhs, rhs, ny, map):
@@ -1697,121 +1819,3 @@ class Stupid(object):
             lhs[idx_p_ymax, idx_p_ymax] = 1.0
 
 
-    def set_matrices_rayleigh_taylor_boussinesq_mixing_dimensional(self, ny, bsfl, bsfl_ref, map):
-        """
-        """
-        nu = bsfl_ref.nuref # 2.54841997961264e-06
-        Diff = bsfl_ref.Dref #bsfl_ref.nuref # 2.54841997961264e-06
-        rho0 = bsfl_ref.rhoref # 1.0526315789473686
-
-        #nu = bsfl_ref.nuref
-        #rho0 = bsfl_ref.rhoref
-        
-        # dimensional set of equations
-        grav = bsfl_ref.gref
-
-        if ( grav != 9.81 ):
-            print("")
-            print("Boussinesq R-T dimensional solver: gravity should be dimensional, g = ", grav)
-            input("Check gravity")
-        
-        D1 = map.D1_dim
-        D2 = map.D2_dim
-        
-        # Identity matrix id
-        id      = np.identity(ny)
-
-        # Create diagonal matrices from baseflow vectors
-        dRho    = np.diag(bsfl.Rho)
-        dRhop   = np.diag(bsfl.Rhop)
-        
-        # 1st block indices
-        imin = 0
-        imax = ny
-
-        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id/rho0
-
-        self.mat_a2[imin:imax, imin:imax]           = -id*nu
-
-        self.mat_b2[imin:imax, imin:imax]           = -id*nu
-
-        self.mat_d1[imin:imax, imin:imax]           = D2*nu
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        # 2nd block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a2[imin:imax, imin:imax]           = -id*nu
-
-        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id/rho0
-                
-        self.mat_b2[imin:imax, imin:imax]           = -id*nu
-
-        self.mat_d1[imin:imax, imin:imax]           = D2*nu
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        # 3rd block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a2[imin:imax, imin:imax]           = -id*nu
-
-        self.mat_b2[imin:imax, imin:imax]           = -id*nu
-
-        self.mat_d1[imin:imax, imin:imax]           = D2*nu
-        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1/rho0
-        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/rho0
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        # 4th block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
-
-        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
-
-        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = D1
-
-        # 5th block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a2[imin:imax, imin:imax]           = -id*Diff
-
-        self.mat_b2[imin:imax, imin:imax]           = -id*Diff
-
-        self.mat_d1[imin:imax, imin:imax]           = D2*Diff 
-        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        check_norms = 0
-
-        if (check_norms == 1):
-
-            mat_a1_norm = np.linalg.norm(self.mat_a1)
-            mat_a2_norm = np.linalg.norm(self.mat_a2)
-            
-            mat_b1_norm = np.linalg.norm(self.mat_b1)
-            mat_b2_norm = np.linalg.norm(self.mat_b2)
-            
-            mat_d1_norm = np.linalg.norm(self.mat_d1)
-            
-            mat_rhs_norm = np.linalg.norm(self.mat_rhs)
-
-            print("Dim: norm a1 = ", mat_a1_norm)
-            print("Dim: norm a2 = ", mat_a2_norm)
-            
-            print("Dim: norm b1 = ", mat_b1_norm)
-            print("Dim: norm b2 = ", mat_b2_norm)
-            
-            print("Dim: norm d1 = ", mat_d1_norm)
-            print("Dim: norm rhs = ", mat_rhs_norm)
-
-            print("")
-            input("Checking matrices norms for dimensional Boussinesq solver")

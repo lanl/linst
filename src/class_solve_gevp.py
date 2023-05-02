@@ -122,8 +122,8 @@ class SolveGeneralizedEVP:
         if (rt_flag):
             i = 0
             print("ire, i = ", ire, i)
-            
-            if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
+
+            if   ( mob.boussinesq == -2 or isinstance(mob, BoussinesqDim)):
                 iarr.omega_dim[ire, i] = omega
                 iarr.omega_nondim[ire, i] = omega*bsfl_ref.Lref/bsfl_ref.Uref
                 print("omega (dimensional)     = ", iarr.omega_dim[ire, i])
