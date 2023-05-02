@@ -46,7 +46,6 @@ i8  = np.dtype('i8') # integer 8
 prim_form = 1
 
 # Plotting flags
-plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
 plot_eigvcts = 1 # set to 1 to plot eigenvectors ==> will be set to 1 if only one location and one alpha
 
 ###################################
@@ -78,8 +77,6 @@ print(bsfl_ref)
 # Dimensionalize inputs if needed #
 ###################################
 
-# Deal with dimensional vs. nondimensional solvers
-mtmp = mbm.BuildMatrices(ny, rt_flag, prim_form)
 
 # # If solver boussines = -2 is used, I need to dimensionalize inputs
 # if ( mtmp.boussinesq == -2 ): # =================> dimensional solver
@@ -132,11 +129,12 @@ iarr = marray.MainArrays(1, 1, ny)
 #################################################
 
 # Create instance for class GaussLobatto
+mtmp = mbm.Boussinesq(ny)
 cheb = mgl.GaussLobatto(ny)
 map = mma.MapShearLayer(yinf, cheb, lmap, bsfl_ref, mtmp.boussinesq)
 bsfl = mbf.RayleighTaylorBaseflow(ny, map, bsfl_ref, mtmp)
 solver = mod_incomp.Solver(
-    prim_form, False, plot_grid_bsfl, plot_eigvcts, 1, \
+    prim_form, False, plot_eigvcts, 1, \
     1, ny, 1, alpha, beta, mtmp, \
     yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag, map, bsfl
     )

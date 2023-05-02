@@ -18,78 +18,78 @@ class BuildMatrices:
     This class builds the main matrices A (mat_lhs) and B (mat_rhs) 
     required to form the temporal generalized eigenvalue problem A*q = omega*B*q
     """
-    #def __init__(self, size): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
-    def __init__(self, ny, rt_flag, prim_form): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
+    def __init__(self, size): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
+    #def __init__(self, ny): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
         """
         Constructor for class BuilMatrices
         """
-        if (rt_flag == True):
-            if (prim_form==1):
+        # if (rt_flag == True):
+        #     if (prim_form==1):
 
-                size = 5*ny
+        #         size = 5*ny
 
-                """Boussinesq flag:    1 -> Boussinesq,
-                                 #   10 -> dimensional Boussinesq,
-                                 #   -2 -> Chandrasekhar,
-                                 #   -3 -> Sandoval,
-                                 #   -4 -> modified Sandoval,
-                                 # -555 -> compressible
-                """
+        #         """Boussinesq flag:    1 -> Boussinesq,
+        #                          #   10 -> dimensional Boussinesq,
+        #                          #   -2 -> Chandrasekhar,
+        #                          #   -3 -> Sandoval,
+        #                          #   -4 -> modified Sandoval,
+        #                          # -555 -> compressible
+        #         """
                 
-                self.boussinesq = 1 #-2
+        #         self.boussinesq = 1 #-2
 
-                if   (self.boussinesq == 1 ):
-                    pass
-                    # print("")
-                    # print('-----------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Boussinesq"')
-                    # print('-----------------------------------------------------')
-                    # print("")
-                elif (self.boussinesq == 10 ):
-                    pass
-                    # print("")
-                    # print('--------------------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Boussinesq" DIMENSIONAL')
-                    # print('--------------------------------------------------------------')
-                    # print("")
-                elif (self.boussinesq == -2 ):
-                    pass
-                    # print("")
-                    # print('-----------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Chandrasekhar"')
-                    # print('-----------------------------------------------------')
-                    # print("")
-                elif (self.boussinesq == -3 ):
-                    pass
-                    # print("")
-                    # print('-----------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Sandoval"')
-                    # print('-----------------------------------------------------')
-                    # print("")
-                elif (self.boussinesq == -4 ):
-                    pass
-                    # print("")
-                    # print('---------------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
-                    # print('---------------------------------------------------------')
-                    # print("")
-                elif (self.boussinesq == -555 ): # compressible inviscid
-                    size = 4*ny
-                    # print("")
-                    # print('---------------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
-                    # print('---------------------------------------------------------')
-                    # print("")
-                else:
-                    sys.exit("Not a proper value for boussinesq flag!")
-            else:
-                sys.exit("Just used for inviscid debugging 123456789")
-                size = ny
-        else:
-            self.boussinesq = -999
-            size = 4*ny
+        #         if   (self.boussinesq == 1 ):
+        #             pass
+        #             # print("")
+        #             # print('-----------------------------------------------------')
+        #             # print('Equations for Rayleight-Taylor set to "Boussinesq"')
+        #             # print('-----------------------------------------------------')
+        #             # print("")
+        #         elif (self.boussinesq == 10 ):
+        #             pass
+        #             # print("")
+        #             # print('--------------------------------------------------------------')
+        #             # print('Equations for Rayleight-Taylor set to "Boussinesq" DIMENSIONAL')
+        #             # print('--------------------------------------------------------------')
+        #             # print("")
+        #         elif (self.boussinesq == -2 ):
+        #             pass
+        #             # print("")
+        #             # print('-----------------------------------------------------')
+        #             # print('Equations for Rayleight-Taylor set to "Chandrasekhar"')
+        #             # print('-----------------------------------------------------')
+        #             # print("")
+        #         elif (self.boussinesq == -3 ):
+        #             pass
+        #             # print("")
+        #             # print('-----------------------------------------------------')
+        #             # print('Equations for Rayleight-Taylor set to "Sandoval"')
+        #             # print('-----------------------------------------------------')
+        #             # print("")
+        #         elif (self.boussinesq == -4 ):
+        #             pass
+        #             # print("")
+        #             # print('---------------------------------------------------------')
+        #             # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
+        #             # print('---------------------------------------------------------')
+        #             # print("")
+        #         elif (self.boussinesq == -555 ): # compressible inviscid
+        #             size = 4*ny
+        #             # print("")
+        #             # print('---------------------------------------------------------')
+        #             # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
+        #             # print('---------------------------------------------------------')
+        #             # print("")
+        #         else:
+        #             sys.exit("Not a proper value for boussinesq flag!")
+        #     else:
+        #         sys.exit("Just used for inviscid debugging 123456789")
+        #         size = ny
+        # else:
+        #     self.boussinesq = -999
+        #     size = 4*ny
 
-        self.size = size
+        # self.size = size
         # Initialize arrays
         self.mat_a1 = np.zeros((size,size), dpc)
         self.mat_a2 = np.zeros((size,size), dpc)
@@ -105,6 +105,278 @@ class BuildMatrices:
 
         self.vec_rhs = np.zeros(size, dpc)
 
+    def assemble_mat_lhs(self, alpha, beta, omega, bsfl_ref):
+        """
+        This function assemble the lhs matrix mat_lhs
+        """
+
+        if ( self.boussinesq == -555 ):
+            self.mat_lhs = self.mat_a1
+        else:
+            self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
+
+        check_norms = 0
+
+        if (check_norms == 1):
+
+            mat_a1_norm = np.linalg.norm(self.mat_a1)
+            mat_a2_norm = np.linalg.norm(self.mat_a2)
+            
+            mat_b1_norm = np.linalg.norm(self.mat_b1)
+            mat_b2_norm = np.linalg.norm(self.mat_b2)
+            
+            mat_d1_norm = np.linalg.norm(self.mat_d1)
+            
+            mat_lhs_norm = np.linalg.norm(self.mat_lhs)
+            mat_rhs_norm = np.linalg.norm(self.mat_rhs)
+
+            print("")
+            print("alpha, beta, omega: ", alpha, beta, omega)
+            print("Matrix norm of mat_lhs = ", mat_lhs_norm)
+            print("Matrix norm of mat_rhs = ", mat_rhs_norm)
+            print("")
+            print("Matrix norm of mat_a1 = ", mat_a1_norm)
+            print("Matrix norm of mat_a2 = ", mat_a2_norm)
+            print("")
+            print("Matrix norm of mat_b1 = ", mat_b1_norm)
+            print("Matrix norm of mat_b2 = ", mat_b2_norm)
+            print("")
+            print("Matrix norm of mat_d1 = ", mat_d1_norm)
+            print("")
+            
+            input("Check norms!")
+            
+        if ( self.boussinesq == -3 or self.boussinesq == -4 ):
+            self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab 
+        
+        #if (Tracking and Local):
+        #    self.mat_lhs = self.mat_lhs - omega*self.mat_rhs
+            
+        #print("np.shape(self.mat_lhs)=", np.shape(self.mat_lhs))
+        #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
+
+class Boussinesq(BuildMatrices):
+    def __init__(self, ny):
+        self.boussinesq = 1
+        super(Boussinesq, self).__init__(5*ny) 
+    
+    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+        """
+        Equations from Livescu Annual Review of Fluid Mechanics:
+        "Turbulence with Large Thermal and Compositional Density Variations"
+        see Equations 30, 31, 32
+        variables are taken here as (u, v, w, p, rho)^T
+        """
+
+        # non-dimensional set of equations
+        grav = bsfl_ref.gref/bsfl_ref.gref
+
+        if ( grav != 1. ):
+            print("")
+            print("Boussinesq R-T solver: gravity should be non-dimensional, g = ", grav)
+            input("Check gravity")
+        
+        Fr2      = bsfl_ref.Fr**2.
+        Sc       = bsfl_ref.Sc
+        Re       = bsfl_ref.Re
+
+        D1 = map.D1
+        D2 = map.D2
+
+        check_norms_output = 0
+
+        if (check_norms_output == 1):
+            print("")
+            print("R-T Boussinesq Equations (non-dimensional)")
+            print("-----------------------------------------------------------------")
+            print("Gravity                       = ", grav)
+            print("Froude number Fr              = ", np.sqrt(Fr2))
+            print("Schmidt number Sc             = ", Sc)
+            print("Reynolds number Re            = ", Re)
+            print("Peclet number (mass transfer) = ", Re*Sc)
+            print("")
+            
+            
+            mat_D1_norm = np.linalg.norm(D1)
+            mat_D2_norm = np.linalg.norm(D2)
+            
+            print("Mat norm of D1: ", mat_D1_norm)
+            print("Mat norm of D2: ", mat_D2_norm)
+        
+        # Identity matrix id
+        id      = np.identity(ny)
+
+        # Create diagonal matrices from baseflow vectors
+        dRho    = np.diag(bsfl.Rho_nd)
+        dRhop   = np.diag(bsfl.Rhop_nd)
+        
+
+        # 1st block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
+
+        self.mat_a2[imin:imax, imin:imax]           = -id/Re
+
+        self.mat_b2[imin:imax, imin:imax]           = -id/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = D2/Re
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # 2nd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id/Re
+
+        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
+                
+        self.mat_b2[imin:imax, imin:imax]           = -id/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = D2/Re
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # 3rd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id/Re
+
+        self.mat_b2[imin:imax, imin:imax]           = -id/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = D2/Re
+        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1 
+        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/Fr2 
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+        # 4th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+
+        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
+
+        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = D1
+
+        # 5th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -id/(Re*Sc)
+
+        self.mat_b2[imin:imax, imin:imax]           = -id/(Re*Sc)
+
+        self.mat_d1[imin:imax, imin:imax]           = D2/(Re*Sc) 
+        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
+
+    def call_to_set_bc(self, ny, map):
+        """
+        """
+        lhs = self.mat_lhs
+        rhs = self.mat_rhs
+        ######################################
+        # (1) FREESTREAM BOUNDARY-CONDITIONS #
+        ######################################
+        
+        ##################
+        # u-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny
+        idx_u_ymax = 1*ny-1
+
+        # ymin
+        lhs[idx_u_ymin,:] = 0.0
+        rhs[idx_u_ymin,:] = 0.0        
+        lhs[idx_u_ymin, idx_u_ymin] = 1.0
+
+        # ymax
+        lhs[idx_u_ymax,:] = 0.0
+        rhs[idx_u_ymax,:] = 0.0
+        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        
+        ##################
+        # v-velocity BCs #
+        ##################
+        idx_v_ymin = 1*ny
+        idx_v_ymax = 2*ny-1
+
+        # ymin
+        lhs[idx_v_ymin,:] = 0.0
+        rhs[idx_v_ymin,:] = 0.0        
+        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+
+        # ymax
+        lhs[idx_v_ymax,:] = 0.0
+        rhs[idx_v_ymax,:] = 0.0
+        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+
+        ##################
+        # w-velocity BCs #
+        ##################
+        idx_w_ymin = 2*ny
+        idx_w_ymax = 3*ny-1
+
+        # ymin
+        lhs[idx_w_ymin,:] = 0.0
+        rhs[idx_w_ymin,:] = 0.0        
+        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+
+        # ymax
+        lhs[idx_w_ymax,:] = 0.0
+        rhs[idx_w_ymax,:] = 0.0
+        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+
+        ##################
+        # pressure BCs #
+        ##################
+        set_pres = 1
+
+        if (set_pres==1):
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0        
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
+            
+            # ymax
+            lhs[idx_p_ymax,:] = 0.0
+            rhs[idx_p_ymax  ] = 0.0
+            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+
+        ##################
+        # density BCs #
+        ##################
+        set_dens = 1
+
+        if (set_dens==1):
+            idx_r_ymin = 4*ny
+            idx_r_ymax = 5*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0        
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
+        
+
+            
+class Stupid(object):
     def set_bc_shear_layer(self, lhs, rhs, ny, map):
         """
         This function sets the boundary conditions for the free shear layer test case:
@@ -350,57 +622,6 @@ class BuildMatrices:
 
         # print("norm d1 = ", np.linalg.norm(self.mat_d1))
     
-    def assemble_mat_lhs(self, alpha, beta, omega, Tracking, Local, bsfl_ref):
-        """
-        This function assemble the lhs matrix mat_lhs
-        """
-
-        if ( self.boussinesq == -555 ):
-            self.mat_lhs = self.mat_a1
-        else:
-            self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
-
-        check_norms = 0
-
-        if (check_norms == 1):
-
-            mat_a1_norm = np.linalg.norm(self.mat_a1)
-            mat_a2_norm = np.linalg.norm(self.mat_a2)
-            
-            mat_b1_norm = np.linalg.norm(self.mat_b1)
-            mat_b2_norm = np.linalg.norm(self.mat_b2)
-            
-            mat_d1_norm = np.linalg.norm(self.mat_d1)
-            
-            mat_lhs_norm = np.linalg.norm(self.mat_lhs)
-            mat_rhs_norm = np.linalg.norm(self.mat_rhs)
-
-            print("")
-            print("alpha, beta, omega: ", alpha, beta, omega)
-            print("Matrix norm of mat_lhs = ", mat_lhs_norm)
-            print("Matrix norm of mat_rhs = ", mat_rhs_norm)
-            print("")
-            print("Matrix norm of mat_a1 = ", mat_a1_norm)
-            print("Matrix norm of mat_a2 = ", mat_a2_norm)
-            print("")
-            print("Matrix norm of mat_b1 = ", mat_b1_norm)
-            print("Matrix norm of mat_b2 = ", mat_b2_norm)
-            print("")
-            print("Matrix norm of mat_d1 = ", mat_d1_norm)
-            print("")
-            
-            input("Check norms!")
-            
-        if ( self.boussinesq == -3 or self.boussinesq == -4 ):
-            self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab 
-        
-        if (Tracking and Local):
-            self.mat_lhs = self.mat_lhs - omega*self.mat_rhs
-            
-        #print("np.shape(self.mat_lhs)=", np.shape(self.mat_lhs))
-        #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
-
-
     def set_bc_shear_layer_secant(self, lhs, rhs, ny, map, alpha, beta):
         """
         This function sets the boundary conditions for the free shear layer test case:
@@ -614,103 +835,6 @@ class BuildMatrices:
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id        
         
-    def set_bc_rayleigh_taylor(self, lhs, rhs, ny, map):
-        """
-        """
-        ######################################
-        # (1) FREESTREAM BOUNDARY-CONDITIONS #
-        ######################################
-        
-        ##################
-        # u-velocity BCs #
-        ##################
-        idx_u_ymin = 0*ny
-        idx_u_ymax = 1*ny-1
-
-        # ymin
-        lhs[idx_u_ymin,:] = 0.0
-        rhs[idx_u_ymin,:] = 0.0        
-        lhs[idx_u_ymin, idx_u_ymin] = 1.0
-
-        # ymax
-        lhs[idx_u_ymax,:] = 0.0
-        rhs[idx_u_ymax,:] = 0.0
-        lhs[idx_u_ymax, idx_u_ymax] = 1.0
-        
-        ##################
-        # v-velocity BCs #
-        ##################
-        idx_v_ymin = 1*ny
-        idx_v_ymax = 2*ny-1
-
-        # ymin
-        lhs[idx_v_ymin,:] = 0.0
-        rhs[idx_v_ymin,:] = 0.0        
-        lhs[idx_v_ymin, idx_v_ymin] = 1.0
-
-        # ymax
-        lhs[idx_v_ymax,:] = 0.0
-        rhs[idx_v_ymax,:] = 0.0
-        lhs[idx_v_ymax, idx_v_ymax] = 1.0
-
-        ##################
-        # w-velocity BCs #
-        ##################
-        idx_w_ymin = 2*ny
-        idx_w_ymax = 3*ny-1
-
-        # ymin
-        lhs[idx_w_ymin,:] = 0.0
-        rhs[idx_w_ymin,:] = 0.0        
-        lhs[idx_w_ymin, idx_w_ymin] = 1.0
-
-        # ymax
-        lhs[idx_w_ymax,:] = 0.0
-        rhs[idx_w_ymax,:] = 0.0
-        lhs[idx_w_ymax, idx_w_ymax] = 1.0
-
-
-        ##################
-        # pressure BCs #
-        ##################
-        set_pres = 1
-
-        if (set_pres==1):
-            idx_p_ymin = 3*ny
-            idx_p_ymax = 4*ny-1
-            
-            # ymin
-            lhs[idx_p_ymin,:] = 0.0
-            rhs[idx_p_ymin  ] = 0.0        
-            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
-            
-            # ymax
-            lhs[idx_p_ymax,:] = 0.0
-            rhs[idx_p_ymax  ] = 0.0
-            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
-
-        ##################
-        # density BCs #
-        ##################
-        set_dens = 1
-
-        if (set_dens==1):
-            idx_r_ymin = 4*ny
-            idx_r_ymax = 5*ny-1
-            
-            # ymin
-            lhs[idx_r_ymin,:] = 0.0
-            rhs[idx_r_ymin  ] = 0.0        
-            lhs[idx_r_ymin, idx_r_ymin] = 1.0
-            
-            # ymax
-            lhs[idx_r_ymax,:] = 0.0
-            rhs[idx_r_ymax  ] = 0.0
-            lhs[idx_r_ymax, idx_r_ymax] = 1.0
-        
-
     def set_matrices_rayleigh_taylor_inviscid_w_equation(self, ny, bsfl, map):
         """
         Hello
@@ -991,123 +1115,6 @@ class BuildMatrices:
             #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
 
             
-    def set_matrices_rayleigh_taylor_boussinesq_mixing(self, ny, bsfl, bsfl_ref, map):
-        """
-        Equations from Livescu Annual Review of Fluid Mechanics:
-        "Turbulence with Large Thermal and Compositional Density Variations"
-        see Equations 30, 31, 32
-        variables are taken here as (u, v, w, p, rho)^T
-        """
-
-        # non-dimensional set of equations
-        grav = bsfl_ref.gref/bsfl_ref.gref
-
-        if ( grav != 1. ):
-            print("")
-            print("Boussinesq R-T solver: gravity should be non-dimensional, g = ", grav)
-            input("Check gravity")
-        
-        Fr2      = bsfl_ref.Fr**2.
-        Sc       = bsfl_ref.Sc
-        Re       = bsfl_ref.Re
-
-        D1 = map.D1
-        D2 = map.D2
-
-        check_norms_output = 0
-
-        if (check_norms_output == 1):
-            print("")
-            print("R-T Boussinesq Equations (non-dimensional)")
-            print("-----------------------------------------------------------------")
-            print("Gravity                       = ", grav)
-            print("Froude number Fr              = ", np.sqrt(Fr2))
-            print("Schmidt number Sc             = ", Sc)
-            print("Reynolds number Re            = ", Re)
-            print("Peclet number (mass transfer) = ", Re*Sc)
-            print("")
-            
-            
-            mat_D1_norm = np.linalg.norm(D1)
-            mat_D2_norm = np.linalg.norm(D2)
-            
-            print("Mat norm of D1: ", mat_D1_norm)
-            print("Mat norm of D2: ", mat_D2_norm)
-        
-        # Identity matrix id
-        id      = np.identity(ny)
-
-        # Create diagonal matrices from baseflow vectors
-        dRho    = np.diag(bsfl.Rho_nd)
-        dRhop   = np.diag(bsfl.Rhop_nd)
-        
-
-        # 1st block indices
-        imin = 0
-        imax = ny
-
-        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
-
-        self.mat_a2[imin:imax, imin:imax]           = -id/Re
-
-        self.mat_b2[imin:imax, imin:imax]           = -id/Re
-
-        self.mat_d1[imin:imax, imin:imax]           = D2/Re
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        # 2nd block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a2[imin:imax, imin:imax]           = -id/Re
-
-        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
-                
-        self.mat_b2[imin:imax, imin:imax]           = -id/Re
-
-        self.mat_d1[imin:imax, imin:imax]           = D2/Re
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        # 3rd block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a2[imin:imax, imin:imax]           = -id/Re
-
-        self.mat_b2[imin:imax, imin:imax]           = -id/Re
-
-        self.mat_d1[imin:imax, imin:imax]           = D2/Re
-        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1 
-        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/Fr2 
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-        # 4th block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
-
-        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
-
-        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = D1
-
-        # 5th block indices
-        imin = imin + ny
-        imax = imax + ny
-
-        self.mat_a2[imin:imax, imin:imax]           = -id/(Re*Sc)
-
-        self.mat_b2[imin:imax, imin:imax]           = -id/(Re*Sc)
-
-        self.mat_d1[imin:imax, imin:imax]           = D2/(Re*Sc) 
-        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
-
-        self.mat_rhs[imin:imax, imin:imax]          = -1j*id
-
-            
     def set_matrices_rayleigh_taylor_sandoval_equations(self, ny, bsfl, bsfl_ref, map):
         """
         Equations from Sndoval PhD Thesis:
@@ -1347,48 +1354,6 @@ class BuildMatrices:
             self.mat_a2[imin:imax, imin:imax]           = 0.0
             self.mat_b2[imin:imax, imin:imax]           = 0.0
             self.mat_d1[imin:imax, imin:imax]           = 0.0
-            
-        
-    def call_to_build_matrices(self, rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in):
-
-        # Call proper matrix building
-        if (rt_flag == True):
-            if (prim_form==1):
-                #print("in class_build_matrices: rt_flag and prim_form TRUE")
-                if   ( self.boussinesq == 1 ):
-                    self.set_matrices_rayleigh_taylor_boussinesq_mixing(ny, bsfl, bsfl_ref, map)
-                if   ( self.boussinesq == 10 ):
-                    self.set_matrices_rayleigh_taylor_boussinesq_mixing_dimensional(ny, bsfl, bsfl_ref, map)
-                elif ( self.boussinesq == -2 ):
-                    self.set_matrices_rayleigh_taylor(ny, bsfl, bsfl_ref, map)
-                elif ( self.boussinesq == -3 ):
-                    self.set_matrices_rayleigh_taylor_sandoval_equations(ny, bsfl, bsfl_ref, map)
-                elif ( self.boussinesq == -4 ):
-                    self.set_matrices_rayleigh_taylor_sandoval_equations_VAR_MU(ny, bsfl, bsfl_ref, map)
-                elif ( self.boussinesq == -555 ):
-                    self.set_matrices_rayleigh_taylor_compressible_inviscid(ny, bsfl, bsfl_ref, map, alpha_in)
-            
-            else:
-                self.set_matrices_rayleigh_taylor_inviscid_w_equation(ny, bsfl, map)
-        else:
-            self.set_matrices(ny, Re, bsfl, map)
-
-            
-    def call_to_set_bc(self, rt_flag, prim_form, ny, map):
-
-        if (rt_flag):
-            if (prim_form==1):
-                if   ( self.boussinesq == -555 ):
-                    self.set_bc_rayleigh_taylor_compressible_inviscid(self.mat_lhs, self.mat_rhs, ny, map)
-                else:
-                    self.set_bc_rayleigh_taylor(self.mat_lhs, self.mat_rhs, ny, map)
-            else:
-                self.set_bc_rayleigh_taylor_inviscid(self.mat_lhs, self.mat_rhs, ny, map)
-        else:
-            self.set_bc_shear_layer(self.mat_lhs, self.mat_rhs, ny, map)            
-
-
-
 
 
     def set_matrices_rayleigh_taylor_sandoval_equations_VAR_MU(self, ny, bsfl, bsfl_ref, map):

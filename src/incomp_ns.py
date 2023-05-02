@@ -25,7 +25,7 @@ i8  = np.dtype('i8') # integer 8
 #################################
 
 class Solver(object):
-    def __init__(self, prim_form, Local, plot_grid_bsfl, plot_eigvcts, SolverT, \
+    def __init__(self, prim_form, Local, plot_eigvcts, SolverT, \
                   baseflowT, ny, npts_alp, alpha, beta, mtmp, \
                   yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag, map, bsfl):
 
@@ -43,6 +43,7 @@ class Solver(object):
         self.lmap = lmap
         self.map = map
         self.bsfl = bsfl
+        self.mtmp = mtmp
         
         if (rt_flag==False):
             prim_form = 1
@@ -55,27 +56,18 @@ class Solver(object):
             self.Tracking = False
 
         #abs_target1 = np.abs(target1)
-
-        
-        if plot_grid_bsfl == 1:
-            mod_util.plot_baseflow(ny, self.map.y, yi, bsfl.U, bsfl.Up, self.map.D1)
-
         
         #################################################
         #            Solve stability problem            # 
         #################################################
         
         # Create instance for Class SolveGeneralizedEVP
-        self.solve_evp = msg.SolveGeneralizedEVP(ny, rt_flag, prim_form, mtmp.boussinesq)
-
-        print("")
-        print("Deletting instance mtmp")
-        del mtmp
+        self.solve_evp = msg.SolveGeneralizedEVP(ny, rt_flag, prim_form, mtmp)
 
     def solve(self):
         # Build matrices and solve global/local problem
-        self.omega_all, self.eigvals_filtered, self.mob, self.q_eigvect = \
-          self.solve_evp.solve_stability_problem(self.map, self.alpha, self.beta, self.target1, self.bsfl_ref.Re, self.ny, self.Tracking, self.mid_idx, self.bsfl, self.bsfl_ref, self.Local, self.rt_flag, self.prim_form, self.baseflowT, self.iarr, self.ire, self.lmap)
+        self.eigvals_filtered, self.mob = \
+          self.solve_evp.solve_general_problem(self.map, self.alpha, self.beta, self.target1, self.bsfl_ref.Re, self.ny, self.mid_idx, self.bsfl, self.bsfl_ref, self.rt_flag, self.prim_form, self.baseflowT, self.iarr, self.ire, self.lmap)
 
         # Switch to another non-dimensionalization
     
@@ -112,6 +104,9 @@ class Solver(object):
     def write_eigvals(self):
         mod_util.write_out_eigenvalues(self.solve_evp.EigVal, self.ny)
     
+    def plot_baseflow(self):
+        mod_util.plot_baseflow(self.ny, self.map.y, yi, self.bsfl.U, self.bsfl.Up, self.map.D1)
+        
     def plot_eigvals(self, ax=None):
         if not ax:
             ax = plt.gca()
