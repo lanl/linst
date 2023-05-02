@@ -51,7 +51,7 @@ class Baseflow:
             self.nuref = self.Uref*self.Lref/self.Re
         # Set dimensional diffusivity reference value
         self.Dref  = self.nuref/self.Sc
-5
+
     def __str__(self):
         # if (nondim_flag==1):
         #     print("")
@@ -146,8 +146,9 @@ class RayleighTaylorBaseflow(Baseflow):
     """
     This child class of class Baseflow defines the "Rayleigh-Taylor" baseflow
     """
-    def __init__(self, size, y, map, bsfl_ref, mtmp): # here I pass ny
+    def __init__(self, size, map, bsfl_ref, mtmp): # here I pass ny
 
+        y = map.y
         ny = size
         self.size = size
         

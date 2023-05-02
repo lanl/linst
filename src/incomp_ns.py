@@ -27,7 +27,7 @@ i8  = np.dtype('i8') # integer 8
 class Solver(object):
     def __init__(self, prim_form, Local, plot_grid_bsfl, plot_eigvcts, SolverT, \
                   baseflowT, ny, npts_alp, alpha, beta, mtmp, \
-                  yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag):
+                  yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag, map, bsfl):
 
         self.bsfl_ref = bsfl_ref
         self.alpha = alpha
@@ -41,6 +41,8 @@ class Solver(object):
         self.iarr = iarr
         self.ire = ire
         self.lmap = lmap
+        self.map = map
+        self.bsfl = bsfl
         
         if (rt_flag==False):
             prim_form = 1
@@ -54,67 +56,7 @@ class Solver(object):
 
         #abs_target1 = np.abs(target1)
 
-        #################################################
-        #  Create Chebyshev matrices and map if needed  #
-        #################################################
-
-        # Create instance for class GaussLobatto
-        cheb = mgl.GaussLobatto(ny)
         
-        # Get Gauss-Lobatto points
-        cheb.cheby(ny-1)
-        
-        # Get spectral differentiation matrices on [1,-1]
-        cheb.spectral_diff_matrices(ny-1)
-        
-        yi = cheb.xc
-        
-        # Create instance for class Mapping
-        self.map = mma.Mapping(ny)
-
-        # Create mapping and generate baseflow
-        if (rt_flag):
-            #k = np.sqrt(alpha[0]**2. + beta**2.)
-            if (ire==0):
-                print("")
-                print("Rayleigh-Taylor Stability Analysis")
-                print("==================================")
-                print("")
-                # In main.py I make yinf and lmap dimensional for solver boussinesq == -2
-                self.map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
-
-                mod_util.calc_min_dy(self.map.y, mtmp.boussinesq, bsfl_ref)
-
-            self.bsfl = mbf.RayleighTaylorBaseflow(ny, self.map.y, self.map, bsfl_ref, mtmp)
-
-        else:
-            if ( baseflowT == 1 ):
-                if (ire==0):
-                    print("")
-                    print("Mixing-Layer Stability Analysis")
-                    print("===============================")
-                    print("")
-                self.map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
-                self.bsfl = mbf.HypTan(ny, self.map.y)
-
-                flag_reset = mod_util.check_lmap_val_reset_if_needed(bsfl.Up, self.map, lmap, ny)
-
-                # If the mapping parameter has been reset, we need to re-map!
-                if ( flag_reset ):
-                    self.map.map_shear_layer(yinf, yi, lmap, cheb.DM, bsfl_ref, mtmp.boussinesq)
-                    self.bsfl = mbf.HypTan(ny, self.map.y)
-                
-            elif ( baseflowT == 2 ):
-                if (ire==0):
-                    print("")
-                    print("Plane Poiseuille Stability Analysis")
-                    print("===================================")
-                    print("")
-                self.map.map_void(yi, cheb.DM)
-                self.bsfl = mbf.PlanePoiseuille(ny, self.map.y)
-            else:
-                sys.exit("Not a proper value for flag baseflowT")
-
         if plot_grid_bsfl == 1:
             mod_util.plot_baseflow(ny, self.map.y, yi, bsfl.U, bsfl.Up, self.map.D1)
 

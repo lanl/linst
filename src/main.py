@@ -127,10 +127,18 @@ iarr = marray.MainArrays(1, 1, ny)
 #     print("Main Loop over Reynolds number: solving for Re = %10.5e (%i/%i)" % (Re, i+1, bsfl_ref.npts_re))
 #     print("==================================================================")
 
+#################################################
+#  Create Chebyshev matrices and map if needed  #
+#################################################
+
+# Create instance for class GaussLobatto
+cheb = mgl.GaussLobatto(ny)
+map = mma.MapShearLayer(yinf, cheb, lmap, bsfl_ref, mtmp.boussinesq)
+bsfl = mbf.RayleighTaylorBaseflow(ny, map, bsfl_ref, mtmp)
 solver = mod_incomp.Solver(
     prim_form, False, plot_grid_bsfl, plot_eigvcts, 1, \
     1, ny, 1, alpha, beta, mtmp, \
-    yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag
+    yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag, map, bsfl
     )
 solver.solve()
 solver.plot_eigvals()
