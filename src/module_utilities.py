@@ -210,21 +210,6 @@ def plot_baseflow(ny, y, yi, U, Up, D1):
 
     input("Checking baseflow")
 
-def plot_eigvals(eigvals):
-
-    ptn = plt.gcf().number + 1
-    
-    f = plt.figure(ptn)
-    plt.plot(eigvals.real, eigvals.imag, 'ks', markerfacecolor='none')
-    plt.xlabel(r'$\omega_r$', fontsize=20)
-    plt.ylabel(r'$\omega_i$', fontsize=20)
-    plt.gcf().subplots_adjust(left=0.18)
-    plt.gcf().subplots_adjust(bottom=0.13)
-    #plt.title('Eigenvalue spectrum')
-    plt.xlim([-10, 10])
-    #plt.ylim([-1, 1])
-    f.show()
-
 def plot_phase(phase, str_var, y):
 
     ptn = plt.gcf().number + 1

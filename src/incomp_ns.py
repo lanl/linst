@@ -25,7 +25,7 @@ i8  = np.dtype('i8') # integer 8
 #################################
 
 class Solver(object):
-    def __init__(self, prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, SolverT, \
+    def __init__(self, prim_form, Local, plot_grid_bsfl, plot_eigvcts, SolverT, \
                   baseflowT, ny, npts_alp, alpha, beta, mtmp, \
                   yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag):
 
@@ -52,7 +52,7 @@ class Solver(object):
         else:
             self.Tracking = False
 
-        abs_target1 = np.abs(target1)
+        #abs_target1 = np.abs(target1)
 
         #################################################
         #  Create Chebyshev matrices and map if needed  #
@@ -132,7 +132,8 @@ class Solver(object):
 
     def solve(self):
         # Build matrices and solve global/local problem
-        omega_all,eigvals_filtered,mob,q_eigvect = self.solve_evp.solve_stability_problem(self.map, self.alpha, self.beta, self.target1, self.bsfl_ref.Re, self.ny, self.Tracking, self.mid_idx, self.bsfl, self.bsfl_ref, self.Local, self.rt_flag, self.prim_form, self.baseflowT, self.iarr, self.ire, self.lmap)
+        self.omega_all, self.eigvals_filtered, self.mob, self.q_eigvect = \
+          self.solve_evp.solve_stability_problem(self.map, self.alpha, self.beta, self.target1, self.bsfl_ref.Re, self.ny, self.Tracking, self.mid_idx, self.bsfl, self.bsfl_ref, self.Local, self.rt_flag, self.prim_form, self.baseflowT, self.iarr, self.ire, self.lmap)
 
         # Switch to another non-dimensionalization
     
@@ -140,7 +141,7 @@ class Solver(object):
         #################################################
         # Re-scale data
         #################################################
-        if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):  # Only dimensional solver
+        if   ( self.mob.boussinesq == -2 or self.mob.boussinesq == 10 ):  # Only dimensional solver
             #alpha_dim = alpha/bsfl_ref.Lref
             alpha_dim = self.alpha
             beta_dim = self.beta
@@ -166,46 +167,53 @@ class Solver(object):
         mod_util.ReScale_NonDim2(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
         mod_util.ReScale_NonDim3(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
 
+    def write_eigvals(self):
+        mod_util.write_out_eigenvalues(self.solve_evp.EigVal, self.ny)
     
-
-    # #################################################
-    # #           Plots, Energy balance, etc.         # 
-    # #################################################
-
-    # # Plot and write out eigenvalue spectrum (Global solver only)        
-    # if (not Local):
-    #     if plot_eigvals == 1:
-    #         mod_util.plot_eigvals(eigvals_filtered)
+    def plot_eigvals(self, ax=None):
+        if not ax:
+            ax = plt.gca()
+        ax.plot(
+            self.eigvals_filtered.real,
+            self.eigvals_filtered.imag,
+            'ks', markerfacecolor='none'
+            )
+        ax.set_xlabel(r'$\omega_r$', fontsize=20)
+        ax.set_ylabel(r'$\omega_i$', fontsize=20)
+        #ax.set_title('Eigenvalue spectrum')
+        #ax.set_xlim([-10, 10])
+        #ax.set_ylim([-1, 1])
             
-    #     mod_util.write_out_eigenvalues(solve.EigVal, ny)
+    def plot_eigvects(self):
+        # Plot and write out eigenvalue spectrum (Global solver only)        
+        if (not self.Local):
         
-    #     # Find index of target eigenvalue to extract eigenvector
-    #     idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, abs_target1, target1)
+            # Find index of target eigenvalue to extract eigenvector
+            idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(self.solve_evp.EigVal, np.abs(self.target1), self.target1)
 
-    #     print("")
-    #     print("Eigenvector will be extracted for eigenvalue omega = ", solve.EigVal[idx_tar1])
-    #     q_eigvect = solve.EigVec[:,idx_tar1]
-    # else:
-    #     idx_tar1 = -999
+            print("")
+            print("Eigenvector will be extracted for eigenvalue omega = ", self.solve_evp.EigVal[idx_tar1])
+            q_eigvect = self.solve_evp.EigVec[:,idx_tar1]
+        else:
+            idx_tar1 = -999
 
-    # #print("q_eigvect.shape = ", q_eigvect.shape)
+        #print("q_eigvect.shape = ", q_eigvect.shape)
 
-    # # Get eigenvectors
-    # norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
+        # Get eigenvectors
+        norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(self.ny, self.target1, idx_tar1, self.alpha, self.map, self.mob, self.bsfl, self.bsfl_ref, 1, self.rt_flag, q_eigvect, self.Local)
 
-    # if (not Local): solve.EigVec = solve.EigVec/norm_s
+        if (not self.Local): self.solve_evp.EigVec = self.solve_evp.EigVec/norm_s
 
-    # OutputEigFct = True
+        OutputEigFct = True
 
-    # if (OutputEigFct):
-    #     ylimp = 0.0
-    #     mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob, ylimp)
-    #     mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob, ylimp)
-    #     mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob, ylimp)
-    #     #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, mob)
-    #     mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob, ylimp)
-    #     mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob, ylimp)
-    
+        if (OutputEigFct):
+            ylimp = 0.0
+            mod_util.plot_real_imag_part(ueig, "u", self.map.y, self.rt_flag, self.mob, ylimp)
+            mod_util.plot_real_imag_part(veig, "v", self.map.y, self.rt_flag, self.mob, ylimp)
+            mod_util.plot_real_imag_part(weig, "w", self.map.y, self.rt_flag, self.mob, ylimp)
+            #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, self.mob)
+            mod_util.plot_real_imag_part(reig, "r", self.map.y, self.rt_flag, self.mob, ylimp)
+            mod_util.plot_real_imag_part(peig, "p", self.map.y, self.rt_flag, self.mob, ylimp)
     # #####
     # #idx_tar2, found2 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.578232), 0.0+1j*0.578232)
     # #idx_tar3, found3 = mod_util.get_idx_of_closest_eigenvalue(solve.EigVal, np.abs(0.0+1j*0.448152), 0.0+1j*0.448152)

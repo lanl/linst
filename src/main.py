@@ -48,7 +48,6 @@ prim_form = 1
 # Plotting flags
 plot_grid_bsfl = 0 # set to 1 to plot grid distribution and baseflow profiles
 plot_eigvcts = 1 # set to 1 to plot eigenvectors ==> will be set to 1 if only one location and one alpha
-plot_eigvals = 0 # set to 1 to plot eigenvalues
 
 ###################################
 #   Reference data from Michalke  #
@@ -62,7 +61,7 @@ alpha = np.array([4.672])
 beta = 0.0
 yinf = 10
 lmap = 0.2
-ny = 101
+ny = 251
 target1 = 1.e-12+0.816j
 # Set reference quantities from non-dimensional parameters and Uref (ref. velocity) and gref (ref. acceleration)
 bsfl_ref = mbf.Baseflow(
@@ -73,7 +72,7 @@ bsfl_ref = mbf.Baseflow(
     Uref=0.05,
     gref=9.81
     )
-#bsfl_ref.print()
+print(bsfl_ref)
 
 ###################################
 # Dimensionalize inputs if needed #
@@ -129,13 +128,14 @@ iarr = marray.MainArrays(1, 1, ny)
 #     print("==================================================================")
 
 solver = mod_incomp.Solver(
-    prim_form, False, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 1, \
+    prim_form, False, plot_grid_bsfl, plot_eigvcts, 1, \
     1, ny, 1, alpha, beta, mtmp, \
     yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag
     )
 solver.solve()
+solver.plot_eigvals()
+plt.show()
 
-    
 ###################################
 #     Plot and write out data     #
 ###################################
