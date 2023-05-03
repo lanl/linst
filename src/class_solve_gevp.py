@@ -7,6 +7,7 @@ from scipy import linalg
 import module_utilities as mod_util
 import class_build_matrices as mbm
 #import scipy as sp
+import matplotlib.pyplot as plt
 
 dp  = np.dtype('d')        # double precision
 dpc = np.dtype(np.cdouble) # double precision complex
@@ -19,24 +20,84 @@ class SolveGeneralizedEVP:
     This class define a solution object and contain the main function that provides the solution 
     to the generalized eigenvalue problem (GEVP)
     """
-    def __init__(self, ny, rt_flag, prim_form, mtmp):
+    def __init__(self, prim_form, Local, plot_eigvcts, SolverT, \
+                  baseflowT, ny, npts_alp, alpha, beta, mtmp, \
+                  yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag, map, bsfl):
         """
         Constructor of class SolveGeneralizedEVP
         """
-        self.mtmp = mtmp
-        boussi = mtmp.boussinesq
-        if (rt_flag == True):
-            if (prim_form==1):
-                size = 5*ny
-                if (boussi == -555): size = 4*ny 
-            else:
-                size = ny
-        else:
-            size = 4*ny
 
-        self.size = size
-        self.EigVal = np.zeros(size*size, dpc)
-        self.EigVec = np.zeros((size, size), dpc)
+        self.bsfl_ref = bsfl_ref
+        self.alpha = alpha
+        self.beta = beta
+        self.ny = ny
+        self.target1 = target1
+        self.Local = Local
+        self.rt_flag = rt_flag
+        self.prim_form = prim_form
+        self.baseflowT = baseflowT
+        self.iarr = iarr
+        self.ire = ire
+        self.lmap = lmap
+        self.map = map
+        self.bsfl = bsfl
+        self.mtmp = mtmp
+        
+        if (rt_flag==False):
+            prim_form = 1
+
+        self.mid_idx = mod_util.get_mid_idx(ny)
+
+        if (npts_alp > 1 or npts_re > 1):
+            self.Tracking = True
+        else:
+            self.Tracking = False
+
+        #abs_target1 = np.abs(target1)
+        
+        #################################################
+        #            Solve stability problem            # 
+        #################################################
+        
+        # Create instance for Class SolveGeneralizedEVP
+        #self.solve_evp = msg.SolveGeneralizedEVP(mtmp)
+        
+    def solve(self):
+        # Build matrices and solve global/local problem
+        self.eigvals_filtered, self.mob = \
+          self.solve_general_problem()
+
+        # Switch to another non-dimensionalization
+    
+    
+        #################################################
+        # Re-scale data
+        #################################################
+        if   ( self.mob.boussinesq == -2 or self.mob.boussinesq == 10 ):  # Only dimensional solver
+            #alpha_dim = alpha/bsfl_ref.Lref
+            alpha_dim = self.alpha
+            beta_dim = self.beta
+
+            print("alpha = ", alpha_dim*self.bsfl_ref.Lref)
+            print("alpha_dim = ", alpha_dim)
+            print("alpha_chandra = ", alpha_dim*bsfl_ref.Lscale_Chandra)
+        
+        else:
+            alpha_dim = self.alpha/self.bsfl_ref.Lref
+            beta_dim = self.beta/self.bsfl_ref.Lref
+            
+            print("alpha = ", self.alpha)
+            print("alpha_dim = ", alpha_dim)
+            print("alpha_chandra = ", alpha_dim*self.bsfl_ref.Lscale_Chandra)
+            
+
+        omega_sol_dim = self.iarr.omega_dim[-1, -1]
+        omega_sol_nondim = self.iarr.omega_nondim[-1, -1]
+
+        # Explore additional non-dimensionalizations
+        mod_util.ReScale_NonDim1(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+        mod_util.ReScale_NonDim2(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+        mod_util.ReScale_NonDim3(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
 
     def solve_secant_problem(self, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
         """
@@ -82,31 +143,34 @@ class SolveGeneralizedEVP:
 
                 #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
 
-    def solve_general_problem(self, map, alpha, beta, omega, Re, ny, mid_idx, bsfl, bsfl_ref, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
+    def solve_general_problem(self):
+
+        omega = self.target1
+        
         # Create instance for Class BuildMatrices
         mob = self.mtmp
                 
         # Build main stability matrices
-        mob.call_to_build_matrices(ny, bsfl, bsfl_ref, map)
+        mob.call_to_build_matrices(self.ny, self.bsfl, self.bsfl_ref, self.map)
 
         # Assemble matrices
-        if (prim_form==1):
-            mob.assemble_mat_lhs(alpha[0], beta, omega, bsfl_ref)
+        if (self.prim_form==1):
+            mob.assemble_mat_lhs(self.alpha[0], self.beta, omega, self.bsfl_ref)
         else:
             sys.exit("Just used for inviscid debugging")
-            mob.assemble_mat_lhs_rt_inviscid(alpha[0], beta, omega, Tracking , Local)
+            mob.assemble_mat_lhs_rt_inviscid(self.alpha[0], self.beta, omega, Tracking , Local)
 
-        mob.call_to_set_bc(ny, map)
+        mob.call_to_set_bc(self.ny, self.map)
 
         #mob.mat_lhs = np.conj(mob.mat_lhs)
         #mob.mat_rhs = np.conj(mob.mat_rhs)
                 
-        self.solve_eigenvalue_problem(mob.mat_lhs, mob.mat_rhs)
+        self.EigVal, self.EigVec = linalg.eig(mob.mat_lhs, mob.mat_rhs)
 
         eigvals_filtered = self.EigVal[ np.abs(self.EigVal) < 10000. ]
         q_eigenvects     = self.EigVec
 
-        if (rt_flag==True and prim_form==0):
+        if (self.rt_flag==True and self.prim_form==0):
             input("In here")
             
             neigs = len(eigvals_filtered)
@@ -116,40 +180,27 @@ class SolveGeneralizedEVP:
             eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
 
         idx = mod_util.get_idx_of_max(eigvals_filtered)
-        omega = eigvals_filtered[idx]#*bsfl.Tscale                
+        omega = eigvals_filtered[idx]#*self.bsfl.Tscale                
 
 
-        if (rt_flag):
+        if (self.rt_flag):
             i = 0
-            print("ire, i = ", ire, i)
+            print("ire, i = ", self.ire, i)
 
             if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
-                iarr.omega_dim[ire, i] = omega
-                iarr.omega_nondim[ire, i] = omega*bsfl_ref.Lref/bsfl_ref.Uref
-                print("omega (dimensional)     = ", iarr.omega_dim[ire, i])
-                print("omega (non-dimensional) = ", iarr.omega_nondim[ire, i])
-                print("omega (non-dimensional Chandrasekhar) = ", iarr.omega_dim[ire, i]*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
+                self.iarr.omega_dim[self.ire, i] = omega
+                self.iarr.omega_nondim[self.ire, i] = omega*self.bsfl_ref.Lref/self.bsfl_ref.Uref
+                print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
+                print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
+                print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
             else:
-                iarr.omega_dim[ire, i] = omega*bsfl_ref.Uref/bsfl_ref.Lref
-                iarr.omega_nondim[ire, i] = omega
-                print("omega (dimensional)     = ", iarr.omega_dim[ire, i])
-                print("omega (non-dimensional) = ", iarr.omega_nondim[ire, i])
-                print("omega (non-dimensional Chandrasekhar) = ", iarr.omega_dim[ire, i]*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
+                self.iarr.omega_dim[self.ire, i] = omega*self.bsfl_ref.Uref/self.bsfl_ref.Lref
+                self.iarr.omega_nondim[self.ire, i] = omega
+                print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
+                print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
+                print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
 
         return eigvals_filtered, mob
-
-    def solve_eigenvalue_problem(self, lhs, rhs):
-        """
-        Function of class SolveGeneralizedEVP that solves the GEVP using linalg.eig (no guess needed)
-        """
-        self.EigVal, self.EigVec = linalg.eig(lhs, rhs)
-
-        #print("self.EigVec.shape = ", self.EigVec.shape)
-        #print("self.EigVal.shape = ", self.EigVal.shape)
-        #return self.EigVal, self.EigVec
-
-        #evalue, evect = linalg.eig(lhs, rhs)
-        #return evalue, evect
 
     def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, \
                                Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form):
@@ -336,3 +387,54 @@ class SolveGeneralizedEVP:
 
 
         return omega0, qfinal
+
+    def write_eigvals(self):
+        mod_util.write_out_eigenvalues(self.solve_evp.EigVal, self.ny)
+    
+    def plot_baseflow(self):
+        mod_util.plot_baseflow(self.ny, self.map.y, yi, self.bsfl.U, self.bsfl.Up, self.map.D1)
+        
+    def plot_eigvals(self, ax=None):
+        if not ax:
+            ax = plt.gca()
+        ax.plot(
+            self.eigvals_filtered.real,
+            self.eigvals_filtered.imag,
+            'ks', markerfacecolor='none'
+            )
+        ax.set_xlabel(r'$\omega_r$', fontsize=20)
+        ax.set_ylabel(r'$\omega_i$', fontsize=20)
+        #ax.set_title('Eigenvalue spectrum')
+        #ax.set_xlim([-10, 10])
+        #ax.set_ylim([-1, 1])
+            
+    def plot_eigvects(self):
+        # Plot and write out eigenvalue spectrum (Global solver only)        
+        if (not self.Local):
+        
+            # Find index of target eigenvalue to extract eigenvector
+            idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(self.solve_evp.EigVal, np.abs(self.target1), self.target1)
+
+            print("")
+            print("Eigenvector will be extracted for eigenvalue omega = ", self.solve_evp.EigVal[idx_tar1])
+            q_eigvect = self.solve_evp.EigVec[:,idx_tar1]
+        else:
+            idx_tar1 = -999
+
+        #print("q_eigvect.shape = ", q_eigvect.shape)
+
+        # Get eigenvectors
+        norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(self.ny, self.target1, idx_tar1, self.alpha, self.map, self.mob, self.bsfl, self.bsfl_ref, 1, self.rt_flag, q_eigvect, self.Local)
+
+        if (not self.Local): self.solve_evp.EigVec = self.solve_evp.EigVec/norm_s
+
+        OutputEigFct = True
+
+        if (OutputEigFct):
+            ylimp = 0.0
+            mod_util.plot_real_imag_part(ueig, "u", self.map.y, self.rt_flag, self.mob, ylimp)
+            mod_util.plot_real_imag_part(veig, "v", self.map.y, self.rt_flag, self.mob, ylimp)
+            mod_util.plot_real_imag_part(weig, "w", self.map.y, self.rt_flag, self.mob, ylimp)
+            #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, self.mob)
+            mod_util.plot_real_imag_part(reig, "r", self.map.y, self.rt_flag, self.mob, ylimp)
+            mod_util.plot_real_imag_part(peig, "p", self.map.y, self.rt_flag, self.mob, ylimp)

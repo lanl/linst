@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 
 
 import module_utilities as mod_util
-import incomp_ns as mod_incomp
 
 import class_main_arrays as marray
 
@@ -133,7 +132,7 @@ mtmp = mbm.Boussinesq(ny)
 cheb = mgl.GaussLobatto(ny)
 map = mma.MapShearLayer(yinf, cheb, lmap, bsfl_ref, mtmp.boussinesq)
 bsfl = mbf.RayleighTaylorBaseflow(ny, map, bsfl_ref, mtmp)
-solver = mod_incomp.Solver(
+solver = msg.SolveGeneralizedEVP(
     prim_form, False, plot_eigvcts, 1, \
     1, ny, 1, alpha, beta, mtmp, \
     yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag, map, bsfl
