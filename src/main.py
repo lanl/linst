@@ -7,7 +7,6 @@ import numpy as np
 import class_gauss_lobatto as mgl
 import class_baseflow as mbf
 import class_build_matrices as mbm
-import class_solve_gevp as msg
 import class_mapping as mma
 
 import matplotlib
@@ -128,15 +127,20 @@ iarr = marray.MainArrays(1, 1, ny)
 #################################################
 
 # Create instance for class GaussLobatto
-mtmp = mbm.Boussinesq(ny)
 cheb = mgl.GaussLobatto(ny)
-map = mma.MapShearLayer(yinf, cheb, lmap, bsfl_ref, mtmp.boussinesq)
-bsfl = mbf.RayleighTaylorBaseflow(ny, map, bsfl_ref, mtmp)
-solver = msg.SolveGeneralizedEVP(
-    prim_form, False, plot_eigvcts, 1, \
-    1, ny, 1, alpha, beta, mtmp, \
-    yinf, lmap, target1, 1, iarr, 0, bsfl_ref, rt_flag, map, bsfl
+map = mma.MapShearLayer(yinf, cheb, lmap)
+bsfl = mbf.RTSimple(y=map.y, At=0.4)
+
+# mtmp = mbm.Boussinesq(ny)
+# solver = msg.SolveGeneralizedEVP(
+#     alpha, beta, mtmp, \
+#     target1, bsfl_ref, map, bsfl
+#     )
+
+solver = mbm.Boussinesq(
+    map, alpha, beta, target1, bsfl_ref, bsfl
     )
+
 solver.solve()
 solver.plot_eigvals()
 plt.show()

@@ -20,9 +20,9 @@ class SolveGeneralizedEVP:
     This class define a solution object and contain the main function that provides the solution 
     to the generalized eigenvalue problem (GEVP)
     """
-    def __init__(self, prim_form, Local, plot_eigvcts, SolverT, \
-                  baseflowT, ny, npts_alp, alpha, beta, mtmp, \
-                  yinf, lmap, target1, npts_re, iarr, ire, bsfl_ref, rt_flag, map, bsfl):
+    def __init__(self, \
+                  map, alpha, beta, \
+                  target1, bsfl_ref, bsfl):
         """
         Constructor of class SolveGeneralizedEVP
         """
@@ -30,28 +30,12 @@ class SolveGeneralizedEVP:
         self.bsfl_ref = bsfl_ref
         self.alpha = alpha
         self.beta = beta
-        self.ny = ny
+        self.ny = map.y.size
         self.target1 = target1
-        self.Local = Local
-        self.rt_flag = rt_flag
-        self.prim_form = prim_form
-        self.baseflowT = baseflowT
-        self.iarr = iarr
-        self.ire = ire
-        self.lmap = lmap
         self.map = map
         self.bsfl = bsfl
-        self.mtmp = mtmp
         
-        if (rt_flag==False):
-            prim_form = 1
-
-        self.mid_idx = mod_util.get_mid_idx(ny)
-
-        if (npts_alp > 1 or npts_re > 1):
-            self.Tracking = True
-        else:
-            self.Tracking = False
+        self.mid_idx = mod_util.get_mid_idx(self.ny)
 
         #abs_target1 = np.abs(target1)
         
@@ -64,8 +48,7 @@ class SolveGeneralizedEVP:
         
     def solve(self):
         # Build matrices and solve global/local problem
-        self.eigvals_filtered, self.mob = \
-          self.solve_general_problem()
+        self.eigvals_filtered = self.solve_general_problem()
 
         # Switch to another non-dimensionalization
     
@@ -73,31 +56,31 @@ class SolveGeneralizedEVP:
         #################################################
         # Re-scale data
         #################################################
-        if   ( self.mob.boussinesq == -2 or self.mob.boussinesq == 10 ):  # Only dimensional solver
-            #alpha_dim = alpha/bsfl_ref.Lref
-            alpha_dim = self.alpha
-            beta_dim = self.beta
+        # if   ( self.mob.boussinesq == -2 or self.mob.boussinesq == 10 ):  # Only dimensional solver
+        #     #alpha_dim = alpha/bsfl_ref.Lref
+        #     alpha_dim = self.alpha
+        #     beta_dim = self.beta
 
-            print("alpha = ", alpha_dim*self.bsfl_ref.Lref)
-            print("alpha_dim = ", alpha_dim)
-            print("alpha_chandra = ", alpha_dim*bsfl_ref.Lscale_Chandra)
+        #     print("alpha = ", alpha_dim*self.bsfl_ref.Lref)
+        #     print("alpha_dim = ", alpha_dim)
+        #     print("alpha_chandra = ", alpha_dim*bsfl_ref.Lscale_Chandra)
         
-        else:
-            alpha_dim = self.alpha/self.bsfl_ref.Lref
-            beta_dim = self.beta/self.bsfl_ref.Lref
+        # else:
+        #     alpha_dim = self.alpha/self.bsfl_ref.Lref
+        #     beta_dim = self.beta/self.bsfl_ref.Lref
             
-            print("alpha = ", self.alpha)
-            print("alpha_dim = ", alpha_dim)
-            print("alpha_chandra = ", alpha_dim*self.bsfl_ref.Lscale_Chandra)
+        #     print("alpha = ", self.alpha)
+        #     print("alpha_dim = ", alpha_dim)
+        #     print("alpha_chandra = ", alpha_dim*self.bsfl_ref.Lscale_Chandra)
             
 
-        omega_sol_dim = self.iarr.omega_dim[-1, -1]
-        omega_sol_nondim = self.iarr.omega_nondim[-1, -1]
+        # omega_sol_dim = self.iarr.omega_dim[-1, -1]
+        # omega_sol_nondim = self.iarr.omega_nondim[-1, -1]
 
-        # Explore additional non-dimensionalizations
-        mod_util.ReScale_NonDim1(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-        mod_util.ReScale_NonDim2(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-        mod_util.ReScale_NonDim3(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+        # # Explore additional non-dimensionalizations
+        # mod_util.ReScale_NonDim1(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+        # mod_util.ReScale_NonDim2(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+        # mod_util.ReScale_NonDim3(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
 
     def solve_secant_problem(self, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
         """
@@ -143,64 +126,60 @@ class SolveGeneralizedEVP:
 
                 #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
 
+    def call_to_build_matrices(*args, **kwargs):
+        raise NotImplemented("Use a specific equation class, not SolveGeneralizedEVP.")
+                
     def solve_general_problem(self):
 
         omega = self.target1
         
-        # Create instance for Class BuildMatrices
-        mob = self.mtmp
-                
         # Build main stability matrices
-        mob.call_to_build_matrices(self.ny, self.bsfl, self.bsfl_ref, self.map)
+        self.call_to_build_matrices(self.ny, self.bsfl, self.bsfl_ref, self.map)
 
         # Assemble matrices
-        if (self.prim_form==1):
-            mob.assemble_mat_lhs(self.alpha[0], self.beta, omega, self.bsfl_ref)
-        else:
-            sys.exit("Just used for inviscid debugging")
-            mob.assemble_mat_lhs_rt_inviscid(self.alpha[0], self.beta, omega, Tracking , Local)
+        self.assemble_mat_lhs(self.alpha[0], self.beta, omega, self.bsfl_ref)
 
-        mob.call_to_set_bc(self.ny, self.map)
+        self.call_to_set_bc(self.ny, self.map)
 
         #mob.mat_lhs = np.conj(mob.mat_lhs)
         #mob.mat_rhs = np.conj(mob.mat_rhs)
                 
-        self.EigVal, self.EigVec = linalg.eig(mob.mat_lhs, mob.mat_rhs)
+        self.EigVal, self.EigVec = linalg.eig(self.mat_lhs, self.mat_rhs)
 
         eigvals_filtered = self.EigVal[ np.abs(self.EigVal) < 10000. ]
         q_eigenvects     = self.EigVec
 
-        if (self.rt_flag==True and self.prim_form==0):
-            input("In here")
+        # if (self.rt_flag==True and self.prim_form==0):
+        #     input("In here")
             
-            neigs = len(eigvals_filtered)
-            eigvals_filtered_tmp = eigvals_filtered
-            eigvals_filtered = np.zeros(2*neigs, dpc)
-            eigvals_filtered[0:neigs] = 1j/np.sqrt(eigvals_filtered_tmp) # I set it to the complex part because growth rate
-            eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
+        #     neigs = len(eigvals_filtered)
+        #     eigvals_filtered_tmp = eigvals_filtered
+        #     eigvals_filtered = np.zeros(2*neigs, dpc)
+        #     eigvals_filtered[0:neigs] = 1j/np.sqrt(eigvals_filtered_tmp) # I set it to the complex part because growth rate
+        #     eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
 
         idx = mod_util.get_idx_of_max(eigvals_filtered)
         omega = eigvals_filtered[idx]#*self.bsfl.Tscale                
 
 
-        if (self.rt_flag):
-            i = 0
-            print("ire, i = ", self.ire, i)
+        # if (self.rt_flag):
+        #     i = 0
+        #     print("ire, i = ", self.ire, i)
 
-            if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
-                self.iarr.omega_dim[self.ire, i] = omega
-                self.iarr.omega_nondim[self.ire, i] = omega*self.bsfl_ref.Lref/self.bsfl_ref.Uref
-                print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
-                print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
-                print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
-            else:
-                self.iarr.omega_dim[self.ire, i] = omega*self.bsfl_ref.Uref/self.bsfl_ref.Lref
-                self.iarr.omega_nondim[self.ire, i] = omega
-                print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
-                print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
-                print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
+        #     if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
+        #         self.iarr.omega_dim[self.ire, i] = omega
+        #         self.iarr.omega_nondim[self.ire, i] = omega*self.bsfl_ref.Lref/self.bsfl_ref.Uref
+        #         print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
+        #         print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
+        #         print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
+        #     else:
+        #         self.iarr.omega_dim[self.ire, i] = omega*self.bsfl_ref.Uref/self.bsfl_ref.Lref
+        #         self.iarr.omega_nondim[self.ire, i] = omega
+        #         print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
+        #         print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
+        #         print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
 
-        return eigvals_filtered, mob
+        return eigvals_filtered
 
     def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, \
                                Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form):

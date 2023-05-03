@@ -1,3 +1,4 @@
+import class_solve_gevp as msg
 
 #from termios import N_TTY
 import module_utilities as mod_util
@@ -13,16 +14,17 @@ i4  = np.dtype('i4') # integer 4
 i8  = np.dtype('i8') # integer 8
 
 
-class BuildMatrices:
+class BuildMatrices(msg.SolveGeneralizedEVP):
     """
     This class builds the main matrices A (mat_lhs) and B (mat_rhs) 
     required to form the temporal generalized eigenvalue problem A*q = omega*B*q
     """
-    def __init__(self, size): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
+    def __init__(self, size, *args, **kwargs): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
     #def __init__(self, ny): # here I pass 4*ny for regular Navier-Stokes Stability and 5*ny for "Rayleigh-Taylor" Navier-Stokes
         """
         Constructor for class BuilMatrices
         """
+        super(BuildMatrices, self).__init__(*args, **kwargs)
         # Initialize arrays
         self.mat_a1 = np.zeros((size,size), dpc)
         self.mat_a2 = np.zeros((size,size), dpc)
@@ -89,9 +91,9 @@ class BuildMatrices:
         #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
 
 class Boussinesq(BuildMatrices):
-    def __init__(self, ny):
+    def __init__(self, map, *args, **kwargs):
         self.boussinesq = 1
-        super(Boussinesq, self).__init__(5*ny) 
+        super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs) 
     
     def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
         """
