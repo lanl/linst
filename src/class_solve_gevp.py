@@ -22,12 +22,11 @@ class SolveGeneralizedEVP:
     """
     def __init__(self, \
                   map, alpha, beta, \
-                  target1, bsfl_ref, bsfl):
+                  target1, bsfl):
         """
         Constructor of class SolveGeneralizedEVP
         """
 
-        self.bsfl_ref = bsfl_ref
         self.alpha = alpha
         self.beta = beta
         self.ny = map.y.size
@@ -134,10 +133,10 @@ class SolveGeneralizedEVP:
         omega = self.target1
         
         # Build main stability matrices
-        self.call_to_build_matrices(self.ny, self.bsfl, self.bsfl_ref, self.map)
+        self.call_to_build_matrices(self.ny, self.bsfl, self.map)
 
         # Assemble matrices
-        self.assemble_mat_lhs(self.alpha[0], self.beta, omega, self.bsfl_ref)
+        self.assemble_mat_lhs(self.alpha[0], self.beta, omega)
 
         self.call_to_set_bc(self.ny, self.map)
 

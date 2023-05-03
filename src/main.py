@@ -28,117 +28,20 @@ start = time.time()
 plt.rcParams['font.size'] = '16'
 plt.rc('font', family='serif')
 
-dp  = np.dtype('d')  # double precision
-dpc = np.dtype(np.cdouble) # double precision complex
-
-i4  = np.dtype('i4') # integer 4
-i8  = np.dtype('i8') # integer 8
-
-###################################
-#   Flags and reference strings   #
-###################################
-
-# Leave on 1 (only used if rt_flag is True)
-# prim_form = 1: RT problem with primitive variable formulation ==> solvers Boussinesq = 1, -2 or -3
-# prim_form = 0: inviscid RT with w-equation only (see Chandrasekhar page 433) ===> do not use in general
-prim_form = 1
-
-# Plotting flags
-plot_eigvcts = 1 # set to 1 to plot eigenvectors ==> will be set to 1 if only one location and one alpha
-
-###################################
-#   Reference data from Michalke  #
-###################################
-
-#alp_mich = np.array([0., 0.1, 0.2, 0.3, 0.4, 0.4446, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=float)
-#ome_mich = np.array([0.0, 0.04184, 0.06975, 0.08654, 0.09410, 0.09485, 0.09376, 0.08650, 0.07305, 0.05388, 0.02942, 0.0], dtype=float)
-
-rt_flag=True
-alpha = np.array([4.672])
-beta = 0.0
-yinf = 10
-lmap = 0.2
-ny = 251
-target1 = 1.e-12+0.816j
-# Set reference quantities from non-dimensional parameters and Uref (ref. velocity) and gref (ref. acceleration)
-bsfl_ref = mbf.Baseflow(
-    Re=1000,
-    At=0.4,
-    Fr=0.101936799,
-    Sc=1.e50,
-    Uref=0.05,
-    gref=9.81
-    )
-print(bsfl_ref)
-
-###################################
-# Dimensionalize inputs if needed #
-###################################
-
-
-# # If solver boussines = -2 is used, I need to dimensionalize inputs
-# if ( mtmp.boussinesq == -2 ): # =================> dimensional solver
-#     # Make yinf and lmap dimensional
-#     riist.yinf = riist.yinf*bsfl_ref.Lref
-#     riist.lmap = riist.lmap*bsfl_ref.Lref
-#     # Make wavenumbers dimensional
-#     riist.alpha_min = riist.alpha_min/bsfl_ref.Lref
-#     riist.alpha_max = riist.alpha_max/bsfl_ref.Lref
-#     riist.alpha = riist.alpha/bsfl_ref.Lref
-
-# Delete read input instance
-#del riist
-#print("riist.Re_min = ",riist.Re_min)
-#print("riist.npts_alp = ",riist.npts_alp)
-
-###################################
-#   Setup some arrays and flags   #
-###################################
-
-#Re_range            = np.linspace(bsfl_ref.Re_min, bsfl_ref.Re_max, bsfl_ref.npts_re)
-#Local, plot_eigvcts = mod_util.set_local_flag_display_sizes(riist.npts_alp, bsfl_ref.npts_re, plot_eigvcts)
-
-# Create instance for main array omega
-iarr = marray.MainArrays(1, 1, ny)
-
-#iarr.re_array = Re_range
-
-
-###################################
-#  Main Loop of Reynolds number   #
-###################################
-
-# for i in range(0, bsfl_ref.npts_re):
-
-#     if (i > 0):
-#         target1 = iarr.omega_array[i-1,0]
-#         print("setting target to target = ",target1)
-
-#     #print("bsfl_ref.gref currently set to: ", bsfl_ref.gref)
-#     #input("Check grav 101")
-        
-#     Re = Re_range[i]
-
-#     print("Main Loop over Reynolds number: solving for Re = %10.5e (%i/%i)" % (Re, i+1, bsfl_ref.npts_re))
-#     print("==================================================================")
-
-#################################################
-#  Create Chebyshev matrices and map if needed  #
-#################################################
-
 # Create instance for class GaussLobatto
-cheb = mgl.GaussLobatto(ny)
-map = mma.MapShearLayer(yinf, cheb, lmap)
+cheb = mgl.GaussLobatto(size=251)
+map = mma.MapShearLayer(sinf=10, cheb=cheb, l=0.2)
 bsfl = mbf.RTSimple(y=map.y, At=0.4)
 
-# mtmp = mbm.Boussinesq(ny)
-# solver = msg.SolveGeneralizedEVP(
-#     alpha, beta, mtmp, \
-#     target1, bsfl_ref, map, bsfl
-#     )
-
 solver = mbm.Boussinesq(
-    map, alpha, beta, target1, bsfl_ref, bsfl
+    map=map,
+    Re=1000,
+    Fr=0.101936799,
+    Sc=1.e50,
+    alpha=np.array([4.672]),
+    beta=0.0,
+    target1=1.e-12+0.816j,
+    bsfl=bsfl, 
     )
 
 solver.solve()

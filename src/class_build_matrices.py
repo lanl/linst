@@ -40,7 +40,7 @@ class BuildMatrices(msg.SolveGeneralizedEVP):
 
         self.vec_rhs = np.zeros(size, dpc)
 
-    def assemble_mat_lhs(self, alpha, beta, omega, bsfl_ref):
+    def assemble_mat_lhs(self, alpha, beta, omega):
         """
         This function assemble the lhs matrix mat_lhs
         """
@@ -91,11 +91,14 @@ class BuildMatrices(msg.SolveGeneralizedEVP):
         #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
 
 class Boussinesq(BuildMatrices):
-    def __init__(self, map, *args, **kwargs):
+    def __init__(self, map, Re=1, Fr=1, Sc=1, *args, **kwargs):
         self.boussinesq = 1
+        self.Re = Re
+        self.Fr2 = Fr**2
+        self.Sc = Sc
         super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs) 
     
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self, ny, bsfl, map):
         """
         Equations from Livescu Annual Review of Fluid Mechanics:
         "Turbulence with Large Thermal and Compositional Density Variations"
@@ -104,16 +107,17 @@ class Boussinesq(BuildMatrices):
         """
 
         # non-dimensional set of equations
-        grav = bsfl_ref.gref/bsfl_ref.gref
+        #grav = bsfl_ref.gref/bsfl_ref.gref
+        grav = 1.
 
         if ( grav != 1. ):
             print("")
             print("Boussinesq R-T solver: gravity should be non-dimensional, g = ", grav)
             input("Check gravity")
         
-        Fr2      = bsfl_ref.Fr**2.
-        Sc       = bsfl_ref.Sc
-        Re       = bsfl_ref.Re
+        Fr2      = self.Fr2
+        Sc       = self.Sc
+        Re       = self.Re
 
         D1 = map.D1
         D2 = map.D2
