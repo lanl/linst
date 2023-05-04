@@ -181,7 +181,8 @@ class SolveGeneralizedEVP:
 
         jxu  = 5*ny-1 # 0
 
-        if (rt_flag): jxu  = 3*ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
+        # Generally you want to use density (don't know why)
+        if (rt_flag): jxu  = 5*ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
 
         #
         # Compute u00
@@ -283,15 +284,6 @@ class SolveGeneralizedEVP:
             
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
-        # if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
-        #     print("omega (dimensional)     = ", omega0.imag)
-        #     print("omega (non-dimensional) = ", omega0.imag*bsfl_ref.Lref/bsfl_ref.Uref)
-        #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
-        # else:
-        #     print("omega (dimensional)     = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref)
-        #     print("omega (non-dimensional) = ", omega0.imag)
-        #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
-
         # Get final eigenvectors
         mob.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-8, Tracking, Local, bsfl_ref)
         qfinal = linalg.solve(mob.mat_lhs, mob.vec_rhs)
@@ -327,13 +319,21 @@ class SolveGeneralizedEVP:
         
         plot_eig_vec = 0
         if (plot_eig_vec==1):
-            ylimp = 0.0
-            mod_util.plot_real_imag_part(qfinal[0*ny:1*ny], "u", map.y, rt_flag, mob, ylimp)
-            #mod_util.plot_real_imag_part(qfinal[1*ny:2*ny], "v", map.y, rt_flag, mob, ylimp)
-            mod_util.plot_real_imag_part(qfinal[2*ny:3*ny], "w", map.y, rt_flag, mob, ylimp)
-            #mod_util.plot_real_imag_part(qfinal[3*ny:4*ny], "p", map.y, rt_flag, mob, ylimp)
-            mod_util.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, mob, ylimp)
+            norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, omega0, -999, alpha_in, map, mob, bsfl, bsfl_ref, rt_flag, qfinal, Local)
             
+            ylimp = 0.0
+            mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob, ylimp)
+            #mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob, ylimp)
+            mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob, ylimp)
+            mod_util.plot_real_imag_part(peig, "p", map.y, rt_flag, mob, ylimp)
+            mod_util.plot_real_imag_part(reig, "r", map.y, rt_flag, mob, ylimp)
+
+            #mod_util.plot_real_imag_part(qfinal[0*ny:1*ny], "u", map.y, rt_flag, mob, ylimp)
+            #mod_util.plot_real_imag_part(qfinal[1*ny:2*ny], "v", map.y, rt_flag, mob, ylimp)
+            #mod_util.plot_real_imag_part(qfinal[2*ny:3*ny], "w", map.y, rt_flag, mob, ylimp)
+            #mod_util.plot_real_imag_part(qfinal[3*ny:4*ny], "p", map.y, rt_flag, mob, ylimp)
+            #mod_util.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, mob, ylimp)
+
             input("Local solver: check eigenfunctions 2222222222222")
 
 
@@ -742,3 +742,11 @@ class SolveGeneralizedEVP:
 
 
     
+        # if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
+        #     print("omega (dimensional)     = ", omega0.imag)
+        #     print("omega (non-dimensional) = ", omega0.imag*bsfl_ref.Lref/bsfl_ref.Uref)
+        #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
+        # else:
+        #     print("omega (dimensional)     = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref)
+        #     print("omega (non-dimensional) = ", omega0.imag)
+        #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)

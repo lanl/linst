@@ -28,15 +28,16 @@ class BuildMatrices:
 
                 size = 5*ny
 
-                """Boussinesq flag:    1 -> Boussinesq,
-                                 #   10 -> dimensional Boussinesq,
-                                 #   -2 -> Chandrasekhar,
-                                 #   -3 -> Sandoval,
-                                 #   -4 -> modified Sandoval,
-                                 # -555 -> compressible
+                """Boussinesq flag:   1 -> Boussinesq -------------> (non-dimensional)
+                                 #   10 -> dimensional Boussinesq -> (dimensional)
+                                 #   -2 -> Chandrasekhar ----------> (dimensional)
+                                 #  -20 -> Chandrasekhar ----------> (non-dimensional)
+                                 #   -3 -> Sandoval ---------------> (non-dimensional)
+                                 #   -4 -> modified Sandoval ------> (non-dimensional)
+                                 # -555 -> compressible -----------> (non-dimensional)
                 """
                 
-                self.boussinesq = 1 #-2
+                self.boussinesq = 1 #-20 #-2
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -73,11 +74,18 @@ class BuildMatrices:
                     # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
                     # print('---------------------------------------------------------')
                     # print("")
+                elif (self.boussinesq == -20 ):
+                    pass
+                    # print("")
+                    # print('-----------------------------------------------------')
+                    # print('Equations for Rayleight-Taylor set to "Chandrasekhar NON-DIMENSIONAL"')
+                    # print('-----------------------------------------------------')
+                    # print("")
                 elif (self.boussinesq == -555 ): # compressible inviscid
                     size = 4*ny
                     # print("")
                     # print('---------------------------------------------------------')
-                    # print('Equations for Rayleight-Taylor set to "Modified Sandoval"')
+                    # print('Equations for Rayleight-Taylor Compressible Inviscid    "')
                     # print('---------------------------------------------------------')
                     # print("")
                 else:
@@ -518,7 +526,7 @@ class BuildMatrices:
             lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
 
 
-    def set_matrices_rayleigh_taylor(self, ny, bsfl, bsfl_ref, map): # here I pas ny
+    def set_matrices_rayleigh_taylor_chandrasekhar(self, ny, bsfl, bsfl_ref, map): # here I pas ny
         """
         """
         # Identity matrix id
@@ -933,15 +941,14 @@ class BuildMatrices:
         lhs[idx_w_ymin, idx_w_ymin] = 1.0
 
         # ymax
-        #lhs[idx_w_ymax,:] = 0.0
-        #rhs[idx_w_ymax  ] = 0.0
-        #lhs[idx_w_ymax, idx_w_ymax] = 1.0
+        lhs[idx_w_ymax,:] = 0.0
+        rhs[idx_w_ymax  ] = 0.0
+        lhs[idx_w_ymax, idx_w_ymax] = 1.0
 
         # Replace w(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy w(ymax)=0
-        lhs[2*ny+mid_idx,:] = 0.0
-        rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
-
+        #lhs[2*ny+mid_idx,:] = 0.0
+        #rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+        #lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
 
         ##################
         # pressure BCs #
@@ -980,15 +987,15 @@ class BuildMatrices:
             lhs[idx_r_ymin, idx_r_ymin] = 1.0
             
             # ymax
-            lhs[idx_r_ymax,:] = 0.0
-            rhs[idx_r_ymax  ] = 0.0
+            #lhs[idx_r_ymax,:] = 0.0
+            #rhs[idx_r_ymax  ] = 0.0
             #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
-            lhs[idx_r_ymax, idx_r_ymax] = 1.0
+            #lhs[idx_r_ymax, idx_r_ymax] = 1.0
 
             # Replace rho(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy rho(ymax)=0
-            #lhs[4*ny+mid_idx,:] = 0.0
-            #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-            #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+            lhs[4*ny+mid_idx,:] = 0.0
+            rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+            lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
 
             
     def set_matrices_rayleigh_taylor_boussinesq_mixing(self, ny, bsfl, bsfl_ref, map):
@@ -1360,7 +1367,9 @@ class BuildMatrices:
                 if   ( self.boussinesq == 10 ):
                     self.set_matrices_rayleigh_taylor_boussinesq_mixing_dimensional(ny, bsfl, bsfl_ref, map)
                 elif ( self.boussinesq == -2 ):
-                    self.set_matrices_rayleigh_taylor(ny, bsfl, bsfl_ref, map)
+                    self.set_matrices_rayleigh_taylor_chandrasekhar(ny, bsfl, bsfl_ref, map)
+                elif ( self.boussinesq == -20 ):
+                    self.set_matrices_rayleigh_taylor_chandrasekhar_non_dimensional(ny, bsfl, bsfl_ref, map)
                 elif ( self.boussinesq == -3 ):
                     self.set_matrices_rayleigh_taylor_sandoval_equations(ny, bsfl, bsfl_ref, map)
                 elif ( self.boussinesq == -4 ):
@@ -1850,3 +1859,92 @@ class BuildMatrices:
 
             print("")
             input("Checking matrices norms for dimensional Boussinesq solver")
+
+
+    def set_matrices_rayleigh_taylor_chandrasekhar_non_dimensional(self, ny, bsfl, bsfl_ref, map): # here I pas ny
+        """
+        """
+        # Identity matrix id
+        id      = np.identity(ny)
+
+        Fr2      = bsfl_ref.Fr**2.
+        Re       = bsfl_ref.Re
+        
+        # Create diagonal matrices from baseflow vectors
+        dMu     = np.diag(bsfl.Mu_nd)
+        dRho    = np.diag(bsfl.Rho_nd)
+
+        dMup    = np.diag(bsfl.Mup_nd)
+        dRhop   = np.diag(bsfl.Rhop_nd)
+
+        Lder    = np.matmul(dMup, map.D1_nondim)
+        Lder2   = np.matmul(dMu, map.D2_nondim)
+
+        grav    = bsfl_ref.gref/bsfl_ref.gref
+
+        if ( grav != 1.0 ):
+            print("")
+            print("Chandrasekhar R-T solver NON-DIMENSIONAL, gravity should be non-dimensional, g = ", grav)
+            input("Check gravity")
+
+        # 1st block indices
+        imin = 0
+        imax = ny
+
+        self.mat_a1[imin:imax, imin+2*ny:imax+2*ny] = 1j*dMup/Re
+        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_b2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = Lder2/Re + Lder/Re
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 2nd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_b1[imin:imax, imin+1*ny:imax+1*ny] = 1j*dMup/Re
+        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
+                
+        self.mat_b2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = Lder2/Re + Lder/Re
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 3rd block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_b2[imin:imax, imin:imax]           = -dMu/Re
+
+        self.mat_d1[imin:imax, imin:imax]           = Lder2/Re + 2*Lder/Re
+        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -map.D1_nondim 
+        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -id/Fr2 
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*dRho
+
+        # 4th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+
+        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
+
+        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = map.D1_nondim
+
+        # 5th block indices
+        imin = imin + ny
+        imax = imax + ny
+
+        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
+
+        self.mat_rhs[imin:imax, imin:imax]          = -1j*id        

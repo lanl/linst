@@ -180,7 +180,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     #print("q_eigvect.shape = ", q_eigvect.shape)
 
     # Get eigenvectors
-    norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local)
+    norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, rt_flag, q_eigvect, Local)
 
     if (not Local): solve.EigVec = solve.EigVec/norm_s
 
@@ -240,7 +240,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         mod_util.check_mass_continuity_satisfied_rayleigh_taylor(ueig_ps, veig_ps, weig_ps, peig_ps, reig_ps, \
         map.D1, map.D2, map.y, alpha_cur, beta_cur, np.imag(omega_cur), bsfl, bsfl_ref, mob, rt_flag)
 
-        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ):
+        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 or mob.boussinesq == -555 or mob.boussinesq == -20 ):
             scale_fac = bsfl_ref.Lref
         else:
             scale_fac = 1.0
@@ -265,7 +265,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
         print("Non-dimensional growth rate and wavenumber using Chandrasekhar time ans length scales")
         print("=====================================================================================")
     
-        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 ): # non-dimensional solvers
+        if   ( mob.boussinesq == 1 or mob.boussinesq == -3 or mob.boussinesq == -4 or mob.boussinesq == -555 or mob.boussinesq == -20 ): # non-dimensional solvers
 
             if   ( mob.boussinesq == 1 ):  # Boussinesq solver
                 print("Boussinesq R-T solver")

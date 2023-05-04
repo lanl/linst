@@ -535,7 +535,7 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
     input("debug all omega")
 
 
-def get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
+def get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, rt_flag, q_eigvect, Local):
     
     #y  = map.y
     #D1 = map.D1

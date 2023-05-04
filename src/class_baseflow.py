@@ -18,11 +18,14 @@ i8 = np.dtype('i8') # integer 8
 plt.rcParams['font.size'] = '14'
 plt.rc('font', family='serif')
 
-nondim_flag = 1
+nondim_flag = 0
 """ nondim_flag:
         0 -> my old nondimensionalisation
         1 -> nondimensionalization with Uref = sqrt(g*Lref), Lref = h = thickness layer
-             ==> Fr = 1 
+             ==> Fr = 1
+        2 -> nondimensionalization with Lref = 1 and set Uref = 1 in input file
+             ==> in that case 1/Fr^2 = g and Re = 1/nuref
+        3 -> Chandrasekahr non-dimensionalization ==> set Re=1, Fr=1 in input file
 """
 
 class Baseflow:
@@ -60,18 +63,18 @@ class Baseflow:
             print("USING NEW NON-DIMENSIONALIZATION")
             print("")
             # Lref is here the dimensional thickness of the layer
-            self.Lref = 0.00025484199796126404 #0.001
+            self.Lref  = 0.001 #0.00025484199796126404 #0.001
             
             self.nuref = np.sqrt(self.gref)*self.Lref**(3./2.)/self.Re
-            print("Setting Lref to: ", self.Lref)
+            self.Uref  = np.sqrt(self.gref*self.Lref)
+            self.Fr    = self.Uref/np.sqrt(self.gref*self.Lref)
 
-            self.Uref = np.sqrt(self.gref*self.Lref)
-            self.Fr = self.Uref/np.sqrt(self.gref*self.Lref)
+            print("Setting Lref to: ", self.Lref)
             print("")
             print("Overwritting Uref and Froude...")
             print("")
         
-        else:
+        elif (nondim_flag==0):
             print("")
             print("USING OLD NON-DIMENSIONALIZATION")
             print("")
@@ -80,6 +83,47 @@ class Baseflow:
             self.Lref  = self.Uref**2./(self.Fr**2.*self.gref)
             self.nuref = self.Uref*self.Lref/self.Re
 
+        elif (nondim_flag==2):
+            print("")
+            print("USING NON-DIMENSIONALIZATION WITH LREF=1 AND UREF=1")
+            print("SET UREF=1 IN INPUT FILE")
+            print("")
+
+            # This gives a dimensional solution where 1/Re = nu and 1/Fr^2 = g ==> basically dimensional form
+
+            self.Lref = 1.0
+            
+            if (self.Uref != 1.0 or self.Lref != 1.0 ):
+                sys.exit("Uref and Lref are supposed to be equal to 1!!!!")
+
+            # Simplified because Lref = Uref = 1
+            self.nuref = 1/self.Re
+            self.Fr    = 1/np.sqrt(self.gref)
+
+        elif (nondim_flag==3):
+            print("")
+            print("CHANDRASEKHAR NON-DIMENSIONALIZATION")
+            print("")
+            
+            self.Lref  = 0.1019367991845056 #0.00005
+            self.nuref = np.sqrt(self.gref)*self.Lref**(1.5)
+
+            self.Uref  = (self.nuref*self.gref)**(1./3.)
+            
+            self.Fr = self.Uref/np.sqrt(self.gref*self.Lref)
+            self.Re = self.Uref*self.Lref/self.nuref
+
+            print("")
+            print("Reynolds and Froude #, now set to:", self.Re, self.Fr)
+            print("")
+
+            tol_h = 1.0e-14
+            if ( np.abs(self.Re-1.0) > tol_h ):
+                sys.exit("Reynolds number should be 1")
+            if ( np.abs(self.Fr-1.0) > tol_h ):
+                sys.exit("Froude number should be 1")
+
+                
         # Set dimensional diffusivity reference value
         self.Dref  = self.nuref/self.Sc
             
@@ -99,10 +143,11 @@ class Baseflow:
             print("---------------------------")
             print("Mass transfer Peclet number ( Pe = Re*Sc )                      = ", self.Re*self.Sc)
             print("Ref. mass diffusivity Dref [m^2/s] ( Dref = nuref/Sc )          = ", self.Dref)
-            if (nondim_flag==1):
-                print("Ref. length scale Lref [m] set to Lref                      = ", self.Lref)
-            else:
-                print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )     = ", self.Lref)
+            if   (nondim_flag==1 or nondim_flag==2 or nondim_flag==3):
+                print("Ref. length scale Lref [m] set to Lref                          = ", self.Lref)
+            elif (nondim_flag==0):
+                print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )         = ", self.Lref)
+                
             print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
             print("")
             
@@ -186,7 +231,7 @@ class RayleighTaylorBaseflow(Baseflow):
         ny = size
         self.size = size
         
-        UseConstantMu = True
+        UseConstantMu = True #False
         UseNumericalDerivatives = False
         plotF = True
         opt  = 1
@@ -275,8 +320,8 @@ class RayleighTaylorBaseflow(Baseflow):
                 if ( delta != 1.0 ):
                     sys.exit("Non-dimensional layer thickness (delta) must be one in this non-dimensionalization")
                     
-            else:                # this is the "old" non-dimensionalization
-                delta     = 1 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
+            elif(nondim_flag==0 or nondim_flag==2 or nondim_flag==3): # this is the "old" non-dimensionalization
+                delta     = 0.01 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
                 delta_dim = delta*Lref
 
             self.delta = delta
@@ -438,7 +483,33 @@ class RayleighTaylorBaseflow(Baseflow):
             
             Rhop_num_nd  = np.matmul(D1_nondim, self.Rho_nd)
             Rhopp_num_nd = np.matmul(D2_nondim, self.Rho_nd)
-            
+
+            # Check that baseflow is good enough by comparing exact to numerical derivatives
+            max_Rhop_num = np.max(np.abs(Rhop_num))
+            max_Rhopp_num = np.max(np.abs(Rhopp_num))
+            #
+            max_Rhop_num_nd = np.max(np.abs(Rhop_num_nd))
+            max_Rhopp_num_nd = np.max(np.abs(Rhopp_num_nd))
+            #
+            max_Rhop  = np.max(np.abs(self.Rhop))
+            max_Rhopp = np.max(np.abs(self.Rhopp))
+            #
+            max_Rhop_nd  = np.max(np.abs(self.Rhop_nd))
+            max_Rhopp_nd = np.max(np.abs(self.Rhopp_nd))
+
+            tol_bsfl = 0.01
+            if ( np.abs(max_Rhop_num-max_Rhop)/max_Rhop > tol_bsfl or
+                 np.abs(max_Rhop_num_nd-max_Rhop_nd)/max_Rhop_nd > tol_bsfl or
+                 np.abs(max_Rhopp_num-max_Rhopp)/max_Rhopp > tol_bsfl or
+                 np.abs(max_Rhopp_num_nd-max_Rhopp_nd)/max_Rhopp_nd > tol_bsfl ):
+                print("")
+                print("np.abs(max_Rhop_num-max_Rhop)/max_Rhop = ", np.abs(max_Rhop_num-max_Rhop)/max_Rhop)
+                print("np.abs(max_Rhop_num_nd-max_Rhop_nd)/max_Rhop_nd = ", np.abs(max_Rhop_num_nd-max_Rhop_nd)/max_Rhop_nd)
+                print("np.abs(max_Rhopp_num-max_Rhopp)/max_Rhopp = ", np.abs(max_Rhopp_num-max_Rhopp)/max_Rhopp)
+                print("np.abs(max_Rhopp_num_nd-max_Rhopp_nd)/max_Rhopp_nd = ", np.abs(max_Rhopp_num_nd-max_Rhopp_nd)/max_Rhopp_nd)
+                print("")
+                sys.exit("Baseflow is not properly resolved: check ymax and lmap and re-run!")
+                
             Mup_num      = np.matmul(D1_dim, self.Mu)
 
             # Compute Chandrasekhar length and time scales
