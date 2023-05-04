@@ -98,7 +98,7 @@ class Boussinesq(BuildMatrices):
         self.Sc = Sc
         super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs) 
     
-    def call_to_build_matrices(self, ny, bsfl, map):
+    def call_to_build_matrices(self):
         """
         Equations from Livescu Annual Review of Fluid Mechanics:
         "Turbulence with Large Thermal and Compositional Density Variations"
@@ -115,13 +115,6 @@ class Boussinesq(BuildMatrices):
             print("Boussinesq R-T solver: gravity should be non-dimensional, g = ", grav)
             input("Check gravity")
         
-        Fr2      = self.Fr2
-        Sc       = self.Sc
-        Re       = self.Re
-
-        D1 = map.D1
-        D2 = map.D2
-
         check_norms_output = 0
 
         if (check_norms_output == 1):
@@ -129,97 +122,95 @@ class Boussinesq(BuildMatrices):
             print("R-T Boussinesq Equations (non-dimensional)")
             print("-----------------------------------------------------------------")
             print("Gravity                       = ", grav)
-            print("Froude number Fr              = ", np.sqrt(Fr2))
-            print("Schmidt number Sc             = ", Sc)
-            print("Reynolds number Re            = ", Re)
-            print("Peclet number (mass transfer) = ", Re*Sc)
+            print("Froude number Fr              = ", np.sqrt(self.Fr2))
+            print("Schmidt number Sc             = ", self.Sc)
+            print("Reynolds number Re            = ", self.Re)
+            print("Peclet number (mass transfer) = ", self.Re*self.Sc)
             print("")
             
             
-            mat_D1_norm = np.linalg.norm(D1)
-            mat_D2_norm = np.linalg.norm(D2)
+            mat_D1_norm = np.linalg.norm(self.map.D1)
+            mat_D2_norm = np.linalg.norm(self.map.D2)
             
             print("Mat norm of D1: ", mat_D1_norm)
             print("Mat norm of D2: ", mat_D2_norm)
         
         # Identity matrix id
-        id      = np.identity(ny)
+        id      = np.identity(self.ny)
 
         # Create diagonal matrices from baseflow vectors
-        dRho    = np.diag(bsfl.Rho_nd)
-        dRhop   = np.diag(bsfl.Rhop_nd)
+        dRho    = np.diag(self.bsfl.Rho_nd)
+        dRhop   = np.diag(self.bsfl.Rhop_nd)
         
 
         # 1st block indices
         imin = 0
-        imax = ny
+        imax = self.ny
 
-        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = -1j*id
+        self.mat_a1[imin:imax, imin+3*self.ny:imax+3*self.ny] = -1j*id
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/Re
+        self.mat_a2[imin:imax, imin:imax]           = -id/self.Re
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/Re
+        self.mat_b2[imin:imax, imin:imax]           = -id/self.Re
 
-        self.mat_d1[imin:imax, imin:imax]           = D2/Re
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/self.Re
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
         # 2nd block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/Re
+        self.mat_a2[imin:imax, imin:imax]           = -id/self.Re
 
-        self.mat_b1[imin:imax, imin+2*ny:imax+2*ny] = -1j*id
+        self.mat_b1[imin:imax, imin+2*self.ny:imax+2*self.ny] = -1j*id
                 
-        self.mat_b2[imin:imax, imin:imax]           = -id/Re
+        self.mat_b2[imin:imax, imin:imax]           = -id/self.Re
 
-        self.mat_d1[imin:imax, imin:imax]           = D2/Re
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/self.Re
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
         # 3rd block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/Re
+        self.mat_a2[imin:imax, imin:imax]           = -id/self.Re
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/Re
+        self.mat_b2[imin:imax, imin:imax]           = -id/self.Re
 
-        self.mat_d1[imin:imax, imin:imax]           = D2/Re
-        self.mat_d1[imin:imax, imin+1*ny:imax+1*ny] = -D1 
-        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = -grav*id/Fr2 
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/self.Re
+        self.mat_d1[imin:imax, imin+1*self.ny:imax+1*self.ny] = -self.map.D1 
+        self.mat_d1[imin:imax, imin+2*self.ny:imax+2*self.ny] = -grav*id/self.Fr2 
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
         # 4th block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
-        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+        self.mat_a1[imin:imax, imin-3*self.ny:imax-3*self.ny] = 1j*id
 
-        self.mat_b1[imin:imax, imin-2*ny:imax-2*ny] = 1j*id
+        self.mat_b1[imin:imax, imin-2*self.ny:imax-2*self.ny] = 1j*id
 
-        self.mat_d1[imin:imax, imin-1*ny:imax-1*ny] = D1
+        self.mat_d1[imin:imax, imin-1*self.ny:imax-1*self.ny] = self.map.D1
 
         # 5th block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/(Re*Sc)
+        self.mat_a2[imin:imax, imin:imax]           = -id/(self.Re*self.Sc)
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/(Re*Sc)
+        self.mat_b2[imin:imax, imin:imax]           = -id/(self.Re*self.Sc)
 
-        self.mat_d1[imin:imax, imin:imax]           = D2/(Re*Sc) 
-        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = -dRhop
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/(self.Re*self.Sc) 
+        self.mat_d1[imin:imax, imin-2*self.ny:imax-2*self.ny] = -dRhop
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
-    def call_to_set_bc(self, ny, map):
+    def call_to_set_bc(self):
         """
         """
-        lhs = self.mat_lhs
-        rhs = self.mat_rhs
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
         ######################################
@@ -227,50 +218,50 @@ class Boussinesq(BuildMatrices):
         ##################
         # u-velocity BCs #
         ##################
-        idx_u_ymin = 0*ny
-        idx_u_ymax = 1*ny-1
+        idx_u_ymin = 0*self.ny
+        idx_u_ymax = 1*self.ny-1
 
         # ymin
-        lhs[idx_u_ymin,:] = 0.0
-        rhs[idx_u_ymin,:] = 0.0        
-        lhs[idx_u_ymin, idx_u_ymin] = 1.0
+        self.mat_lhs[idx_u_ymin,:] = 0.0
+        self.mat_rhs[idx_u_ymin,:] = 0.0        
+        self.mat_lhs[idx_u_ymin, idx_u_ymin] = 1.0
 
         # ymax
-        lhs[idx_u_ymax,:] = 0.0
-        rhs[idx_u_ymax,:] = 0.0
-        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        self.mat_lhs[idx_u_ymax,:] = 0.0
+        self.mat_rhs[idx_u_ymax,:] = 0.0
+        self.mat_lhs[idx_u_ymax, idx_u_ymax] = 1.0
         
         ##################
         # v-velocity BCs #
         ##################
-        idx_v_ymin = 1*ny
-        idx_v_ymax = 2*ny-1
+        idx_v_ymin = 1*self.ny
+        idx_v_ymax = 2*self.ny-1
 
         # ymin
-        lhs[idx_v_ymin,:] = 0.0
-        rhs[idx_v_ymin,:] = 0.0        
-        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+        self.mat_lhs[idx_v_ymin,:] = 0.0
+        self.mat_rhs[idx_v_ymin,:] = 0.0        
+        self.mat_lhs[idx_v_ymin, idx_v_ymin] = 1.0
 
         # ymax
-        lhs[idx_v_ymax,:] = 0.0
-        rhs[idx_v_ymax,:] = 0.0
-        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+        self.mat_lhs[idx_v_ymax,:] = 0.0
+        self.mat_rhs[idx_v_ymax,:] = 0.0
+        self.mat_lhs[idx_v_ymax, idx_v_ymax] = 1.0
 
         ##################
         # w-velocity BCs #
         ##################
-        idx_w_ymin = 2*ny
-        idx_w_ymax = 3*ny-1
+        idx_w_ymin = 2*self.ny
+        idx_w_ymax = 3*self.ny-1
 
         # ymin
-        lhs[idx_w_ymin,:] = 0.0
-        rhs[idx_w_ymin,:] = 0.0        
-        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+        self.mat_lhs[idx_w_ymin,:] = 0.0
+        self.mat_rhs[idx_w_ymin,:] = 0.0        
+        self.mat_lhs[idx_w_ymin, idx_w_ymin] = 1.0
 
         # ymax
-        lhs[idx_w_ymax,:] = 0.0
-        rhs[idx_w_ymax,:] = 0.0
-        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+        self.mat_lhs[idx_w_ymax,:] = 0.0
+        self.mat_rhs[idx_w_ymax,:] = 0.0
+        self.mat_lhs[idx_w_ymax, idx_w_ymax] = 1.0
 
 
         ##################
@@ -279,20 +270,20 @@ class Boussinesq(BuildMatrices):
         set_pres = 1
 
         if (set_pres==1):
-            idx_p_ymin = 3*ny
-            idx_p_ymax = 4*ny-1
+            idx_p_ymin = 3*self.ny
+            idx_p_ymax = 4*self.ny-1
             
             # ymin
-            lhs[idx_p_ymin,:] = 0.0
-            rhs[idx_p_ymin  ] = 0.0        
-            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
+            self.mat_lhs[idx_p_ymin,:] = 0.0
+            self.mat_rhs[idx_p_ymin  ] = 0.0        
+            #self.mat_lhs[idx_p_ymin, idx_p_ymin:4*self.ny] = map.D1[0, :]
+            self.mat_lhs[idx_p_ymin, idx_p_ymin     ] = 1.0
             
             # ymax
-            lhs[idx_p_ymax,:] = 0.0
-            rhs[idx_p_ymax  ] = 0.0
-            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+            self.mat_lhs[idx_p_ymax,:] = 0.0
+            self.mat_rhs[idx_p_ymax  ] = 0.0
+            #self.mat_lhs[idx_p_ymax, idx_p_ymin:4*self.ny] = map.D1[-1, :]
+            self.mat_lhs[idx_p_ymax, idx_p_ymax]      = 1.0
 
         ##################
         # density BCs #
@@ -300,18 +291,18 @@ class Boussinesq(BuildMatrices):
         set_dens = 1
 
         if (set_dens==1):
-            idx_r_ymin = 4*ny
-            idx_r_ymax = 5*ny-1
+            idx_r_ymin = 4*self.ny
+            idx_r_ymax = 5*self.ny-1
             
             # ymin
-            lhs[idx_r_ymin,:] = 0.0
-            rhs[idx_r_ymin  ] = 0.0        
-            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            self.mat_lhs[idx_r_ymin,:] = 0.0
+            self.mat_rhs[idx_r_ymin  ] = 0.0        
+            self.mat_lhs[idx_r_ymin, idx_r_ymin] = 1.0
             
             # ymax
-            lhs[idx_r_ymax,:] = 0.0
-            rhs[idx_r_ymax  ] = 0.0
-            lhs[idx_r_ymax, idx_r_ymax] = 1.0
+            self.mat_lhs[idx_r_ymax,:] = 0.0
+            self.mat_rhs[idx_r_ymax  ] = 0.0
+            self.mat_lhs[idx_r_ymax, idx_r_ymax] = 1.0
         
 class BoussinesqDim(Boussinesq):
     def __init__(self, ny):

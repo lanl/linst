@@ -38,13 +38,10 @@ solver = mbm.Boussinesq(
     Re=1000,
     Fr=0.101936799,
     Sc=1.e50,
-    alpha=np.array([4.672]),
-    beta=0.0,
-    target1=1.e-12+0.816j,
     bsfl=bsfl, 
     )
 
-solver.solve()
+solver.solve(alpha=4.672, beta=0.0, omega_guess=1.e-12+0.816j)
 solver.plot_eigvals()
 plt.show()
 

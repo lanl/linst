@@ -20,34 +20,18 @@ class SolveGeneralizedEVP:
     This class define a solution object and contain the main function that provides the solution 
     to the generalized eigenvalue problem (GEVP)
     """
-    def __init__(self, \
-                  map, alpha, beta, \
-                  target1, bsfl):
+    def __init__(self, map, bsfl):
         """
         Constructor of class SolveGeneralizedEVP
         """
-
-        self.alpha = alpha
-        self.beta = beta
         self.ny = map.y.size
-        self.target1 = target1
         self.map = map
         self.bsfl = bsfl
-        
         self.mid_idx = mod_util.get_mid_idx(self.ny)
-
-        #abs_target1 = np.abs(target1)
         
-        #################################################
-        #            Solve stability problem            # 
-        #################################################
-        
-        # Create instance for Class SolveGeneralizedEVP
-        #self.solve_evp = msg.SolveGeneralizedEVP(mtmp)
-        
-    def solve(self):
+    def solve(self, alpha, beta, omega_guess):
         # Build matrices and solve global/local problem
-        self.eigvals_filtered = self.solve_general_problem()
+        self.eigvals_filtered = self.solve_general_problem(alpha, beta, omega_guess)
 
         # Switch to another non-dimensionalization
     
@@ -128,17 +112,10 @@ class SolveGeneralizedEVP:
     def call_to_build_matrices(*args, **kwargs):
         raise NotImplemented("Use a specific equation class, not SolveGeneralizedEVP.")
                 
-    def solve_general_problem(self):
-
-        omega = self.target1
-        
-        # Build main stability matrices
-        self.call_to_build_matrices(self.ny, self.bsfl, self.map)
-
-        # Assemble matrices
-        self.assemble_mat_lhs(self.alpha[0], self.beta, omega)
-
-        self.call_to_set_bc(self.ny, self.map)
+    def solve_general_problem(self, alpha, beta, omega_guess):
+        self.call_to_build_matrices()
+        self.assemble_mat_lhs(alpha, beta, omega_guess)
+        self.call_to_set_bc()
 
         #mob.mat_lhs = np.conj(mob.mat_lhs)
         #mob.mat_rhs = np.conj(mob.mat_rhs)
