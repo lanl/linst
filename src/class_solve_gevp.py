@@ -344,7 +344,7 @@ class SolveGeneralizedEVP:
         return omega0, qfinal
 
     def write_eigvals(self):
-        mod_util.write_out_eigenvalues(self.solve_evp.EigVal, self.ny)
+        mod_util.write_out_eigenvalues(self.EigVal, self.ny)
     
     def plot_baseflow(self):
         mod_util.plot_baseflow(self.ny, self.map.y, yi, self.bsfl.U, self.bsfl.Up, self.map.D1)

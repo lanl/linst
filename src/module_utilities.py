@@ -24,6 +24,8 @@ dpc = np.dtype(np.cdouble) # double precision complex
 i4  = np.dtype('i4') # integer 4
 i8  = np.dtype('i8') # integer 8
 
+opt_taylor = 1
+
 def get_mid_idx(ny):
 
     if (ny % 2) != 0:
@@ -255,7 +257,7 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
         plt.plot(eig_fct.real, y, 'k-', linewidth=1.5)
         if symbols==1:
             plt.plot(eig_fct.real, y, 'ks-', linewidth=1.5)
-        plt.ylabel('y', fontsize=16)
+        plt.ylabel('z', fontsize=16)
         if str_var == "u":
             plt.xlabel(r'$\hat{u}_r$', fontsize=16)
         elif str_var == "v":
@@ -270,10 +272,10 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
             plt.xlabel("real(" +str_var + ")", fontsize=16)
             print("Not an expected string!!!!!")
 
-    #if (mv==0.):
-    #    plt.ylim([ymin, ymax])
-    #else:
-    #    plt.ylim([-mv, mv])
+    if (mv==0.):
+       plt.ylim([ymin, ymax])
+    else:
+       plt.ylim([-mv, mv])
     
     f1.show()
     f1.subplots_adjust(bottom=0.16)
@@ -307,7 +309,7 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
         if symbols==1:
             plt.plot(eig_fct.imag, y, 'ks-', linewidth=1.5)
         plt.plot(eig_fct.imag, y, 'k-', linewidth=1.5)
-        plt.ylabel('y', fontsize=16)
+        plt.ylabel('z', fontsize=16)
         if str_var == "u":
             plt.xlabel(r'$\hat{u}_i$', fontsize=16)
         elif str_var == "v":
@@ -323,10 +325,10 @@ def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
             print("Not an expected string!!!!!")
 
 
-    #if (mv==0.):
-    #    plt.ylim([ymin, ymax])
-    #else:
-    #    plt.ylim([-mv, mv])
+    if (mv==0.):
+       plt.ylim([ymin, ymax])
+    else:
+       plt.ylim([-mv, mv])
 
     f2.subplots_adjust(bottom=0.16)
     f2.subplots_adjust(left=0.19)
@@ -520,7 +522,7 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
     input("debug all omega")
 
 
-def get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, plot_eigvcts, rt_flag, q_eigvect, Local):
+def get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, rt_flag, q_eigvect, Local):
     
     #y  = map.y
     #D1 = map.D1
@@ -1641,6 +1643,12 @@ def comp_ke_bal_rt_boussinesq(ueig, veig, weig, peig, reig, map, mob, bsfl, D1, 
 
         # Get ymin-ymax
         ymin, ymax = FindResonableYminYmax(RHS_i2, y)
+
+        xmin = -0.2
+        xmax = 0.3
+
+        ymin = -4
+        ymax = 4
         
         f  = plt.figure(ptn)
         ax = plt.subplot(111)
@@ -1648,26 +1656,27 @@ def comp_ke_bal_rt_boussinesq(ueig, veig, weig, peig, reig, map, mob, bsfl, D1, 
         ax.plot(np.real(LHS), y, 'k', linewidth=1.5, label=r"LHS")
         ax.plot(np.real(RHS), y, 'r--', linewidth=1.5, label=r"RHS")
         
-        ax.plot(np.real(RHS_i1), y, 'b', linewidth=1.5, label=r"$vp: -u'_i \dfrac{\partial p'}{\partial x_i}$ (RHS)")
+        ax.plot(np.real(RHS_i1), y, 'b', linewidth=1.5, label=r"$vp: \overline{ -u'_i \dfrac{\partial p'}{\partial x_i}} $ (RHS)")
 
         # Gravity production
-        ax.plot(np.real(RHS_i2), y, 'c', linewidth=1.5, label=r"gp: $-\dfrac{1}{Fr^2}\rho'w'g$ (RHS)")
+        ax.plot(np.real(RHS_i2), y, 'c', linewidth=1.5, label=r"gp: $-\dfrac{1}{Fr^2} \overline{ \rho'w'} g$ (RHS)")
         # Viscous transport
-        ax.plot(np.real(RHS_v1), y, 'g', linewidth=1.5, label=r"vt: $\dfrac{\partial}{\partial x_j}(u'_i \tau'_{ij})$ (RHS)")
+        ax.plot(np.real(RHS_v1), y, 'g', linewidth=1.5, label=r"vt: $\dfrac{\partial}{\partial x_j}(\overline{ u'_i \tau'_{ij}} )$ (RHS)")
         # Viscous dissipation
-        ax.plot(np.real(epsilon_dist), y, 'm', linewidth=1.5, label=r"vd: $\tau'_{ij}\dfrac{\partial u'_i}{\partial x_j}$ (RHS)")
+        ax.plot(np.real(epsilon_dist), y, 'm', linewidth=1.5, label=r"vd: $\overline{ \tau'_{ij}\dfrac{\partial u'_i}{\partial x_j} }$ (RHS)")
 
         plt.xlabel("Boussinesq equations: Kinetic Energy balance (RT)", fontsize=14)
         plt.ylabel("z", fontsize=14)
 
         plt.gcf().subplots_adjust(left=0.17)
         plt.gcf().subplots_adjust(bottom=0.15)
+        plt.xlim([xmin, xmax])
         plt.ylim([ymin, ymax])
         
         plt.legend(loc="upper right")
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
-                  ncol=3, fancybox=True, shadow=True, fontsize=10)
-        
+        ax.legend(loc='upper center', bbox_to_anchor=(0.48, 1.15),   # box with lower left corner at (x, y)
+                  ncol=3, fancybox=True, shadow=True, fontsize=10, framealpha = 0.8)
+    
         f.show()
         
 
@@ -4405,10 +4414,10 @@ def compute_dsc_eq_bal_boussi(ueig, veig, weig, peig, reig, D1, D2, y, alpha, be
     term_rhs2 = 1/(Re*Sc)*term_rhs2
 
     # dissipation of rho'rho'
-    term_rhs3 = -2.*( compute_inner_prod(ia*reig, ia*reig) + compute_inner_prod(ib*reig, ib*reig) + compute_inner_prod(Dr, Dr) )
+    term_rhs3 = 2.*( compute_inner_prod(ia*reig, ia*reig) + compute_inner_prod(ib*reig, ib*reig) + compute_inner_prod(Dr, Dr) )
     term_rhs3 =	1/(Re*Sc)*term_rhs3
 
-    RHS_dscEq = term_rhs1 + term_rhs2 + term_rhs3
+    RHS_dscEq = term_rhs1 + term_rhs2 - term_rhs3
     
     energy_bal_dscEq  = np.amax(np.abs(LHS_dscEq-RHS_dscEq))
     print("Energy balance (RT) dsc-equation BOUSSINESQ (NON-DIMENSIONAL) = ", energy_bal_dscEq)
@@ -4424,9 +4433,9 @@ def compute_dsc_eq_bal_boussi(ueig, veig, weig, peig, reig, D1, D2, y, alpha, be
     f = plt.figure(ptn)
     ax = plt.subplot(111)
 
-    plt.plot(np.real(term_rhs1), y, 'b', linewidth=1.5, label="Production")
+    plt.plot(np.real(term_rhs1), y, 'b', linewidth=1.5, label=r"$-2\rho'w' \dfrac{\partial \bar{\rho}}{\partial z}$")
     plt.plot(np.real(term_rhs2), y, 'm', linewidth=1.5, label=r"$\dfrac{1}{Re Sc} \nabla^2 (\rho'\rho')$")
-    plt.plot(np.real(-term_rhs3), y, 'c', linewidth=1.5, label=r"$\tilde{\epsilon}_b = \dfrac{1}{Re Sc}2\nabla\rho'\cdot \nabla\rho'$")
+    plt.plot(np.real(term_rhs3), y, 'c', linewidth=1.5, label=r"$\tilde{\epsilon}_b = \dfrac{1}{Re Sc}2\nabla\rho'\cdot \nabla\rho'$")
     
     plt.plot(np.real(RHS_dscEq), y, 'r', linewidth=1.5, label="RHS")
     plt.plot(np.real(LHS_dscEq), y, 'k--', linewidth=1.5, label=r"LHS")
@@ -4437,13 +4446,10 @@ def compute_dsc_eq_bal_boussi(ueig, veig, weig, peig, reig, D1, D2, y, alpha, be
     plt.gcf().subplots_adjust(bottom=0.15)
     plt.ylim([ymin, ymax])
 
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4, fancybox=True, shadow=True, fontsize=10)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=3, fancybox=True, shadow=True, fontsize=10)
 
     f.show()
 
-
-
-    
 
     #print("LHS_dscEq*rhoref**2*Uref/Lref = ", LHS_dscEq*rhoref**2*Uref/Lref)
     
@@ -5762,7 +5768,7 @@ def close_previous_plots():
     for i in range(1, ptn+1):
         plt.close(i)
 
-def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bsfl, bsfl_ref, rt_flag, D1, D2, alpha, beta, omega_i, iarr):
+def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bsfl, bsfl_ref, rt_flag, D1, D2, alpha, beta, omega_i, iarr, KE_dist):
     
     ny = len(ueig)
         
@@ -6013,31 +6019,56 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     #
     # 2) w'w' equation
     #
-    
-    pres_strain_mod_ww = -4./3.*Cr1*np.multiply(a3, dpdz_bsfl)
-    pres_strain_mod_ww_girimaji = (-2. + 4./3.*0.54)*a3
-
     B = 1.
+    b  = np.divide(compute_inner_prod(reig, reig), rho2 )
+    dbdz = np.matmul(D1, b)
     dazdz = np.matmul(D1, a3)
     #dazdz22 = np.divide( ( compute_inner_prod(reig, dwdz) + compute_inner_prod(weig, Dr) ), Rho ) - np.divide( np.multiply(Rhop, compute_inner_prod(reig, weig)), rho2)
     #print("np.max(np.abs(dazdz-dazdz22)) = ", np.max(np.abs(dazdz-dazdz22)))
     #input("checking dadz")
-    
-    l_taylor_nondim = iarr.l_taylor_dim/Lref
+
+    # Length scales
+    if (opt_taylor==0):
+        l_taylor_nondim = iarr.l_taylor_dim/Lref
+    elif(opt_taylor==1):
+        l_taylor_nondim = iarr.l_taylor_dim_fst/Lref
+
     l_taylor_nondim2 = np.multiply(l_taylor_nondim, l_taylor_nondim)
 
     l_integr_nondim = iarr.l_integr_dim/Lref
     l_integr_nondim2 = np.multiply(l_integr_nondim, l_integr_nondim)
 
-    if ( np.amax(np.abs(iarr.l_taylor_dim)) != 0.0 and np.amax(np.abs(iarr.l_integr_dim)) != 0.0 ): 
+    #pres_strain_mod_ww = -4./3.*Cr1*np.multiply(a3, dpdz_bsfl)
+    pres_strain_mod_ww = 4./3.*Cr1*a3/Fr**2.
+
+    az = a3
+    C5 = 1.3
+    C1_star = -2.*C5 #-3
+    bzz = np.real(np.divide(Rs_ww, 2.*KE_dist)) - 1./3.
+    pres_strain_mod_ww_girimaji = np.multiply( (C1_star*bzz + 4./3.*C5), np.real(az))/Fr**2.
+
+    data_out = np.column_stack([np.real(bzz), np.real(az), np.real(RHS_ww_t12), y])
+    datafile_path = "./pres_strain_model_girimaji.dat" 
+    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e'])
+    
+
+    pres_strain_mod_Ruu = iarr.eps_r_ke_fst*Rs_uu
+
+    #pres_dissipation_model_a_eq = 1./3.*np.multiply(b, dpdz_bsfl)
+    #pres_diffusion_model_a_eq = -np.matmul(D1, np.multiply(l_taylor_nondim2, dbdz))
+
+    if ( np.amax(np.abs(iarr.l_taylor_dim)) != 0.0 and np.amax(np.abs(iarr.l_integr_dim)) != 0.0 and np.abs(iarr.l_taylor_dim_fst) != 0.0 ): 
         pass
     else:
         sys.exit("Something not right with the length scales!!!!!")    
 
     #print("l_taylor_nondim = ", l_taylor_nondim)
 
-    pres_diffusion_mod_ww = 2.*np.multiply( Rho, np.multiply(l_taylor_nondim2, dazdz) )
-    pres_diffusion_mod_ww = np.matmul(D1, pres_diffusion_mod_ww)
+    #pres_diffusion_mod_ww = 2./Fr**2.*np.multiply( Rho, np.multiply(l_taylor_nondim2, dazdz) )
+    #pres_diffusion_mod_ww = np.matmul(D1, pres_diffusion_mod_ww)
+
+    # AHA: I added a minus sign here!!!1
+    pres_diffusion_mod_ww = -2./Fr**2.*B*np.matmul(D1, np.multiply(l_taylor_nondim2, dazdz))
     
     #pres_diffusion_mod_ww22 = 2.*np.multiply( Rho, np.multiply(l_integr_nondim2, dazdz) )
     #pres_diffusion_mod_ww22 = np.matmul(D1, pres_diffusion_mod_ww22)
@@ -6165,38 +6196,56 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     
     f  = plt.figure(ptn)
     ax = plt.subplot(111)
-    ax.plot(np.real(LHS_ww), y, 'k', linewidth=1.5, label=r"LHS $(\overline{w'w'})$")
-    ax.plot(np.real(RHS_ww), y, 'g--', linewidth=1.5, label=r"RHS $(\overline{w'w'})$")
+    ax.plot(np.real(LHS_ww), y, 'r', linewidth=1.5, label=r"LHS")
+    ax.plot(np.real(RHS_ww), y, 'k', linestyle='--', dashes=(5, 5), linewidth=1.5, label=r"RHS")
+    
+    #ax.plot(np.real(RHS_ww_t1), y, 'r', linewidth=1.5, label=r"$-2\overline{w'\dfrac{\partial p'}{\partial z}}$ (RHS)")
+    ax.plot(np.real(RHS_ww_t11), y, 'bs', markerfacecolor='none', markevery=5, label=r"$-2 \dfrac{\partial}{\partial z} \overline{p'w'}$ (RHS)") # --> pressure diffusion
+    ax.plot(np.real(RHS_ww_t12), y, 'cs', markerfacecolor='none', markevery=7, label=r"$2\overline{p'\dfrac{\partial w'}{\partial z}}$ (RHS)")   # --> pressure strain    
+    ax.plot(np.real(RHS_ww_t2), y, 'm', linestyle='-.', linewidth=1.5, label=r"$-2 a_z \bar{\rho}/Fr^2$ (RHS)")
+    ax.plot(np.real(Lap_ww), y, 'm', linewidth=1.5, label=r"$\dfrac{1}{Re} \nabla^2 \overline{w'w'}$ (RHS)")
+    ax.plot(np.real(dissip_ww), y, 'y', linewidth=1.5, label=r"$\dfrac{2}{Re} \overline{\nabla w' \cdot \nabla w'}$ (RHS)")
 
+    #cst_val = 0.35
+    #print("cst_val = ", cst_val)
+
+    #aaa = pres_strain_mod_Ruu.real/np.real(RHS_ww_t12)
+    #mean_val = np.mean(aaa[1:-2].real)
+    #cst_val1 = 1/mean_val
+    #print("mean_val, cst_val1 = ", mean_val, cst_val1)
+    #print("pres_strain_mod_Ruu/np.real(RHS_ww_t12) = ", pres_strain_mod_Ruu/np.real(RHS_ww_t12))
+
+    # model terms
     max_pd = np.max(np.abs(RHS_ww_t11))
     max_pd_mod = np.max(np.abs(pres_diffusion_mod_ww))
 
     scale_pd = max_pd/max_pd_mod
     print("scale_pd = ", scale_pd)
     
-    #ax.plot(np.real(RHS_ww_t1), y, 'r', linewidth=1.5, label=r"$-2\overline{w'\dfrac{\partial p'}{\partial z}}$ (RHS)")
-    ax.plot(np.real(RHS_ww_t11), y, 'b', linewidth=1.5, label=r"$-2 \dfrac{\partial}{\partial z} \overline{p'w'}$ (RHS)") # --> pressure diffusion
-    ax.plot(np.real(RHS_ww_t12), y, 'c', linewidth=1.5, label=r"$2\overline{p'\dfrac{\partial w'}{\partial z}}$ (RHS)")   # --> pressure strain
+    label_pd_mod = "pres. diff. model ( scaling = %s )" % str('{:.2e}'.format(scale_pd))    
+    ax.plot(np.real(pres_diffusion_mod_ww)*scale_pd, y, 'b', linestyle='-.', linewidth=2., label=label_pd_mod)
 
-    # mode terms
-    label_pd_mod = "pd model ( scaling = %s )" % str('{:.2e}'.format(scale_pd))
+    # Pressure strain model from Daniel
+    #ax.plot(np.real(pres_strain_mod_ww), y, 'c', linestyle='-.', linewidth=1.5, label=r"p strain model:")
+
+    # Pressure strain model from Girimaji
+    ax.plot(np.real(pres_strain_mod_ww_girimaji), y, 'c--', linewidth=2., label=r"anisotropic pres. strain model")
+
+    # that model was pretty good
+    #ax.plot(-2.75*np.real(pres_strain_mod_Ruu), y, 'c', linestyle='-', linewidth=1.5, label=r"p strain model: $-2.75\left( \dfrac{\epsilon}{k} \right)_{fst} u'u' $")
+
+    #ax.plot(-cst_val*np.real(Rs_uu), y, 'k-.', linewidth=1.5, label=r"-cst_val*Rs_uu")
+    #ax.plot(-2*compute_inner_prod(weig, dpdz), y, 'g-.', linewidth=1.5, label=r"new: -2w'dp'/dz")
     
-    ax.plot(np.real(pres_diffusion_mod_ww)*scale_pd, y, 'b-.', linewidth=1.5, label=label_pd_mod)
-    ax.plot(np.real(pres_strain_mod_ww), y, 'c-.', linewidth=1.5, label=r"ps model")
-    ax.plot(np.real(pres_strain_mod_ww_girimaji), y, 'c--', linewidth=1.5, label=r"ps model (Girimaji)")
-
-    ax.plot(np.real(RHS_ww_t2), y, 'm-.', linewidth=1.5, label=r"$2a_z \dfrac{\partial \bar{p}}{\partial z}$ (RHS)")
-
-    ax.plot(np.real(Lap_ww), y, 'm', linewidth=1.5, label=r"$\dfrac{1}{Re} \nabla^2 \overline{w'w'}$ (RHS)")
-    ax.plot(np.real(dissip_ww), y, 'y', linewidth=1.5, label=r"$\dfrac{2}{Re} \overline{\nabla w' \cdot \nabla w'}$ (RHS)")
-
+    #ax.plot(-np.real(pres_dissipation_model_a_eq), y, 'k-.', linewidth=1.5, label=r"new 1")
+    #ax.plot(np.real(pres_diffusion_model_a_eq), y, 'k:', linewidth=1.5, label=r"new 2")
+    
     #ax.plot(np.real(dazdz), y, 'y', linewidth=1.5, color='orange', label=r"dazdz")
 
     #try_var = np.multiply(l_taylor_nondim2, np.matmul(D1, dazdz))
     #try_var = np.multiply(l_integr_nondim2, np.matmul(D1, dazdz))
     #ax.plot(np.real(try_var), y, 'y', linewidth=3, color='orange', label=r"dazdz")
 
-    #pres_diffusion_mod_ww, pres_strain_mod_ww
 
     #if (opt==1):
     #    ax.plot(np.real(RHS_ww_t3), y, 'm', linewidth=1.5, label=r"$2\overline{w'\dfrac{\partial \tau'_{3k}}{\partial x_k}}$ (RHS)")
@@ -6213,13 +6262,59 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     plt.ylabel("z", fontsize=18)
     plt.gcf().subplots_adjust(left=0.17)
     plt.gcf().subplots_adjust(bottom=0.15)
-    plt.ylim([ymin, ymax])
-    #plt.ylim([-15, 30])
-    #plt.ylim([-5, 5])
+    #plt.ylim([ymin, ymax])
+    plt.xlim([-0.4, 0.6])
+    plt.ylim([-4, 4])
     
     plt.legend(loc="upper right")
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
-              ncol=3, fancybox=True, shadow=True, fontsize=8)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.45, 1.17),   # box with lower left corner at (x, y)
+              #ncol=4, fancybox=True, shadow=True, fontsize=9)
+              ncol=3, fancybox=True, shadow=True, fontsize=9,
+              framealpha=0.8)
+    f.show()
+
+
+
+
+
+    #####################################
+    # Pressure strain models comparison #
+    #####################################
+
+    ptn = plt.gcf().number + 1
+
+    ymin, ymax = FindResonableYminYmax(Rs_ww, y)
+    
+    f  = plt.figure(ptn)
+    ax = plt.subplot(111)
+    ax.plot(np.real(RHS_ww_t12), y, 'ks', markerfacecolor='none', markevery=4, label=r"$2\overline{p'\dfrac{\partial w'}{\partial z}}$ (RHS)")   # --> pressure strain
+    
+    # Pressure strain model from Daniel
+    ax.plot(np.real(pres_strain_mod_ww), y, 'k', linestyle='--', linewidth=1.5, label=r"pres. strain model")
+
+    # Pressure strain model from Girimaji
+    ax.plot(np.real(pres_strain_mod_ww_girimaji), y, 'k', linestyle='-', linewidth=1.5, label=r"Anisotropic pres. strain model")
+
+    # that model was pretty good
+    #ax.plot(-2.75*np.real(pres_strain_mod_Ruu), y, 'c', linestyle='-', linewidth=1.5, label=r"p strain model: $-2.75\left( \dfrac{\epsilon}{k} \right)_{fst} u'u' $")
+    
+    plt.xlabel("Pressure strain models for $R_{zz}$ equation", fontsize=16)
+    plt.ylabel("z", fontsize=16)
+    plt.gcf().subplots_adjust(left=0.17)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    #plt.ylim([ymin, ymax])
+    #plt.xlim([-0.4, 0.6])
+    plt.ylim([-4, 4])
+    
+    plt.legend(loc="upper right")
+    #ax.legend(loc='upper right', bbox_to_anchor=(0.7, 1.15),   # box with lower left corner at (x, y)
+    #          ncol=1, fancybox=True, shadow=True, fontsize=14)
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.45, 1.17),   # box with lower left corner at (x, y)
+              #ncol=4, fancybox=True, shadow=True, fontsize=9)
+              ncol=1, fancybox=True, shadow=True, fontsize=12,
+              framealpha=0.8)
+    
     
     f.show()
 
@@ -6227,44 +6322,44 @@ def reynolds_stresses_balance_equations(ueig, veig, weig, peig, reig, y, mob, bs
     # Model terms vs exact from w'w' equation
     #
 
-    # d/dz(p'w')
-    ddz_pw = np.matmul(D1, compute_inner_prod(peig, weig))
-    # p'*dw'/dz
-    pdwdz = compute_inner_prod(peig, dwdz)
-    # w'*dp'/dz
-    wdpdz = compute_inner_prod(weig, dpdz)
+    # # d/dz(p'w')
+    # ddz_pw = np.matmul(D1, compute_inner_prod(peig, weig))
+    # # p'*dw'/dz
+    # pdwdz = compute_inner_prod(peig, dwdz)
+    # # w'*dp'/dz
+    # wdpdz = compute_inner_prod(weig, dpdz)
     
-    ptn = plt.gcf().number + 1
+    # ptn = plt.gcf().number + 1
 
-    f  = plt.figure(ptn)
-    ax = plt.subplot(111)
+    # f  = plt.figure(ptn)
+    # ax = plt.subplot(111)
 
-    # Exact terms
-    ax.plot(np.real(ddz_pw),y, 'k', linewidth=1.5, label=r"$\dfrac{\partial}{\partial z} \left( p'w' \right )$")
-    ax.plot(np.real(pdwdz), y, 'g--', linewidth=1.5, label=r"$p'\dfrac{\partial w'}{\partial z}$")
-    ax.plot(np.real(wdpdz), y, 'r', linewidth=1.5, label=r"$w'\dfrac{\partial p'}{\partial z}$")
+    # # Exact terms
+    # ax.plot(np.real(ddz_pw),y, 'k', linewidth=1.5, label=r"$\dfrac{\partial}{\partial z} \left( p'w' \right )$")
+    # ax.plot(np.real(pdwdz), y, 'g--', linewidth=1.5, label=r"$p'\dfrac{\partial w'}{\partial z}$")
+    # ax.plot(np.real(wdpdz), y, 'r', linewidth=1.5, label=r"$w'\dfrac{\partial p'}{\partial z}$")
 
-    # Model terms
-    ax.plot(np.real(pres_strain_mod_ww), y, 'c-.', linewidth=1.5, label=r"ps model")
+    # # Model terms
+    # ax.plot(np.real(pres_strain_mod_ww), y, 'c-.', linewidth=1.5, label=r"ps model")
 
-    #fac_mod = 1. #max_1/np.amax(np.abs(pres_diffusion_mod_ww))
-    #pd_mod  = "pressure diffusion model, sign? ( scaling = %s )" % str('{:.2e}'.format(fac_mod))
-    pd_mod  = "pressure diffusion model"
-    ax.plot(np.real(pres_diffusion_mod_ww), y, 'm-.', linewidth=1.5, label=pd_mod)
-    #ax.plot(np.real(pres_diffusion_mod_ww)*fac_mod, y, 'm-.', linewidth=1.5, label=pd_mod)
+    # #fac_mod = 1. #max_1/np.amax(np.abs(pres_diffusion_mod_ww))
+    # #pd_mod  = "pressure diffusion model, sign? ( scaling = %s )" % str('{:.2e}'.format(fac_mod))
+    # pd_mod  = "pressure diffusion model"
+    # ax.plot(np.real(pres_diffusion_mod_ww), y, 'm-.', linewidth=1.5, label=pd_mod)
+    # #ax.plot(np.real(pres_diffusion_mod_ww)*fac_mod, y, 'm-.', linewidth=1.5, label=pd_mod)
 
     
-    plt.xlabel("Rzz balance eq. (w'w'): exact vs. model", fontsize=18)
-    plt.ylabel("z", fontsize=18)
-    plt.gcf().subplots_adjust(left=0.17)
-    plt.gcf().subplots_adjust(bottom=0.15)
-    plt.ylim([ymin, ymax])
+    # plt.xlabel("Rzz balance eq. (w'w'): exact vs. model", fontsize=18)
+    # plt.ylabel("z", fontsize=18)
+    # plt.gcf().subplots_adjust(left=0.17)
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    # plt.ylim([ymin, ymax])
     
-    plt.legend(loc="upper right")
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
-              ncol=3, fancybox=True, shadow=True, fontsize=10)
+    # plt.legend(loc="upper right")
+    # ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),   # box with lower left corner at (x, y)
+    #           ncol=3, fancybox=True, shadow=True, fontsize=10)
     
-    f.show()
+    # f.show()
 
 
 
@@ -6604,6 +6699,8 @@ def compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig, veig, weig, peig, reig, D1, D2, 
     drdy    = (1j*beta)*reig
     drdz    = Dr
 
+    epsilon_b = 2.0*( compute_inner_prod(drdx, drdx) + compute_inner_prod(drdy, drdy) + compute_inner_prod(drdz, drdz) )/(Re*Sc)
+
     d2wdx2  = (1j*alpha)**2.*weig
     d2wdy2  = (1j*beta)**2.*weig
     d2wdz2  = D2w
@@ -6611,6 +6708,10 @@ def compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig, veig, weig, peig, reig, D1, D2, 
     d2rdx2  = (1j*alpha)**2.*reig
     d2rdy2  = (1j*beta)**2.*reig
     d2rdz2  = D2r
+
+    reig2 = compute_inner_prod(reig, reig)
+    dreig2dz = np.matmul(D1, reig2)
+    d2reig2dz2 = np.matmul(D2, reig2)
 
     # LHS for a-equation
     LHS_aEq = 2*omega_i*compute_inner_prod(reig, weig)
@@ -6648,11 +6749,47 @@ def compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig, veig, weig, peig, reig, D1, D2, 
     b  = np.divide(compute_inner_prod(reig, reig), rho2 )
     dbdz = np.matmul(D1, b)
 
-    l_taylor_nondim = iarr.l_taylor_dim/Lref
+    if (opt_taylor==0):
+        l_taylor_nondim = iarr.l_taylor_dim/Lref
+    elif(opt_taylor==1):
+        l_taylor_nondim = iarr.l_taylor_dim_fst/Lref
+
     l_taylor_nondim2 = np.multiply(l_taylor_nondim, l_taylor_nondim)
 
+    l_integr_nondim = iarr.l_integr_dim/Lref
+
     pres_dissipation_model = 1./3.*np.multiply(b, dpdz_bsfl)
-    pres_diffusion_model = -np.matmul(D1, np.multiply(l_taylor_nondim2, dbdz))
+    #pres_diffusion_model = -np.matmul(D1, np.multiply(l_taylor_nondim2, dbdz))
+    pres_diffusion_model = -np.matmul(D1, np.multiply(l_taylor_nondim**2., dbdz))
+
+    #print("l_taylor_nondim = ", l_taylor_nondim)
+    #print("l_integr_nondim = ", l_integr_nondim)
+    
+    #print("l_taylor_nondim/l_integr_nondim = ", l_taylor_nondim/l_integr_nondim)
+    
+    Rs_uu = compute_inner_prod(ueig, ueig)
+    #pres_dissipation_model_Ruu = np.multiply(Rs_uu, Rho)/l_taylor_nondim
+    #pres_dissipation_model_Ruu = np.multiply(Rs_uu, Rho)/l_taylor_nondim
+    #pres_dissipation_model_Ruu = np.multiply(Rs_uu, Rhop)*iarr.l_taylor_dim/Lref/l_integr_nondim
+    pres_dissipation_model_Ruu = np.multiply(Rs_uu, Rhop)*l_taylor_nondim/l_integr_nondim
+
+    # Use Girimaji for the pressure dissipation term
+    C5 = 5.5
+    C4 = -0.5*C5
+
+    print("rhoref = ", rhoref)
+
+    Rs_ww = compute_inner_prod(weig, weig)
+    bzz = np.real(np.divide(Rs_ww, 2.*KE_dist)) - 1./3.
+    #pres_dissip_mod_a_eq_girimaji = np.multiply( (C1_star*bzz + 4./3.*C5), np.real(az))/Fr**2.
+    pres_dissip_mod_a_eq_girimaji = np.multiply( (C4*bzz + 1./3.*C5), np.multiply(Rho, b))/Fr**2.
+
+    #data_out = np.column_stack([np.real(bzz), np.real(az), np.real(RHS_a_t12), y])
+    data_out = np.column_stack([np.real(bzz), Rho, np.real(b), np.real(RHS_a_t12), y])
+    datafile_path = "./pres_dissipation_model_a_equation_girimaji.dat" 
+    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+
+    #print("np.real(RHS_a_t12)/np.real(pres_dissipation_model_Ruu) = ", np.real(RHS_a_t12)/np.real(pres_dissipation_model_Ruu))
 
     ####################
     # PLOTS
@@ -6666,42 +6803,497 @@ def compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig, veig, weig, peig, reig, D1, D2, 
     f = plt.figure(ptn)
     ax = plt.subplot(111)
 
+    plt.plot(np.real(LHS_aEq), y, 'r', linestyle='-', linewidth=1.5, label=r"LHS: $\dfrac{\partial}{\partial t} \overline{\rho'w'}$")
+    plt.plot(np.real(RHS_aEq), y, 'k', linestyle='--', dashes=(5, 5), linewidth=1.5, label="RHS")
+
     #plt.plot(np.real(RHS_a_t1), y, 'b--', linewidth=1.5, label=r"$-\overline{ \rho' \dfrac{\partial p'}{\partial z} }$")
+
+    #markerfacecolor='none', markevery=3
     
-    plt.plot(np.real(RHS_a_t11), y, 'b', linewidth=1.5, label=r"$-\dfrac{\partial}{\partial z} \left( \overline{ \rho'p' } \right)$") ## pressure diffusion
-    plt.plot(np.real(RHS_a_t12), y, 'c', linewidth=1.5, label=r"$\overline{ p'\dfrac{\partial \rho'}{\partial z} }$")                 ## pressure dissipation
+    #plt.plot(np.real(RHS_a_t11), y, 'b', linewidth=1.5, label=r"$-\dfrac{\partial}{\partial z} \left( \overline{ \rho'p' } \right)$") ## pressure diffusion
+    #plt.plot(np.real(RHS_a_t12), y, 'c', linewidth=1.5, label=r"$\overline{ p'\dfrac{\partial \rho'}{\partial z} }$")                 ## pressure dissipation
+    plt.plot(np.real(RHS_a_t11), y, 'bs', markerfacecolor='none', markevery=4, label=r"$-\dfrac{\partial}{\partial z} \left( \overline{ \rho'p' } \right)$") ## pressure diffusion
+    plt.plot(np.real(RHS_a_t12), y, 'cs', markerfacecolor='none', markevery=7, label=r"$\overline{ p'\dfrac{\partial \rho'}{\partial z} }$")                 ## pressure dissipation
     
     plt.plot(np.real(RHS_a_t2), y, 'g', linewidth=1.5, label=r"$-\dfrac{\partial \bar{\rho}}{\partial z}\overline{w'w'}$")
     plt.plot(np.real(RHS_a_t3), y, 'y', linewidth=1.5, label=r"$-\overline{\rho'\rho'}g/Fr^2$")
-    plt.plot(np.real(Lap_a),    y, 'm-.', linewidth=1.5, label=r"$\dfrac{1}{Re}\nabla^2 \overline{\rho'w'}$")
+    plt.plot(np.real(Lap_a),    y, 'm', linestyle='-.', linewidth=1.5, label=r"$\dfrac{1}{Re}\nabla^2 \overline{\rho'w'}$")
     plt.plot(np.real(dissip_a), y, 'm', linewidth=1.5, label=r"$2\dfrac{\partial \rho'}{\partial x_j}\dfrac{\partial w'}{\partial x_j}$")    
 
-    plt.plot(np.real(RHS_aEq), y, 'r', linewidth=1.5, label="RHS")
-    plt.plot(np.real(LHS_aEq), y, 'k--', linewidth=1.5, label=r"LHS: $\dfrac{\partial}{\partial t} \overline{\rho'w'}$")
+    #plt.plot(0.08*np.real(Rs_uu), y, 'g:', linewidth=1.5, label=r"NEW ==> $0.08*Rs_{uu}$")
 
+    # For sign reference, plot az: recall: production if same sign as az
+    #plt.plot(np.real(az), y, 'k', linestyle='-.', linewidth=1.5, label=r"$a_z$ (prod. if same sign)")
+    
+    # Models
     max_pd = np.max(np.abs(RHS_a_t11))
     max_pd_model = np.max(np.abs(pres_diffusion_model))
     scale_pd = max_pd/max_pd_model
     
-    label_pd_mod = "pd model ( scaling = %s )" % str('{:.2e}'.format(scale_pd))
-    plt.plot(np.real(pres_diffusion_model)*scale_pd, y, 'b-.', linewidth=1.5, label=label_pd_mod)
-    plt.plot(np.real(pres_dissipation_model), y, 'c-.', linewidth=1.5, label="pd model")
+    label_pd_mod = "p diff. model ( scaling = %s )" % str('{:.2e}'.format(scale_pd))
+    plt.plot(np.real(pres_diffusion_model)*scale_pd, y, 'b', linestyle='-.', linewidth=2., label=label_pd_mod)
+    #
+    #plt.plot(-np.real(pres_dissipation_model), y, 'c', linestyle='-.', linewidth=1.5, label="-p diss. model")
+    plt.plot(np.real(pres_dissip_mod_a_eq_girimaji), y, 'c', linestyle='--', linewidth=2., label="Anisotropic pres. diss. model")
+    #
+    #print("pres_dissipation_model_Ruu = ", pres_dissipation_model_Ruu)   #  np.multiply(Rs_uu, Rhop)*l_taylor_nondim/l_integr_nondim
+    #plt.plot(35.*np.real(pres_dissipation_model_Ruu), y, 'c', linestyle='-', linewidth=1.5, \
+    #         label=r"p diss. model: 30$\dfrac{\partial \bar{\rho}}{\partial z}R_{uu}\dfrac{l_{\lambda_{fst}}}{l_{integr}}$")
+
+    #plt.plot(np.real(epsilon_b), y, 'c--', linewidth=1.5, label=r"$\epsilon_b$")
+
+    #plt.plot(np.real(d2reig2dz2)*l_taylor_nondim2/Fr**2., y, 'c--', linewidth=1.5, label=r"p diss. model: $l_\lambda^2 \dfrac{\partial^2 \rho'\rho'}{\partial z^2}/Fr^2$")
     #plt.plot(np.real(pres_dissipation_model+pres_diffusion_model), y, 'c:', linewidth=1.5, label="pressure dissipation + pressure diffusion model")
     
-    plt.xlabel(r"a-equation (Boussinesq, Sc=1)", fontsize=14)
+    plt.xlabel(r"a-equation (Boussinesq, Sc=1)", fontsize=16)
     plt.ylabel('y', fontsize=16)
     plt.gcf().subplots_adjust(left=0.16)
     plt.gcf().subplots_adjust(bottom=0.15)
-    plt.ylim([ymin, ymax])
-    #plt.ylim([-8, 20])
+    #plt.ylim([ymin, ymax])
+    #plt.ylim([-3, 3])
     #plt.ylim([-5, 5])
+    plt.xlim([-0.12, 0.06])
+    plt.ylim([-4, 4])
 
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=3, fancybox=True, shadow=True, fontsize=8)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.455, 1.17), ncol=4, fancybox=True, shadow=True, fontsize=8.8, framealpha=0.8)
 
+    f.show()
+
+
+    #####################################
+    # Pressure strain models comparison #
+    #####################################
+
+    # GET ymin-ymax
+    ymin, ymax = FindResonableYminYmax(RHS_aEq, y)
+
+    ptn = plt.gcf().number + 1
+    
+    f = plt.figure(ptn)
+    ax = plt.subplot(111)
+
+    plt.plot(np.real(RHS_a_t12), y, 'ks', markerfacecolor='none', markevery=2, label=r"$\overline{ p'\dfrac{\partial \rho'}{\partial z} }$")                 ## pressure dissipation
+    
+    plt.plot(-np.real(pres_dissipation_model), y, 'k', linestyle='--', linewidth=1.5, label="pres. diss. model")
+    plt.plot(np.real(pres_dissip_mod_a_eq_girimaji), y, 'k', linestyle='-', linewidth=1.5, label="Anisotropic pres. diss. model")
+    #
+    plt.xlabel(r"Pressure dissipation models (a-equation)", fontsize=16)
+    plt.ylabel('y', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.16)
+    plt.gcf().subplots_adjust(bottom=0.15)
+    #plt.xlim([-0.12, 0.06])
+    plt.ylim([-4, 4])
+    #ax.legend(loc='upper right', bbox_to_anchor=(0.5, 1.15), ncol=1, fancybox=True, shadow=True, fontsize=14)
+    #ax.legend(loc='upper center', bbox_to_anchor=(0.75, 1.15), ncol=1, fancybox=True, shadow=True, fontsize=14)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.455, 1.17), fancybox=True, shadow=True, fontsize=12, framealpha=0.8)
+    
     f.show()
 
     input("Boussinesq a-equation balance...")
 
+
+def compute_freestream_length_scales(bsfl_ref, y, omega, kx, ky, iarr):
+
+    nuref = bsfl_ref.Uref*bsfl_ref.Lref/bsfl_ref.Re
+    Fr = bsfl_ref.Fr
+    Re = bsfl_ref.Re
+    Sc = bsfl_ref.Sc
+
+    Pem_inv = Re*Sc
+    
+    Uref = bsfl_ref.Uref
+    Lref = bsfl_ref.Lref
+    tref = Lref/Uref
+
+    nz = 1001
+    zmin = y[-1]-y[-1]/20
+    zmax = y[-1]
+
+    print("In compute_freestream_length_scales: zmin, zmax: ", zmin, zmax)
+
+    zgrid = np.linspace(zmin, zmax, nz)
+    
+    a11 = 0
+    a12 = 1
+    a13 = 0
+    a14 = 0
+    a15 = 0
+    a16 = 0
+    a17 = 0
+    a18 = 0
+    a19 = 0
+    #
+    a21 = kx**2 + ky**2 -1j*omega*Re
+    a22 = 0
+    a23 = 0
+    a24 = 0
+    a25 = 0
+    a26 = 0
+    a27 = 1j*kx*Re
+    a28 = 0
+    a29 = 0
+    #
+    a31 = 0
+    a32 = 0
+    a33 = 0
+    a34 = 1
+    a35 = 0
+    a36 = 0
+    a37 = 0
+    a38 = 0
+    a39 = 0
+    #
+    a41 = 0
+    a42 = 0
+    a43 = kx**2 + ky**2 -1j*omega*Re
+    a44 = 0
+    a45 = 0
+    a46 = 0
+    a47 = 1j*ky*Re
+    a48 = 0
+    a49 = 0
+    #
+    a51 = 0
+    a52 = 0
+    a53 = 0
+    a54 = 0
+    a55 = 0
+    a56 = 1
+    a57 = 0
+    a58 = 0
+    a59 = 0
+    #
+    a61 = 0
+    a62 = -1j*kx
+    a63 = 0
+    a64 = -1j*ky
+    a65 = 0
+    a66 = 0
+    a67 = 0
+    a68 = 0
+    a69 = 0
+    #
+    a71 = 0
+    a72 = -1j*kx/Re
+    a73 = 0
+    a74 = -1j*ky/Re
+    a75 = 1j*omega-(kx**2+ky**2)/Re
+    a76 = 0
+    a77 = 0
+    a78 = -1/Fr**2
+    a79 = 0
+    #
+    a81 = 0
+    a82 = 0
+    a83 = 0
+    a84 = 0
+    a85 = 0
+    a86 = 0
+    a87 = 0
+    a88 = 0
+    a89 = 1
+    #
+    a91 = 0
+    a92 = 0
+    a93 = 0
+    a94 = 0
+    a95 = 0
+    a96 = 0
+    a97 = 0
+    a98 = kx**2 + ky**2 -1j*omega*Pem_inv
+    a99 = 0
+
+    Mat = np.zeros((9, 9), dpc)
+
+    Mat[0,0] = a11
+    Mat[0,1] = a12
+    Mat[0,2] = a13
+    Mat[0,3] = a14
+    Mat[0,4] = a15
+    Mat[0,5] = a16
+    Mat[0,6] = a17
+    Mat[0,7] = a18
+    Mat[0,8] = a19
+
+    Mat[1,0] = a21
+    Mat[1,1] = a22
+    Mat[1,2] = a23
+    Mat[1,3] = a24
+    Mat[1,4] = a25
+    Mat[1,5] = a26
+    Mat[1,6] = a27
+    Mat[1,7] = a28
+    Mat[1,8] = a29
+
+    Mat[2,0] = a31
+    Mat[2,1] = a32
+    Mat[2,2] = a33
+    Mat[2,3] = a34
+    Mat[2,4] = a35
+    Mat[2,5] = a36
+    Mat[2,6] = a37
+    Mat[2,7] = a38
+    Mat[2,8] = a39
+
+    Mat[3,0] = a41
+    Mat[3,1] = a42
+    Mat[3,2] = a43
+    Mat[3,3] = a44
+    Mat[3,4] = a45
+    Mat[3,5] = a46
+    Mat[3,6] = a47
+    Mat[3,7] = a48
+    Mat[3,8] = a49
+
+    Mat[4,0] = a51
+    Mat[4,1] = a52
+    Mat[4,2] = a53
+    Mat[4,3] = a54
+    Mat[4,4] = a55
+    Mat[4,5] = a56
+    Mat[4,6] = a57
+    Mat[4,7] = a58
+    Mat[4,8] = a59
+
+    Mat[5,0] = a61
+    Mat[5,1] = a62
+    Mat[5,2] = a63
+    Mat[5,3] = a64
+    Mat[5,4] = a65
+    Mat[5,5] = a66
+    Mat[5,6] = a67
+    Mat[5,7] = a68
+    Mat[5,8] = a69
+
+    Mat[6,0] = a71
+    Mat[6,1] = a72
+    Mat[6,2] = a73
+    Mat[6,3] = a74
+    Mat[6,4] = a75
+    Mat[6,5] = a76
+    Mat[6,6] = a77
+    Mat[6,7] = a78
+    Mat[6,8] = a79
+
+    Mat[7,0] = a81
+    Mat[7,1] = a82
+    Mat[7,2] = a83
+    Mat[7,3] = a84
+    Mat[7,4] = a85
+    Mat[7,5] = a86
+    Mat[7,6] = a87
+    Mat[7,7] = a88
+    Mat[7,8] = a89
+
+    Mat[8,0] = a91
+    Mat[8,1] = a92
+    Mat[8,2] = a93
+    Mat[8,3] = a94
+    Mat[8,4] = a95
+    Mat[8,5] = a96
+    Mat[8,6] = a97
+    Mat[8,7] = a98
+    Mat[8,8] = a99
+
+    # Mat = ([a11 a12 a13 a14 a15 a16 a17 a18 a19 ;
+    #         a21 a22 a23 a24 a25 a26 a27 a28 a29 ;
+    #         a31 a32 a33 a34 a35 a36 a37 a38 a39 ;
+    #         a41 a42 a43 a44 a45 a46 a47 a48 a49 ;
+    #         a51 a52 a53 a54 a55 a56 a57 a58 a59 ;
+    #         a61 a62 a63 a64 a65 a66 a67 a68 a69 ;
+    #         a71 a72 a73 a74 a75 a76 a77 a78 a79 ;
+    #         a81 a82 a83 a84 a85 a86 a87 a88 a89 ;
+    #         a91 a92 a93 a94 a95 a96 a97 a98 a99  ]);
+
+    D, V = linalg.eig(Mat)
+
+    #print("D = ", D)
+    
+    #[V,D] = eig(Mat)
+
+    #print("np.size(D,0) = ", np.size(D,0))
+
+    eigvals = D
+
+    #print("np.size(eigvals,0) = ", np.size(eigvals,0))
+
+    tol = 1e-10
+
+    # find indices of eigenvalues with negative real parts
+    idx_array = np.zeros(4, i4)
+
+    ct = 0
+    
+    for i in range(0, np.size(Mat, 0)): #i=1:size(Mat,1)
+        if ( eigvals[i].real < 0.0 and np.abs(eigvals[i].real) > tol ):
+            idx_array[ct] = i
+            ct = ct + 1
+
+    Lam1 = eigvals[idx_array[0]]
+    Lam2 = eigvals[idx_array[1]]
+    Lam3 = eigvals[idx_array[2]]
+    Lam4 = eigvals[idx_array[3]]
+
+    #print("Lam1, Lam2, Lam3, Lam4: ", Lam1, Lam2, Lam3, Lam4)
+
+    uvec = np.zeros(nz,dpc)
+    vvec = np.zeros(nz,dpc)
+    wvec = np.zeros(nz,dpc)
+    pvec = np.zeros(nz,dpc)
+    rvec = np.zeros(nz,dpc)
+
+    ke = np.zeros(nz, dp)
+
+    # str = ['u','v','w','p','r']
+    # vars = [0 2 4 6 7]
+
+    for k in range(0, nz): #k=1:nz
+
+        zloc = zgrid[k]
+
+        q = V[:,idx_array[0]]*np.exp(Lam1*zloc) + \
+            V[:,idx_array[1]]*np.exp(Lam2*zloc) + \
+            V[:,idx_array[2]]*np.exp(Lam3*zloc) + \
+            V[:,idx_array[3]]*np.exp(Lam4*zloc)
+
+        uvec[k] = q[0]
+        vvec[k] = q[2]
+        wvec[k] = q[4]
+        pvec[k] = q[6]
+        rvec[k] = q[7]
+
+        #print("uvec[k], vvec[k], wvec[k], pvec[k], rvec[k]: ", uvec[k], vvec[k], wvec[k], pvec[k], rvec[k])
+
+        # u -> index 0
+        uu = compute_inner_prod(q[0], q[0])
+        # v -> index 2
+        vv = compute_inner_prod(q[2], q[2])
+        # w -> index 4
+        ww = compute_inner_prod(q[4], q[4])
+
+        #print("uu, vv, ww: ", uu, vv, ww)
+        
+        ke[k] = 0.5*( uu + vv + ww )
+
+    ## 
+    ke_dim = ke*Uref**2.
+    eps_dim = compute_disturbance_dissipation_dimensional_LOCAL_FREESTREAM(uvec, vvec, wvec, bsfl_ref, kx, ky, zgrid)
+
+    visc = nuref
+
+    #print("ke_dim = ", ke_dim)
+    #print("")
+    #print("eps_dim = ", eps_dim)
+
+    l_taylor_dim_fst = np.sqrt(np.divide(15.*visc*ke_dim, eps_dim))
+    l_integr_dim_fst = np.divide(ke_dim**(3./2.), eps_dim)
+
+    eps_dim_r_ke_dim = np.divide(eps_dim, ke_dim)
+    eps_r_ke = eps_dim_r_ke_dim*tref
+    
+    iarr.eps_dim_r_ke_dim_fst = eps_dim_r_ke_dim[-20]
+    iarr.eps_r_ke_fst = eps_r_ke[-20]
+
+    iarr.l_taylor_dim_fst = l_taylor_dim_fst[-20].real
+    iarr.l_integr_dim_fst = l_integr_dim_fst[-20].real
+
+    print("Freestream dimensional Taylor scale: ", iarr.l_taylor_dim_fst)
+
+    if ( np.abs(l_taylor_dim_fst[-20]-l_taylor_dim_fst[-21]) > 1.0e-7 ):
+        sys.exit("Something weird for Freestream dimensional Taylor scale")
+
+    #for ii in range(0, nz):
+    #    print("l_taylor_dim_fst[ii] = ", l_taylor_dim_fst[ii])
+    #print("l_integr_dim_fst = ", l_integr_dim_fst)
+
+
+def compute_disturbance_dissipation_dimensional_LOCAL_FREESTREAM(ueig, veig, weig, bsfl_ref, alpha, beta, zgrid):
+
+    Sc = bsfl_ref.Sc
+    Re = bsfl_ref.Re
+    Fr = bsfl_ref.Fr
+
+    ny = len(ueig)
+
+    Lref = bsfl_ref.Lref
+    Uref = bsfl_ref.Uref
+    muref = bsfl_ref.muref
+    rhoref = bsfl_ref.rhoref
+
+    visc   = muref/rhoref
+    print("visc = ", visc)
+
+    # Create dimensional differentiation matrix
+    zgrid_dim = zgrid*Lref
+    dz = zgrid_dim[1]-zgrid_dim[0]
+    
+    D1_dim = np.zeros((ny, ny), dp)
+    D1_dim[0,0] = -1./dz
+    D1_dim[0,1] = 1./dz
+    
+    for ii in range(1, ny-1):
+        D1_dim[ii,ii+1] = 1./(2.*dz)
+        D1_dim[ii,ii-1] = -1./(2.*dz)
+
+    D1_dim[-1,-1] = 1./dz
+    D1_dim[-1,-2] = -1./dz
+
+    # Make eigenfunctions dimensional
+    ueig = ueig*Uref
+    veig = veig*Uref
+    weig = weig*Uref
+        
+    # Dimensional
+    ia = 1j*alpha/Lref
+    ib = 1j*beta/Lref
+
+    dudx = ia*ueig
+    dudy = ib*ueig
+    dudz = np.matmul(D1_dim, ueig)
+    
+    dvdx = ia*veig
+    dvdy = ib*veig
+    dvdz = np.matmul(D1_dim, veig)
+    
+    dwdx = ia*weig
+    dwdy = ib*weig
+    dwdz = np.matmul(D1_dim, weig)
+    
+    sub1 = dudy+dvdx
+    sub2 = dvdz+dwdy
+    sub3 = dudz+dwdx
+
+    div = dudx+dvdy+dwdz
+
+    term1 = 2.*( compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) )
+    term2 = -2./3.*compute_inner_prod(div, div)
+    term3 = compute_inner_prod(sub1, sub1) + compute_inner_prod(sub2, sub2) + compute_inner_prod(sub3, sub3)
+
+    ########################################
+    # Various components of the dissipation
+    ########################################
+
+    # 1) visc*(du_i/dx_j)*(du_i/dx_j)
+    epsilon_tilde_dist = compute_inner_prod(dudx, dudx) + compute_inner_prod(dudy, dudy) + compute_inner_prod(dudz, dudz) \
+                       + compute_inner_prod(dvdx, dvdx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dvdz, dvdz) \
+                       + compute_inner_prod(dwdx, dwdx) + compute_inner_prod(dwdy, dwdy) + compute_inner_prod(dwdz, dwdz)
+    epsilon_tilde_dist = visc*epsilon_tilde_dist
+
+    # 2) visc*(du_i/dx_j)*(du_j/dx_i)
+    epsilon_2tilde_dist = compute_inner_prod(dudx, dudx) + compute_inner_prod(dvdy, dvdy) + compute_inner_prod(dwdz, dwdz) \
+                        + 2.*compute_inner_prod(dudy, dvdx) + 2.*compute_inner_prod(dudz, dwdx) + 2.*compute_inner_prod(dvdz, dwdy)
+    epsilon_2tilde_dist = visc*epsilon_2tilde_dist
+
+    # 3) incompressible dissipation
+    epsilon_incomp_dist = epsilon_tilde_dist + epsilon_2tilde_dist
+
+    # 4) compressible part of dissipation
+    epsilon_comp_dist = visc*term2
+
+    # 5) full dissipation
+    epsilon_dist = epsilon_incomp_dist + epsilon_comp_dist 
+
+    return epsilon_dist
 
     
 # using Test
