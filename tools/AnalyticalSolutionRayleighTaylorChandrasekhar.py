@@ -14,7 +14,7 @@ print("")
 print("Chandrasekhar analytical stability solution of R-T")
 print("==================================================")
 
-At   = 0.5
+At   = 0.5 # 0.05
 rho1 = 1.0
 
 rho2 = rho1*(1.+At)/(1.-At) #3.*rho1 # that way I get Atw = 0.5
@@ -55,7 +55,9 @@ n = (y**2.-1)*Q**(-2./3.)
 
 idx_sorted = np.argsort(k)
 k_sorted   = k[idx_sorted]
-n_sorted   = n[idx_sorted] 
+n_sorted   = n[idx_sorted]
+
+Idx_max_ = np.argmax(n_sorted)
 
 #print("k_sorted=",k_sorted)
 #print("n_sorted=",n_sorted)
@@ -106,9 +108,11 @@ Idx_max_ndim = np.argmax(ndim)
 #print("ndim[Idx_max_ndim-1], ndim[Idx_max_ndim], ndim[Idx_max_ndim+1] = ",\
 #      ndim[Idx_max_ndim-1], ndim[Idx_max_ndim], ndim[Idx_max_ndim+1])
 
-print("")
-print("Wavenumber with max. growth rate, k = ", kdim[Idx_max_ndim])
-print("")
+print("==========================================================================")
+print("Non-Dimensional wavenumber with max. growth rate, k = ", k_sorted[Idx_max_])
+print("--------------------------------------------------------------------------")
+print("Dimensional wavenumber with max. growth rate, k = ", kdim[Idx_max_ndim])
+print("==========================================================================")
 
 f = plt.figure(ptn)
 plt.plot(kdim, ndim, 'b', label="Chandrasekhar (dimensional)")
