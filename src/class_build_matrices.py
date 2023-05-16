@@ -37,7 +37,7 @@ class BuildMatrices:
                                  # -555 -> compressible -----------> (non-dimensional)
                 """
                 
-                self.boussinesq = 1 #-20 #-2
+                self.boussinesq = 1
 
                 if   (self.boussinesq == 1 ):
                     pass

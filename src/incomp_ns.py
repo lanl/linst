@@ -100,7 +100,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                 print("===================================")
                 print("")
             map.map_void(yi, cheb.DM)
-            bsfl = mbf.PlanePoiseuille(ny, map.y)
+            bsfl = mbf.PlanePoiseuille(ny, map.y, bsfl_ref)
         else:
             sys.exit("Not a proper value for flag baseflowT")
 
@@ -151,9 +151,9 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     omega_sol_nondim = iarr.omega_nondim[-1, -1]
 
     # Explore additional non-dimensionalizations
-    mod_util.ReScale_NonDim1(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-    mod_util.ReScale_NonDim2(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-    mod_util.ReScale_NonDim3(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+    #mod_util.ReScale_NonDim1(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+    #mod_util.ReScale_NonDim2(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
+    #mod_util.ReScale_NonDim3(bsfl, bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
     
     
 
@@ -187,7 +187,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
     OutputEigFct = True
 
     if (OutputEigFct):
-        ylimp = 0.0
+        ylimp = 50.
         mod_util.plot_real_imag_part(ueig, "u", map.y, rt_flag, mob, ylimp)
         mod_util.plot_real_imag_part(veig, "v", map.y, rt_flag, mob, ylimp)
         mod_util.plot_real_imag_part(weig, "w", map.y, rt_flag, mob, ylimp)
@@ -305,7 +305,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
 
             
             # Check if disturbance field is divergence free
-            mod_util.check_baseflow_disturbance_flow_divergence_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, alpha_nd, beta_nd, bsfl, bsfl_ref, map, mob)
+            #mod_util.check_baseflow_disturbance_flow_divergence_sandoval(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, alpha_nd, beta_nd, bsfl, bsfl_ref, map, mob)
 
         
             #mod_util.build_total_flow_field(reig_nd, bsfl.Rho_nd, alpha_nd, beta_nd, omega_sol_nondim, map.y)
@@ -321,11 +321,32 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
             
             KE_dist,epsilon_dist,epsil_tild_min_2tild_dist = mod_util.compute_disturbance_dissipation(ueig_nd,veig_nd,weig_nd,peig_nd,reig_nd,map.y,alpha_nd,beta_nd,map.D1,map.D2,bsfl,bsfl_ref,mob)
 
+            # ptn = plt.gcf().number + 1
+            
+            # f  = plt.figure(ptn)
+            # ax = plt.subplot(111)
+            
+            # ax.plot(np.real(KE_dist), map.y, 'k', linewidth=1.5, label=r"ke1")
+            # ax.plot(np.real(ke_dim/bsfl_ref.Uref**2.), map.y, 'r--', linewidth=1.5, label=r"ke2")
+            
+            # plt.xlabel("KE", fontsize=14)
+            # plt.ylabel("z", fontsize=14)
+            
+            # plt.gcf().subplots_adjust(left=0.17)
+            # plt.gcf().subplots_adjust(bottom=0.15)
+            # plt.legend(loc="upper right")            
+            # f.show()
+
+            # input("Temporray check of ke")
+
+            
             # Cmpute Taylor and integral length scales
             mod_util.compute_taylor_and_integral_scales(ke_dim, eps_dim, KE_dist, epsilon_dist, map.y, iarr, bsfl_ref)
 
+            mod_util.compute_freestream_length_scales(bsfl_ref, map.y, np.imag(omega_sol_nondim)*1j, alpha_nd, beta_nd, iarr)
+
             # Reynolds stress balance equations ==> THIS NEEDS TO BE AFTER CALL TO compute_taylor_and_integral_scales
-            mod_util.reynolds_stresses_balance_equations(ueig_nd,veig_nd,weig_nd,peig_nd,reig_nd,map.y,mob,bsfl,bsfl_ref,rt_flag,map.D1,map.D2,alpha_nd,beta_nd,np.imag(omega_sol_nondim),iarr)
+            mod_util.reynolds_stresses_balance_equations(ueig_nd,veig_nd,weig_nd,peig_nd,reig_nd,map.y,mob,bsfl,bsfl_ref,rt_flag,map.D1,map.D2,alpha_nd,beta_nd,np.imag(omega_sol_nondim),iarr,KE_dist)
             
             input('Check Reynolds stresses equations balances...')
 
@@ -368,7 +389,6 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                 #mod_util.compute_a_eq_ener_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag)
                 #mod_util.compute_a_eq_ener_bal_boussi_Sc_1(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
                 #                                           alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, KE_dist, epsilon_dist, epsil_tild_min_2tild_dist, iarr)
-
                 
                 mod_util.compute_a_eq_ener_bal_boussi_Sc_1_NEW(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y, \
                                                            alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, KE_dist, epsilon_dist, epsil_tild_min_2tild_dist, iarr)
@@ -381,7 +401,7 @@ def incomp_ns_fct(prim_form, Local, plot_grid_bsfl, plot_eigvcts, plot_eigvals, 
                 print("")
                 print("density-self-correlation-equation energy balance")
                 print("================================================")                
-                #mod_util.compute_dsc_eq_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y,alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
+                mod_util.compute_dsc_eq_bal_boussi(ueig_nd, veig_nd, weig_nd, peig_nd, reig_nd, map.D1, map.D2, map.y,alpha_nd, beta_nd, np.imag(omega_sol_nondim), bsfl, bsfl_ref, mob, rt_flag, map)
                 print("")
                 
         elif ( mob.boussinesq == -2):                         # dimensional solver

@@ -31,3 +31,9 @@ class MainArrays:
 
         self.l_taylor_dim = np.zeros(ny, dp)
         self.l_integr_dim = np.zeros(ny, dp)
+
+        self.l_taylor_dim_fst = np.zeros(1, dp)
+        self.l_integr_dim_fst = np.zeros(1, dp)
+
+        self.eps_dim_r_ke_dim_fst = np.zeros(1, dp)
+        self.eps_r_ke_fst = np.zeros(1, dp)

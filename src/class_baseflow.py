@@ -18,7 +18,7 @@ i8 = np.dtype('i8') # integer 8
 plt.rcParams['font.size'] = '14'
 plt.rc('font', family='serif')
 
-nondim_flag = 0
+nondim_flag = 1
 """ nondim_flag:
         0 -> my old nondimensionalisation
         1 -> nondimensionalization with Uref = sqrt(g*Lref), Lref = h = thickness layer
@@ -213,13 +213,18 @@ class PlanePoiseuille(Baseflow):
     """
     This child class of class Baseflow defines the plane Poiseuille baseflow
     """
-    def __init__(self, size, y): # here I pass ny
+    def __init__(self, size, y, bsfl_ref): # here I pass ny
         self.size = size
         self.U    = 1.0 - y**2.
         self.Up   = -2.0*y
         
         self.W    = np.zeros(size, dp)
         self.Wp   = np.zeros(size, dp)
+
+        bsfl_ref.Tscale_Chandra = 0.0
+        bsfl_ref.Lscale_Chandra = 0.0
+        bsfl_ref.Uref_Chandra   = 0.0
+        
         
 
 class RayleighTaylorBaseflow(Baseflow):
@@ -321,7 +326,7 @@ class RayleighTaylorBaseflow(Baseflow):
                     sys.exit("Non-dimensional layer thickness (delta) must be one in this non-dimensionalization")
                     
             elif(nondim_flag==0 or nondim_flag==2 or nondim_flag==3): # this is the "old" non-dimensionalization
-                delta     = 0.01 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
+                delta     = 0.1 #0.01 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
                 delta_dim = delta*Lref
 
             self.delta = delta
@@ -509,6 +514,10 @@ class RayleighTaylorBaseflow(Baseflow):
                 print("np.abs(max_Rhopp_num_nd-max_Rhopp_nd)/max_Rhopp_nd = ", np.abs(max_Rhopp_num_nd-max_Rhopp_nd)/max_Rhopp_nd)
                 print("")
                 sys.exit("Baseflow is not properly resolved: check ymax and lmap and re-run!")
+            else:
+                print("")
+                print("Baseflow is appropriately resolved ===> proceeding")
+                print("")
                 
             Mup_num      = np.matmul(D1_dim, self.Mu)
 
@@ -772,7 +781,7 @@ class RayleighTaylorBaseflow(Baseflow):
             plt.plot(rho_thick1, zdim, 'r', markerfacecolor='none', label="density (dimensional, rho_thick1)")
             plt.plot(rho_thick2, zdim, 'b', markerfacecolor='none', label="density (dimensional, rho_thick2)")
 
-            plt.xlabel(r"$\rho$", fontsize=20)
+            plt.xlabel(r"$\bar{\rho}$", fontsize=20)
             plt.ylabel('z (dimensional)', fontsize=20)
             #plt.legend(loc="upper right")
             plt.gcf().subplots_adjust(left=0.16)
@@ -791,18 +800,19 @@ class RayleighTaylorBaseflow(Baseflow):
             ptn = plt.gcf().number + 1
             
             f = plt.figure(ptn)
-            plt.plot(self.Rho_nd, znondim, 'k', markerfacecolor='none', label="density (non-dim)")
+            plt.plot(self.Rho_nd, znondim, 'k', markerfacecolor='none')#, label="density (non-dim)")
 
-            plt.xlabel(r"$\rho$", fontsize=20)
-            plt.ylabel('z (non-dim.)', fontsize=20)
-            #plt.legend(loc="upper right")
+            plt.xlabel(r"$\bar{\rho}$", fontsize=20)
+            #plt.ylabel('z (non-dim.)', fontsize=20)
+            plt.ylabel('z', fontsize=20)
+
             plt.gcf().subplots_adjust(left=0.16)
             plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
+            plt.ylim([-10, 10])
+
             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$\rho$ Non-Dim.")
-            plt.legend(loc="upper center")
+            #plt.title(r"$\rho$ vs z (Non-Dim.)")
+            #plt.legend(loc="upper center")
             f.show()
 
             #
@@ -845,6 +855,27 @@ class RayleighTaylorBaseflow(Baseflow):
             plt.title(r"$d^2\rho/dz^2$ DIMENSIONAL")
             f.show()
 
+            #
+            # Plot d(rho)/dz (non-dimensional)
+            #
+
+            ptn = ptn+1
+            
+            f = plt.figure(ptn)
+            plt.plot(self.Rhop_nd, znondim, 'k', markerfacecolor='none')#, label="drho/dz (analytical)")
+            #plt.plot(Rhop_num_nd, znondim, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
+            plt.xlabel(r"$d\bar{\rho}/dz$", fontsize=20)
+            plt.ylabel('z', fontsize=20)
+            #plt.ylabel('z (non-dimensional)', fontsize=20)
+            #plt.legend(loc="upper right")
+            plt.gcf().subplots_adjust(left=0.16)
+            plt.gcf().subplots_adjust(bottom=0.15)
+
+            plt.ylim([-10, 10])
+            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+            #plt.title(r"$d\rho/dz$ (Non-Dim.)")
+            f.show()
+            
             #
             # Plot d(rho)/dz (non-dimensional)
             #
