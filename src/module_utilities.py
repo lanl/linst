@@ -225,116 +225,6 @@ def plot_phase(phase, str_var, y):
 
     f1.show()
 
-def plot_real_imag_part(eig_fct, str_var, y, rt_flag, mob, mv):
-
-    ptn = plt.gcf().number + 1
-
-    # Get ymin-ymax
-    ymin, ymax = FindResonableYminYmax(eig_fct, y)
-
-    symbols = 0
-
-    f1 = plt.figure(ptn)
-    if (rt_flag and mob.boussinesq == -555):
-        plt.plot(y, eig_fct.real, 'k-', linewidth=1.5)
-        if symbols==1:
-            plt.plot(y, eig_fct.real, 'ks-', linewidth=1.5)
-        plt.xlabel('x', fontsize=16)
-        if str_var == "u":
-            plt.ylabel(r'$\hat{u}_r$', fontsize=16)
-        elif str_var == "v":
-            plt.ylabel(r'$\hat{v}_r$', fontsize=16)
-        elif str_var == "w":
-            plt.ylabel(r'$\hat{w}_r$', fontsize=16)
-        elif str_var == "p":
-            plt.ylabel(r'$\hat{p}_r$', fontsize=16)
-        elif str_var == "r":
-            plt.ylabel(r'$\hat{\rho}_r$', fontsize=16)
-        else:
-            plt.ylabel("real(" +str_var + ")", fontsize=16)
-            print("Not an expected string!!!!!")
-    else:
-        plt.plot(eig_fct.real, y, 'k-', linewidth=1.5)
-        if symbols==1:
-            plt.plot(eig_fct.real, y, 'ks-', linewidth=1.5)
-        plt.ylabel('z', fontsize=16)
-        if str_var == "u":
-            plt.xlabel(r'$\hat{u}_r$', fontsize=16)
-        elif str_var == "v":
-            plt.xlabel(r'$\hat{v}_r$', fontsize=16)
-        elif str_var == "w":
-            plt.xlabel(r'$\hat{w}_r$', fontsize=16)
-        elif str_var == "p":
-            plt.xlabel(r'$\hat{p}_r$', fontsize=16)
-        elif str_var == "r":
-            plt.xlabel(r'$\hat{\rho}_r$', fontsize=16)
-        else:
-            plt.xlabel("real(" +str_var + ")", fontsize=16)
-            print("Not an expected string!!!!!")
-
-    if (mv==0.):
-       plt.ylim([ymin, ymax])
-    else:
-       plt.ylim([-mv, mv])
-    
-    f1.show()
-    f1.subplots_adjust(bottom=0.16)
-    f1.subplots_adjust(left=0.19)
-
-    #plt.gcf().subplots_adjust(left=0.19)
-    #plt.gcf().subplots_adjust(bottom=0.16)
-
-
-    f2 = plt.figure(ptn+1)
-
-    if (rt_flag and mob.boussinesq == -555):
-        plt.plot(y, eig_fct.imag, 'k-', linewidth=1.5)
-        if symbols==1:
-            plt.plot(y, eig_fct.imag, 'ks-', linewidth=1.5)
-        plt.xlabel('x', fontsize=16)
-        if str_var == "u":
-            plt.ylabel(r'$\hat{u}_i$', fontsize=16)
-        elif str_var == "v":
-            plt.ylabel(r'$\hat{v}_i$', fontsize=16)
-        elif str_var == "w":
-            plt.ylabel(r'$\hat{w}_i$', fontsize=16)
-        elif str_var == "p":
-            plt.ylabel(r'$\hat{p}_i$', fontsize=16)
-        elif str_var == "r":
-            plt.ylabel(r'$\hat{\rho}_i$', fontsize=16)
-        else:
-            plt.ylabel("imag(" +str_var + ")", fontsize=16)
-            print("Not an expected string!!!!!")
-    else:
-        if symbols==1:
-            plt.plot(eig_fct.imag, y, 'ks-', linewidth=1.5)
-        plt.plot(eig_fct.imag, y, 'k-', linewidth=1.5)
-        plt.ylabel('z', fontsize=16)
-        if str_var == "u":
-            plt.xlabel(r'$\hat{u}_i$', fontsize=16)
-        elif str_var == "v":
-            plt.xlabel(r'$\hat{v}_i$', fontsize=16)
-        elif str_var == "w":
-            plt.xlabel(r'$\hat{w}_i$', fontsize=16)
-        elif str_var == "p":
-            plt.xlabel(r'$\hat{p}_i$', fontsize=16)
-        elif str_var == "r":
-            plt.xlabel(r'$\hat{\rho}_i$', fontsize=16)
-        else:
-            plt.xlabel("imag(" +str_var + ")", fontsize=16)
-            print("Not an expected string!!!!!")
-
-
-    if (mv==0.):
-       plt.ylim([ymin, ymax])
-    else:
-       plt.ylim([-mv, mv])
-
-    f2.subplots_adjust(bottom=0.16)
-    f2.subplots_adjust(left=0.19)
-    f2.show()
-
-
 def plot_amplitude(eig_fct, str_var, y):
 
     ptn = plt.gcf().number + 1
@@ -522,53 +412,6 @@ def plot_imag_omega_vs_alpha(omega, str_var, alpha, alp_m, ome_m):
     input("debug all omega")
 
 
-def get_normalize_eigvcts(ny, target1, idx_tar1, alpha, map, mob, bsfl, bsfl_ref, rt_flag, q_eigvect, Local):
-    
-    #y  = map.y
-    #D1 = map.D1
-
-    if (Local):
-        ueig_vec    = q_eigvect[0*ny:1*ny]
-        veig_vec    = q_eigvect[1*ny:2*ny]
-        weig_vec    = q_eigvect[2*ny:3*ny]
-        peig_vec    = q_eigvect[3*ny:4*ny]
-
-        if (rt_flag):
-            if ( mob.boussinesq == -555 ):
-                ueig_vec    = q_eigvect[0*ny:1*ny]
-                veig_vec    = q_eigvect[1*ny:2*ny]
-                reig_vec    = q_eigvect[2*ny:3*ny]
-                peig_vec    = q_eigvect[3*ny:4*ny]
-                
-                weig_vec    = 0.0*ueig_vec
-            else:
-                reig_vec    = q_eigvect[4*ny:5*ny]
-        else:
-            reig_vec    = 0.0*ueig_vec
-            
-    else:
-        ueig_vec    = q_eigvect[0*ny:1*ny]
-        veig_vec    = q_eigvect[1*ny:2*ny]
-        weig_vec    = q_eigvect[2*ny:3*ny]
-        peig_vec    = q_eigvect[3*ny:4*ny]
-
-        if (rt_flag):
-            if ( mob.boussinesq == -555 ):
-                ueig_vec    = q_eigvect[0*ny:1*ny]
-                veig_vec    = q_eigvect[1*ny:2*ny]
-                reig_vec    = q_eigvect[2*ny:3*ny]
-                peig_vec    = q_eigvect[3*ny:4*ny]
-                
-                weig_vec    = 0.0*ueig_vec
-            else:
-                reig_vec    = q_eigvect[4*ny:5*ny]
-        else:
-            reig_vec    = 0.0*ueig_vec
-    
-    # Normalize eigenvectors
-    norm_s, ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec = normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag)
-
-    return norm_s, ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
 
     
 def unwrap_shift_phase(ny, ueig, veig, weig, peig, reig, Shift, map, mob, rt_flag):
@@ -5757,7 +5600,7 @@ def FindResonableYminYmax(var, y):
     ymin = y[idx_beg]
     ymax = -ymin
 
-    return ymin, ymax
+    return 2*ymin, 2*ymax
 
 def close_previous_plots():
 

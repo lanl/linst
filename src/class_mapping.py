@@ -58,11 +58,13 @@ class MapShearLayer(object):
 
 
 class MapVoid(object):
-    def __init__(self, yi, DM): # void mapping keep matrices and y as is
+    def __init__(self, sinf, cheb, l): # void mapping keep matrices and y as is
         """
         Mapping for Poiseuille flow ==> no mapping
         """
-        self.y  = yi 
+        self.y  = cheb.xc
+        #print("self.y= ", self.y)
+        
         #Scale the differentiation matrix (due to the use of algebraic mapping)
-        self.D1 = DM[:,:,0]
-        self.D2 = DM[:,:,1]
+        self.D1 = cheb.DM[:,:,0]
+        self.D2 = cheb.DM[:,:,1]

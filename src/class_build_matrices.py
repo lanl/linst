@@ -50,9 +50,6 @@ class BuildMatrices(msg.SolveGeneralizedEVP):
         else:
             self.mat_lhs = alpha*self.mat_a1 + alpha**2.*self.mat_a2 + beta*self.mat_b1 + beta**2.*self.mat_b2 + self.mat_d1
 
-        if ( self.boussinesq == -3 or self.boussinesq == -4 ):
-            self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab 
-
         check_norms = 0
 
         if (check_norms == 1):
@@ -82,13 +79,179 @@ class BuildMatrices(msg.SolveGeneralizedEVP):
             print("Matrix norm of mat_d1 = ", mat_d1_norm)
             print("")
             
-            input("Check norms!")
-                    
-        #if (Tracking and Local):
-        #    self.mat_lhs = self.mat_lhs - omega*self.mat_rhs
+            input("Check norms before!")
+
             
+        if ( self.boussinesq == -3 or self.boussinesq == -4 ):
+            self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab
+
+        if (self.Local):
+            #print("Hello this is local stuff")
+            #print("omega = ", omega)
+            self.mat_lhs = self.mat_lhs - omega*self.mat_rhs
+
+            
+        if (check_norms == 1):
+
+            mat_lhs_norm = np.linalg.norm(self.mat_lhs)
+
+            print("")
+            print("Matrix norm of mat_lhs = ", mat_lhs_norm)
+            print("")
+            
+            input("Check norms after!")
+                                
         #print("np.shape(self.mat_lhs)=", np.shape(self.mat_lhs))
         #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
+
+    #def set_bc_rayleigh_taylor_secant(self, lhs, rhs, ny, map, alpha, beta):
+    def call_to_set_bc_secant(self, lhs, rhs, ny, map, alpha, beta):
+        """
+        Generic bc for secant method for RT flows. For Poiseuille and shear-layer,
+        the childfren class contains a specific version of it
+        """
+        ######################################
+        # (1) FREESTREAM BOUNDARY-CONDITIONS #
+        ######################################
+
+        # NOTE: YOU NEED AN INHOMOGENEOUS BC HERE OTHERWISE SOLUTION = 0
+        
+        ##################
+        # u-velocity BCs #
+        ##################
+        idx_u_ymin = 0*ny # replace this by rho=1 at midplane
+        idx_u_ymax = 1*ny-1
+
+        # ymin
+        lhs[idx_u_ymin,:] = 0.0
+        rhs[idx_u_ymin  ] = 0.0        
+        lhs[idx_u_ymin, idx_u_ymin] = 1.0
+        
+        mid_idx = mod_util.get_mid_idx(ny)
+        
+        #lhs[idx_u_ymin,:] = 0.0
+        #rhs[idx_u_ymin  ] = 1.0 #+ 1.0*1j # 1.0*1j # 
+        #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
+        
+        #print("mid_idx = ", mid_idx)
+
+        # I checked from eigenfunctions from global solver:
+        # at y = 0, the real and imaginary parts of density are nonzero, that is why I am setting rho = 1 + 1j
+        # although the real part seems really small compared to the imaginary part
+        #lhs[idx_u_ymin,:] = 0.0
+        #rhs[idx_u_ymin  ] = 1.0 + 1.0*1j
+        #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
+
+        # This does not work it seems, whatever the IC, it goes really close to it ==>  no convergence towards eigenvalue
+        #lhs[4*ny+mid_idx,:] = 0.0
+        #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+        #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+
+        # Better it seems
+        #lhs[4*ny+1,:] = 0.0
+        #rhs[4*ny+1  ] = 1. + 1j #+ 1.0*1j # 1.0*1j # 
+        #lhs[4*ny+1, 4*ny+mid_idx] = 1.0
+
+        #print("4*ny+mid_idx = ", 4*ny+mid_idx)
+        
+        #lhs[5*ny-2,:] = 0.0
+        #rhs[5*ny-2  ] = 1.0 + 1.0*1j # 
+        #lhs[5*ny-2, 4*ny+mid_idx] = 1.0
+
+        #lhs[5*ny-3,:] = 0.0
+        #rhs[5*ny-3  ] = 1.0 # 1.0*1j # 
+        #lhs[5*ny-3, 4*ny+mid_idx+1] = 1.0
+        
+        # ymax
+        lhs[idx_u_ymax,:] = 0.0
+        rhs[idx_u_ymax  ] = 0.0
+        lhs[idx_u_ymax, idx_u_ymax] = 1.0
+        
+        ##################
+        # v-velocity BCs #
+        ##################
+        idx_v_ymin = 1*ny
+        idx_v_ymax = 2*ny-1
+
+        # ymin
+        lhs[idx_v_ymin,:] = 0.0
+        rhs[idx_v_ymin  ] = 0.0        
+        lhs[idx_v_ymin, idx_v_ymin] = 1.0
+
+        # ymax
+        lhs[idx_v_ymax,:] = 0.0
+        rhs[idx_v_ymax  ] = 0.0
+        lhs[idx_v_ymax, idx_v_ymax] = 1.0
+
+        ##################
+        # w-velocity BCs #
+        ##################
+        idx_w_ymin = 2*ny
+        idx_w_ymax = 3*ny-1
+
+        # ymin
+        lhs[idx_w_ymin,:] = 0.0
+        rhs[idx_w_ymin  ] = 0.0        
+        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+
+        # ymax
+        #lhs[idx_w_ymax,:] = 0.0
+        #rhs[idx_w_ymax  ] = 0.0
+        #lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+        # Replace w(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy w(ymax)=0
+        lhs[2*ny+mid_idx,:] = 0.0
+        rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+        lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
+
+
+        ##################
+        # pressure BCs #
+        ##################
+        set_pres = 1
+
+        if (set_pres==1):
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0        
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            lhs[idx_p_ymin, idx_p_ymin]      = 1.0
+            
+            # ymax
+            lhs[idx_p_ymax,:] = 0.0
+            rhs[idx_p_ymax  ] = 0.0
+            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
+
+        ##################
+        # density BCs #
+        ##################
+        set_dens = 1
+
+        if (set_dens==1):
+            idx_r_ymin = 4*ny
+            idx_r_ymax = 5*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0
+            #lhs[idx_r_ymin, idx_r_ymin:5*ny] = map.D1[0, :]
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
+            #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
+
+            # Replace rho(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy rho(ymax)=0
+            #lhs[4*ny+mid_idx,:] = 0.0
+            #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+            #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+
 
 class Boussinesq(BuildMatrices):
     def __init__(self, map, Re=1, Fr=1, Sc=1, *args, **kwargs):
@@ -214,7 +377,9 @@ class Boussinesq(BuildMatrices):
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
         ######################################
-        
+        print("")
+        print("call_to_set_bc in class Boussinesq(BuildMatrices)")
+        print("")
         ##################
         # u-velocity BCs #
         ##################
@@ -1211,11 +1376,14 @@ class RayleighTaylorIncompressibleInviscid_W_Equation(BuildMatrices):
 
             
 class ShearLayer(BuildMatrices):
-    def __init__(self, ny):
+    def __init__(self, map, Re=10000, *args, **kwargs):
         self.boussinesq = 999
-        super(ShearLayer, self).__init__(4*ny) 
+        self.Re = Re
+        #print("qwerty: map.y = ", map.y)
+        super(ShearLayer, self).__init__(4*map.y.size, map, *args, **kwargs)
     
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
     #def set_matrices(self, ny, Re, bsfl, map): # here I pas ny
         """
         This function builds the stability matrices for the incompressible stability equations
@@ -1244,20 +1412,20 @@ class ShearLayer(BuildMatrices):
                  0     W'   -D2/Re 0;
                  0     D       0   0 ]
         """
-        nt  = 4*ny
-        Re  = bsfl_ref.Re
+        nt  = 4*self.ny
+        Re  = self.Re
 
         # Identity matrix id
-        id      = np.identity(ny)
+        id      = np.identity(self.ny)
 
         # id/Re
         id_r_re = id/Re
 
         # Create diagonal matrices from baseflow vectors
-        dU      = np.diag(bsfl.U)
-        dW      = np.diag(bsfl.W)
-        dUp     = np.diag(bsfl.Up)
-        dWp     = np.diag(bsfl.Wp)
+        dU      = np.diag(self.bsfl.U)
+        dW      = np.diag(self.bsfl.W)
+        dUp     = np.diag(self.bsfl.Up)
+        dWp     = np.diag(self.bsfl.Wp)
 
         # print("dU has the following size: ", np.shape(dU))
 
@@ -1280,24 +1448,24 @@ class ShearLayer(BuildMatrices):
 
         # 1st block indices
         imin = 0
-        imax = ny
+        imax = self.ny
 
         self.mat_a1[imin:imax, imin:imax]           = 1j*dU
-        self.mat_a1[imin:imax, imin+3*ny:imax+3*ny] = 1j*id
+        self.mat_a1[imin:imax, imin+3*self.ny:imax+3*self.ny] = 1j*id
 
         self.mat_a2[imin:imax, imin:imax]           = id_r_re
 
         self.mat_b1[imin:imax, imin:imax]           = 1j*dW
         self.mat_b2[imin:imax, imin:imax]           = id_r_re
 
-        self.mat_d1[imin:imax, imin:imax]           = -map.D2/Re
-        self.mat_d1[imin:imax, imin+ny:imax+ny]     = dUp
+        self.mat_d1[imin:imax, imin:imax]           = -self.map.D2/Re
+        self.mat_d1[imin:imax, imin+self.ny:imax+self.ny]     = dUp
 
         self.mat_rhs[imin:imax, imin:imax]          = 1j*id
 
         # 2nd block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
         self.mat_a1[imin:imax, imin:imax]           = 1j*dU
         self.mat_a2[imin:imax, imin:imax]           = id_r_re
@@ -1305,25 +1473,25 @@ class ShearLayer(BuildMatrices):
         self.mat_b1[imin:imax, imin:imax]           = 1j*dW
         self.mat_b2[imin:imax, imin:imax]           = id_r_re
 
-        self.mat_d1[imin:imax, imin:imax]           = -map.D2/Re
-        self.mat_d1[imin:imax, imin+2*ny:imax+2*ny] = map.D1
+        self.mat_d1[imin:imax, imin:imax]           = -self.map.D2/Re
+        self.mat_d1[imin:imax, imin+2*self.ny:imax+2*self.ny] = self.map.D1
 
         self.mat_rhs[imin:imax, imin:imax]          = 1j*id
 
         # 3rd block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
         self.mat_a1[imin:imax, imin:imax]       = 1j*dU
         self.mat_a2[imin:imax, imin:imax]       = id_r_re
 
         self.mat_b1[imin:imax, imin:imax]       = 1j*dW
-        self.mat_b1[imin:imax, imin+ny:imax+ny] = 1j*id
+        self.mat_b1[imin:imax, imin+self.ny:imax+self.ny] = 1j*id
 
         self.mat_b2[imin:imax, imin:imax]       = id_r_re
 
-        self.mat_d1[imin:imax, imin:imax]       = -map.D2/Re
-        self.mat_d1[imin:imax, imin-ny:imax-ny] = dWp
+        self.mat_d1[imin:imax, imin:imax]       = -self.map.D2/Re
+        self.mat_d1[imin:imax, imin-self.ny:imax-self.ny] = dWp
 
         #print("imin = ", imin)
         #print("mat_d1[imin,:] = ",mat_d1[imin,:])
@@ -1333,14 +1501,14 @@ class ShearLayer(BuildMatrices):
         self.mat_rhs[imin:imax, imin:imax] = 1j*id   
 
         # 4th block indices
-        imin = imin + ny
-        imax = imax + ny
+        imin = imin + self.ny
+        imax = imax + self.ny
 
-        self.mat_a1[imin:imax, imin-3*ny:imax-3*ny] = 1j*id
+        self.mat_a1[imin:imax, imin-3*self.ny:imax-3*self.ny] = 1j*id
 
-        self.mat_b1[imin:imax, imin-ny:imax-ny]     = 1j*id
+        self.mat_b1[imin:imax, imin-self.ny:imax-self.ny]     = 1j*id
 
-        self.mat_d1[imin:imax, imin-2*ny:imax-2*ny] = map.D1  
+        self.mat_d1[imin:imax, imin-2*self.ny:imax-2*self.ny] = self.map.D1  
     
         #print("")
         #print("self.mat_rhs = ", self.mat_rhs)
@@ -1355,7 +1523,7 @@ class ShearLayer(BuildMatrices):
 
         # print("norm d1 = ", np.linalg.norm(self.mat_d1))
 
-    def call_to_set_bc(self, ny, map):
+    def call_to_set_bc(self):
         """
         This function sets the boundary conditions for the free shear layer test case:
         1) u, v, w = 0 for y --> +/- infinity
@@ -1364,6 +1532,8 @@ class ShearLayer(BuildMatrices):
         """
         lhs = self.mat_lhs
         rhs = self.mat_rhs
+
+        ny = self.ny
 
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
@@ -1430,12 +1600,12 @@ class ShearLayer(BuildMatrices):
             # ymin
             lhs[idx_p_ymin,:] = 0.0
             rhs[idx_p_ymin,:] = 0.0        
-            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            lhs[idx_p_ymin, idx_p_ymin:4*ny] = self.map.D1[0, :]
             
             # ymax
             lhs[idx_p_ymax,:] = 0.0
             rhs[idx_p_ymax,:] = 0.0
-            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+            lhs[idx_p_ymax, idx_p_ymin:4*ny] = self.map.D1[-1, :]
 
         ######################################
         #       (2) SYMMETRY BC AT Y=0       #
@@ -1452,7 +1622,7 @@ class ShearLayer(BuildMatrices):
             idx_w_y0 = mid_idx + 2*ny
             
             lhs[idx_u_y0, :] = 0.0
-            lhs[idx_u_y0, 0:ny] = map.D1[mid_idx, :]
+            lhs[idx_u_y0, 0:ny] = self.map.D1[mid_idx, :]
 
             rhs[idx_u_y0,:] = 0.0
             
@@ -1465,11 +1635,8 @@ class ShearLayer(BuildMatrices):
             rhs[idx_v_y0, :] = 0.0
             rhs[idx_w_y0, :] = 0.0        
 
-
-        
-class Stupid(object):
-    
-    def set_bc_shear_layer_secant(self, lhs, rhs, ny, map, alpha, beta):
+    #def set_bc_shear_layer_secant(self, lhs, rhs, ny, map, alpha, beta):
+    def call_to_set_bc_secant(self, lhs, rhs, ny, map, alpha, beta):
         """
         This function sets the boundary conditions for the free shear layer test case:
         SECANT METHOD!!!!!!!!!!!!!!!!!
@@ -1584,8 +1751,17 @@ class Stupid(object):
             lhs[idx_p_ymax,:] = 0.0
             rhs[idx_p_ymax  ] = 0.0
             lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-        
-    def set_bc_plane_poiseuille_secant(self, lhs, rhs, ny, map, alpha, beta):
+                
+class Poiseuille(ShearLayer):
+    def __init__(self, map, Re=10000, *args, **kwargs):
+        self.boussinesq = 998
+        self.Re = Re
+        #print("map.y.size = ", map.y.size)
+        #super(Poiseuille, self).__init__(map.y.size)
+        super(Poiseuille, self).__init__(map, *args, **kwargs)
+
+    #def set_bc_plane_poiseuille_secant(self, lhs, rhs, ny, map, alpha, beta):
+    def call_to_set_bc_secant(self, lhs, rhs, ny, map, alpha, beta):
         """
         This function sets the boundary conditions for the free shear layer test case:
         SECANT METHOD!!!!!!!!!!!!!!!!!
@@ -1643,157 +1819,3 @@ class Stupid(object):
         lhs[idx_w_ymax,:] = 0.0
         rhs[idx_w_ymax  ] = 0.0
         lhs[idx_w_ymax, idx_w_ymax] = 1.0
-
-
-    def set_bc_rayleigh_taylor_secant(self, lhs, rhs, ny, map, alpha, beta):
-        """
-        """
-        ######################################
-        # (1) FREESTREAM BOUNDARY-CONDITIONS #
-        ######################################
-
-        # NOTE: YOU NEED AN INHOMOGENEOUS BC HERE OTHERWISE SOLUTION = 0
-        
-        ##################
-        # u-velocity BCs #
-        ##################
-        idx_u_ymin = 0*ny # replace this by rho=1 at midplane
-        idx_u_ymax = 1*ny-1
-
-        # ymin
-        lhs[idx_u_ymin,:] = 0.0
-        rhs[idx_u_ymin  ] = 0.0        
-        lhs[idx_u_ymin, idx_u_ymin] = 1.0
-        
-        mid_idx = mod_util.get_mid_idx(ny)
-        
-        #lhs[idx_u_ymin,:] = 0.0
-        #rhs[idx_u_ymin  ] = 1.0 #+ 1.0*1j # 1.0*1j # 
-        #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
-        
-        #print("mid_idx = ", mid_idx)
-
-        # I checked from eigenfunctions from global solver:
-        # at y = 0, the real and imaginary parts of density are nonzero, that is why I am setting rho = 1 + 1j
-        # although the real part seems really small compared to the imaginary part
-        #lhs[idx_u_ymin,:] = 0.0
-        #rhs[idx_u_ymin  ] = 1.0 + 1.0*1j
-        #lhs[idx_u_ymin, 4*ny+mid_idx] = 1.0
-
-        # This does not work it seems, whatever the IC, it goes really close to it ==>  no convergence towards eigenvalue
-        #lhs[4*ny+mid_idx,:] = 0.0
-        #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
-
-        # Better it seems
-        #lhs[4*ny+1,:] = 0.0
-        #rhs[4*ny+1  ] = 1. + 1j #+ 1.0*1j # 1.0*1j # 
-        #lhs[4*ny+1, 4*ny+mid_idx] = 1.0
-
-        #print("4*ny+mid_idx = ", 4*ny+mid_idx)
-        
-        #lhs[5*ny-2,:] = 0.0
-        #rhs[5*ny-2  ] = 1.0 + 1.0*1j # 
-        #lhs[5*ny-2, 4*ny+mid_idx] = 1.0
-
-        #lhs[5*ny-3,:] = 0.0
-        #rhs[5*ny-3  ] = 1.0 # 1.0*1j # 
-        #lhs[5*ny-3, 4*ny+mid_idx+1] = 1.0
-        
-        # ymax
-        lhs[idx_u_ymax,:] = 0.0
-        rhs[idx_u_ymax  ] = 0.0
-        lhs[idx_u_ymax, idx_u_ymax] = 1.0
-        
-        ##################
-        # v-velocity BCs #
-        ##################
-        idx_v_ymin = 1*ny
-        idx_v_ymax = 2*ny-1
-
-        # ymin
-        lhs[idx_v_ymin,:] = 0.0
-        rhs[idx_v_ymin  ] = 0.0        
-        lhs[idx_v_ymin, idx_v_ymin] = 1.0
-
-        # ymax
-        lhs[idx_v_ymax,:] = 0.0
-        rhs[idx_v_ymax  ] = 0.0
-        lhs[idx_v_ymax, idx_v_ymax] = 1.0
-
-        ##################
-        # w-velocity BCs #
-        ##################
-        idx_w_ymin = 2*ny
-        idx_w_ymax = 3*ny-1
-
-        # ymin
-        lhs[idx_w_ymin,:] = 0.0
-        rhs[idx_w_ymin  ] = 0.0        
-        lhs[idx_w_ymin, idx_w_ymin] = 1.0
-
-        # ymax
-        #lhs[idx_w_ymax,:] = 0.0
-        #rhs[idx_w_ymax  ] = 0.0
-        #lhs[idx_w_ymax, idx_w_ymax] = 1.0
-
-        # Replace w(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy w(ymax)=0
-        lhs[2*ny+mid_idx,:] = 0.0
-        rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
-
-
-        ##################
-        # pressure BCs #
-        ##################
-        set_pres = 1
-
-        if (set_pres==1):
-            idx_p_ymin = 3*ny
-            idx_p_ymax = 4*ny-1
-            
-            # ymin
-            lhs[idx_p_ymin,:] = 0.0
-            rhs[idx_p_ymin  ] = 0.0        
-            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            lhs[idx_p_ymin, idx_p_ymin]      = 1.0
-            
-            # ymax
-            lhs[idx_p_ymax,:] = 0.0
-            rhs[idx_p_ymax  ] = 0.0
-            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
-            lhs[idx_p_ymax, idx_p_ymax]      = 1.0
-
-        ##################
-        # density BCs #
-        ##################
-        set_dens = 1
-
-        if (set_dens==1):
-            idx_r_ymin = 4*ny
-            idx_r_ymax = 5*ny-1
-            
-            # ymin
-            lhs[idx_r_ymin,:] = 0.0
-            rhs[idx_r_ymin  ] = 0.0
-            #lhs[idx_r_ymin, idx_r_ymin:5*ny] = map.D1[0, :]
-            lhs[idx_r_ymin, idx_r_ymin] = 1.0
-            
-            # ymax
-            lhs[idx_r_ymax,:] = 0.0
-            rhs[idx_r_ymax  ] = 0.0
-            #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
-            lhs[idx_r_ymax, idx_r_ymax] = 1.0
-
-            # Replace rho(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy rho(ymax)=0
-            #lhs[4*ny+mid_idx,:] = 0.0
-            #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-            #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
-
-            
-
-
-
-
-            
-

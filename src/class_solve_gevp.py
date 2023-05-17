@@ -31,7 +31,16 @@ class SolveGeneralizedEVP:
         
     def solve(self, alpha, beta, omega_guess):
         # Build matrices and solve global/local problem
-        self.eigvals_filtered = self.solve_general_problem(alpha, beta, omega_guess)
+        self.alpha = alpha
+        self.beta = beta
+        self.target1 = omega_guess
+
+        self.Local = self.check_if_local_problem(self.alpha, self.beta)
+
+        if (self.Local):
+            self.solve_secant_problem(alpha, beta, omega_guess)
+        else:
+            self.eigvals_filtered = self.solve_general_problem(alpha, beta, omega_guess)
 
         # Switch to another non-dimensionalization
     
@@ -65,15 +74,20 @@ class SolveGeneralizedEVP:
         # mod_util.ReScale_NonDim2(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
         # mod_util.ReScale_NonDim3(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
 
-    def solve_secant_problem(self, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
+    #def solve_secant_problem(self, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
+    def solve_secant_problem(self, alpha, beta, omega): #, Re, ny, Tracking, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
         """
         Function...
-        """        
+        """
+        ire = 0
+        input("Hardcoded ire to 0!!!!!!")
+        
         npts = len(alpha)
 
         omega_all = np.zeros(npts, dpc)
-        q_eigvect = np.zeros(self.size, dpc)
-        
+
+        #print("np.size(self.vec_rhs) = ", np.size(self.vec_rhs))        
+        q_eigvect = np.zeros(np.size(self.vec_rhs), dpc)
         
         for i in range(0, npts):
 
@@ -82,32 +96,28 @@ class SolveGeneralizedEVP:
             print("------------------------------------------------")
             print("")
 
-            if Tracking and Local:
-                # Extrapolate omega
-                if (i > 1):
-                    #pass
-                    # Extrapolate in alpha space
-                    omega = mod_util.extrapolate_in_alpha(iarr, alpha, i, ire)
-                    print("omega extrapolated = ", omega)
-                elif (ire > 1):
-                    #pass
-                    # Extrapolate in Reynolds space
-                    omega = mod_util.extrapolate_in_reynolds(iarr, i, ire)
-
-                # Create instance for Class BuildMatrices
-                mob = mbm.BuildMatrices(ny, rt_flag, prim_form)
-
-                print("i, alpha[i], beta, omega = ", i, alpha[i], beta, omega)
+            #if Tracking and Local:
+            # Extrapolate omega
+            if (i > 1):
+                #pass
+                # Extrapolate in alpha space
+                omega = mod_util.extrapolate_in_alpha(iarr, alpha, i, ire)
+                print("omega extrapolated = ", omega)
+            elif (ire > 1):
+                #pass
+                # Extrapolate in Reynolds space
+                omega = mod_util.extrapolate_in_reynolds(iarr, i, ire)
                 
-                omega, q_eigvect = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-5, alpha[i], beta, \
-                                                                  Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form)
-
-                iarr.omega_array[ire, i] = omega
-
-                # Only tracking a single mode here!!!!!
-                eigvals_filtered = 0.0
-
-                #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
+            print("i, alpha[i], beta, omega = ", i, alpha[i], beta, omega)
+                
+            #omega, q_eigvect = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-5, alpha[i], beta, \
+            #                                                  Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form)
+            self.omega_array[ire, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha[i], beta )
+            
+            # Only tracking a single mode here!!!!!
+            #eigvals_filtered = 0.0
+            
+            #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
 
     def call_to_build_matrices(*args, **kwargs):
         raise NotImplemented("Use a specific equation class, not SolveGeneralizedEVP.")
@@ -157,58 +167,65 @@ class SolveGeneralizedEVP:
 
         return eigvals_filtered
 
-    def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, \
-                               Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form):
+    #def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, \
+    #                           Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form):
+    def solve_stability_secant(self, omega0, omega00, alpha_in, beta_in):
         """
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
 
         #mid_idx = mod_util.get_mid_idx(ny)
+        mid_idx = self.mid_idx
         
         #print("omega0, omega00 = ", omega0, omega00)
         
-        if rt_flag == True:
+        if self.bsfl.rt_flag == True:
             tol1  = 1.0e-5
             tol2  = 1.0e-5
+            print("tol1, tol2 = ", tol1, tol2)
         else:
-            if baseflowT == 1:
-                tol  = 1.0e-8
-            elif baseflowT == 2:
-                tol  = 1.0e-8
-            else:
-                sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
-            
+            #if baseflowT == 1:
+            tol  = 1.0e-8
+            #elif baseflowT == 2:
+            tol  = 1.0e-8
+            #else:
+            #    sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
+
         u0   = 10
         
         iter = 0
         maxiter = 100
 
-        jxu  = 5*ny-1 # 0
+        jxu  = 5*self.ny-1 # 0
 
-        if (rt_flag): jxu  = 3*ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
+        if (self.bsfl.rt_flag): jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
 
         #
         # Compute u00
         #
         
         # Build main stability matrices and assemble them
-        mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
-        mob.assemble_mat_lhs(alpha_in, beta_in, omega00, Tracking, Local, bsfl_ref)
+        self.call_to_build_matrices()
+        self.assemble_mat_lhs(alpha_in, beta_in, omega00)
+        self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
 
-        if (rt_flag == True):
+        #mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
+        #mob.assemble_mat_lhs(alpha_in, beta_in, omega00, Tracking, Local, bsfl_ref)
+
+        #if (rt_flag == True):
             #print("BC R-T")
-            mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-        else:
-            if baseflowT == 1:
-                mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            elif baseflowT == 2:
+            #mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+        #else:
+            #if baseflowT == 1:
+                #mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            #elif baseflowT == 2:
                 #print("plane poiseuille")
-                mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            else:
-                sys.exit("No function associated with that value")
+                #mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            #else:
+                #sys.exit("No function associated with that value")
             
         # Solve Linear System
-        SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
+        SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
         #SOL = SOL/np.max(SOL)
         
         #SOL = np.linalg.lstsq(mob.mat_lhs, mob.vec_rhs, rcond=None)
@@ -242,21 +259,25 @@ class SolveGeneralizedEVP:
             iter=iter+1
 
             # Assemble stability matrices
-            mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking, Local, bsfl_ref)
+            # mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking, Local, bsfl_ref)
 
-            if (rt_flag == True):
-                mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            else:
-                if baseflowT == 1:
-                    mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-                elif baseflowT == 2:
-                    #print("plane poiseuille")
-                    mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-                else:
-                    sys.exit("No function associated with that value -----  22222222")
+            # if (rt_flag == True):
+            #     mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            # else:
+            #     if baseflowT == 1:
+            #         mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            #     elif baseflowT == 2:
+            #         #print("plane poiseuille")
+            #         mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
+            #     else:
+            #         sys.exit("No function associated with that value -----  22222222")
             
+            self.assemble_mat_lhs(alpha_in, beta_in, omega0)
+            self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
+
             #Solve Linear System
-            SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
+            SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
+            #SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
             #SOL = SOL/np.max(SOL)
             #SOL = np.linalg.lstsq(mob.mat_lhs, mob.vec_rhs, rcond=None)
         
@@ -297,99 +318,258 @@ class SolveGeneralizedEVP:
         #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
 
         # Get final eigenvectors
-        mob.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-8, Tracking, Local, bsfl_ref)
-        qfinal = linalg.solve(mob.mat_lhs, mob.vec_rhs)
-
-        UseEigs=0
+        #mob.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-8, Tracking, Local, bsfl_ref)
+        #qfinal = linalg.solve(mob.mat_lhs, mob.vec_rhs)
+        self.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-10)
+        #self.assemble_mat_lhs(alpha_in, beta_in, omega0)
+        self.qfinal = linalg.solve(self.mat_lhs, self.vec_rhs)
         
-        if UseEigs==1:
-            # Build main stability matrices
-            mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
 
-            # Assemble matrices
-            print("omega0 = ",omega0)
+        # UseEigs=0
+        
+        # if UseEigs==1:
+        #     # Build main stability matrices
+        #     mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
 
-            Tracking = False
-            Local = False
-            mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking , Local, bsfl_ref)
-            mob.call_to_set_bc(rt_flag, prim_form, ny, map)
+        #     # Assemble matrices
+        #     print("omega0 = ",omega0)
 
-            values, vectors = scipy.sparse.linalg.eigs(mob.mat_lhs, k=1, M=mob.mat_rhs, sigma=omega0, tol=1.e-10)
+        #     Tracking = False
+        #     Local = False
+        #     mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking , Local, bsfl_ref)
+        #     mob.call_to_set_bc(rt_flag, prim_form, ny, map)
+
+        #     values, vectors = scipy.sparse.linalg.eigs(mob.mat_lhs, k=1, M=mob.mat_rhs, sigma=omega0, tol=1.e-10)
             
-            print("values = ", values)
-            print("vectors=",vectors)
-            len_vec = len(vectors)
-            print("The size of vectors is:", len_vec)
+        #     print("values = ", values)
+        #     print("vectors=",vectors)
+        #     len_vec = len(vectors)
+        #     print("The size of vectors is:", len_vec)
 
-            Tracking = True
-            Local = True
+        #     Tracking = True
+        #     Local = True
 
-            mod_util.plot_real_imag_part(vectors[0*ny:1*ny], "u", map.y, rt_flag, mob)
-            mod_util.plot_real_imag_part(vectors[4*ny:5*ny], "r", map.y, rt_flag, mob)
+        #     mod_util.plot_real_imag_part(vectors[0*ny:1*ny], "u", map.y, rt_flag, mob)
+        #     mod_util.plot_real_imag_part(vectors[4*ny:5*ny], "r", map.y, rt_flag, mob)
 
-            input("Pause after ARPACK")
+        #     input("Pause after ARPACK")
         
         plot_eig_vec = 0
         if (plot_eig_vec==1):
             ylimp = 0.0
-            mod_util.plot_real_imag_part(qfinal[0*ny:1*ny], "u", map.y, rt_flag, mob, ylimp)
-            #mod_util.plot_real_imag_part(qfinal[1*ny:2*ny], "v", map.y, rt_flag, mob, ylimp)
-            mod_util.plot_real_imag_part(qfinal[2*ny:3*ny], "w", map.y, rt_flag, mob, ylimp)
-            #mod_util.plot_real_imag_part(qfinal[3*ny:4*ny], "p", map.y, rt_flag, mob, ylimp)
-            mod_util.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, mob, ylimp)
+            ny = self.ny
+            self.plot_real_imag_part(qfinal[0*ny:1*ny], "u", map.y, rt_flag, ylimp)
+            self.plot_real_imag_part(qfinal[1*ny:2*ny], "v", map.y, rt_flag, ylimp)
+            self.plot_real_imag_part(qfinal[2*ny:3*ny], "w", map.y, rt_flag, ylimp)
+            self.plot_real_imag_part(qfinal[3*ny:4*ny], "p", map.y, rt_flag, ylimp)
+            self.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, ylimp)
             
             input("Local solver: check eigenfunctions 2222222222222")
 
 
-        return omega0, qfinal
+        return omega0
 
+    def check_if_local_problem(self, alpha, beta):
+
+        #print("np.size(alpha) = ", np.size(alpha))
+        #print("np.size(beta) = ", np.size(beta))
+        
+        if ( np.size(alpha) != 1 or np.size(beta) != 1 ):
+            Local = True
+        else:
+            Local = False
+
+        self.omega_array = np.zeros((1, np.size(alpha)), dpc)
+
+        return Local
+        
     def write_eigvals(self):
-        mod_util.write_out_eigenvalues(self.EigVal, self.ny)
+        if (self.Local):
+            warnings.warn("Ignoring in write_eigvals: Writing eigenvalues (alpha_i vs alpha_r) does not make sense for Local solution")
+        else:
+            mod_util.write_out_eigenvalues(self.EigVal, self.ny)
     
     def plot_baseflow(self):
         mod_util.plot_baseflow(self.ny, self.map.y, yi, self.bsfl.U, self.bsfl.Up, self.map.D1)
         
     def plot_eigvals(self, ax=None):
-        if not ax:
-            ax = plt.gca()
-        ax.plot(
-            self.eigvals_filtered.real,
-            self.eigvals_filtered.imag,
-            'ks', markerfacecolor='none'
+
+        if (self.Local):
+            warnings.warn("Ignoring in plot_eigvals: Plotting eigenvalues (alpha_i vs alpha_r) does not make sense for Local solution")
+        else:
+            if not ax:
+                ax = plt.gca()
+            ax.plot(
+                self.eigvals_filtered.real,
+                self.eigvals_filtered.imag,
+                'ks', markerfacecolor='none'
             )
-        ax.set_xlabel(r'$\omega_r$', fontsize=20)
-        ax.set_ylabel(r'$\omega_i$', fontsize=20)
-        #ax.set_title('Eigenvalue spectrum')
-        #ax.set_xlim([-10, 10])
-        #ax.set_ylim([-1, 1])
+            ax.set_xlabel(r'$\omega_r$', fontsize=20)
+            ax.set_ylabel(r'$\omega_i$', fontsize=20)
+            #ax.set_title('Eigenvalue spectrum')
+            #ax.set_xlim([-10, 10])
+            #ax.set_ylim([-1, 1])
+
+    def identify_eigenvector_from_target(self):
+
+        if (self.Local):
+            q_eigvect = self.qfinal
             
-    def plot_eigvects(self):
-        # Plot and write out eigenvalue spectrum (Global solver only)        
-        if (not self.Local):
+        else:
         
             # Find index of target eigenvalue to extract eigenvector
-            idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(self.solve_evp.EigVal, np.abs(self.target1), self.target1)
-
+            idx_tar1, found1 = mod_util.get_idx_of_closest_eigenvalue(self.EigVal, np.abs(self.target1), self.target1)
+            
             print("")
-            print("Eigenvector will be extracted for eigenvalue omega = ", self.solve_evp.EigVal[idx_tar1])
-            q_eigvect = self.solve_evp.EigVec[:,idx_tar1]
+            print("Eigenvector will be extracted for eigenvalue omega = ", self.EigVal[idx_tar1])
+            q_eigvect = self.EigVec[:,idx_tar1]
+
+            #print("np.size(q_eigvect) = ", np.size(q_eigvect))
+
+        return q_eigvect
+
+    def get_normalized_eigvects(self, q_eigvect, rt_flag):
+
+        ny = self.ny
+
+        if (self.Local):
+            ueig_vec = q_eigvect[0*ny:1*ny]
+            veig_vec = q_eigvect[1*ny:2*ny]
+            weig_vec = q_eigvect[2*ny:3*ny]
+            peig_vec = q_eigvect[3*ny:4*ny]
+
+            if (rt_flag):
+                if ( self.boussinesq == -555 ):
+                    ueig_vec = q_eigvect[0*ny:1*ny]
+                    veig_vec = q_eigvect[1*ny:2*ny]
+                    reig_vec = q_eigvect[2*ny:3*ny]
+                    peig_vec = q_eigvect[3*ny:4*ny]
+                    
+                    weig_vec = 0.0*ueig_vec
+                else:
+                    reig_vec = q_eigvect[4*ny:5*ny]
+            else:
+                reig_vec = 0.0*ueig_vec
+            
         else:
-            idx_tar1 = -999
+            ueig_vec = q_eigvect[0*ny:1*ny]
+            veig_vec = q_eigvect[1*ny:2*ny]
+            weig_vec = q_eigvect[2*ny:3*ny]
+            peig_vec = q_eigvect[3*ny:4*ny]
 
-        #print("q_eigvect.shape = ", q_eigvect.shape)
+            if (rt_flag):
+                if ( self.boussinesq == -555 ):
+                    ueig_vec = q_eigvect[0*ny:1*ny]
+                    veig_vec = q_eigvect[1*ny:2*ny]
+                    reig_vec = q_eigvect[2*ny:3*ny]
+                    peig_vec = q_eigvect[3*ny:4*ny]
+                    
+                    weig_vec = 0.0*ueig_vec
+                else:
+                    reig_vec = q_eigvect[4*ny:5*ny]
+            else:
+                reig_vec = 0.0*ueig_vec
+        
+        # Normalize eigenvectors
+        self.norm_s, self.ueig, self.veig, self.weig, self.peig, self.reig = mod_util.normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_flag)
 
-        # Get eigenvectors
-        norm_s, ueig, veig, weig, peig, reig = mod_util.get_normalize_eigvcts(self.ny, self.target1, idx_tar1, self.alpha, self.map, self.mob, self.bsfl, self.bsfl_ref, 1, self.rt_flag, q_eigvect, self.Local)
+        # For the Generalized Eigenvalue Problem, I renormalize the whole eigenvector matrix
+        if (not self.Local): self.EigVec = self.EigVec/self.norm_s
 
-        if (not self.Local): self.solve_evp.EigVec = self.solve_evp.EigVec/norm_s
+        
+    def plot_eigvects(self, rt_flag):
 
-        OutputEigFct = True
+        ylimp = 0.0
+        self.plot_real_imag_part(self.ueig, "u", self.map.y, rt_flag, ylimp)
+        self.plot_real_imag_part(self.veig, "v", self.map.y, rt_flag, ylimp)
+        self.plot_real_imag_part(self.weig, "w", self.map.y, rt_flag, ylimp)
+        self.plot_real_imag_part(self.reig, "r", self.map.y, rt_flag, ylimp)
+        self.plot_real_imag_part(self.peig, "p", self.map.y, rt_flag, ylimp)
 
-        if (OutputEigFct):
-            ylimp = 0.0
-            mod_util.plot_real_imag_part(ueig, "u", self.map.y, self.rt_flag, self.mob, ylimp)
-            mod_util.plot_real_imag_part(veig, "v", self.map.y, self.rt_flag, self.mob, ylimp)
-            mod_util.plot_real_imag_part(weig, "w", self.map.y, self.rt_flag, self.mob, ylimp)
-            #mod_util.plot_real_imag_part(-1j*veig, "-1j*v", map.y, rt_flag, self.mob)
-            mod_util.plot_real_imag_part(reig, "r", self.map.y, self.rt_flag, self.mob, ylimp)
-            mod_util.plot_real_imag_part(peig, "p", self.map.y, self.rt_flag, self.mob, ylimp)
+    def plot_real_imag_part(self, eig_fct, str_var, y, rt_flag, mv):
+
+        symbols = 0
+        
+        ax = plt.gca()
+                    
+        # Get ymin-ymax
+        ymin, ymax = mod_util.FindResonableYminYmax(eig_fct, y)
+
+        if (self.boussinesq == 998): # Poiseuille flow
+            ymin = -1
+            ymax = 1
+
+        # Get plot strings
+        str_r, str_i = self.get_label_string(str_var)
+
+        # Plot real part
+        if (rt_flag and self.boussinesq == -555):
+            ax.plot(y, eig_fct.real, 'k-', linewidth=1.5)
+            if symbols==1:
+                ax.plot(y, eig_fct.real, 'ks-', linewidth=1.5)
+            ax.set_xlabel('x', fontsize=16)
+            ax.set_ylabel(str_r, fontsize=16)            
+        else:
+            ax.plot(eig_fct.real, y, 'k-', linewidth=1.5)
+            if symbols==1:
+                ax.plot(eig_fct.real, y, 'ks-', linewidth=1.5)
+            ax.set_xlabel(str_r, fontsize=16)
+            ax.set_ylabel('z', fontsize=16)
+            
+        if (mv==0.):
+            ax.set_ylim([ymin, ymax])
+        else:
+            ax.set_ylim([-mv, mv])
+
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+
+        plt.show()
+
+        ax = plt.gca()
+    
+        # Plot imaginary part
+        if (rt_flag and self.boussinesq == -555):
+            ax.plot(y, eig_fct.imag, 'k-', linewidth=1.5)
+            if symbols==1:
+                ax.plot(y, eig_fct.imag, 'ks-', linewidth=1.5)
+            ax.set_xlabel('x', fontsize=16)
+            ax.set_ylabel(str_i, fontsize=16)
+        else:
+            if symbols==1:
+                ax.plot(eig_fct.imag, y, 'ks-', linewidth=1.5)
+            ax.plot(eig_fct.imag, y, 'k-', linewidth=1.5)
+            ax.set_xlabel(str_i, fontsize=16)
+            ax.set_ylabel('z', fontsize=16)
+                
+        if (mv==0.):
+            ax.set_ylim([ymin, ymax])
+        else:
+            ax.set_ylim([-mv, mv])
+
+        plt.gcf().subplots_adjust(left=0.17)
+        plt.gcf().subplots_adjust(bottom=0.15)
+
+        plt.show()
+
+    def get_label_string(self, str_var):
+
+        str_p = "unknown variable"
+        
+        if str_var == "u":
+            str_p = r'$\hat{u}$'
+        elif str_var == "v":
+            str_p = r'$\hat{v}$'
+        elif str_var == "w":
+            str_p = r'$\hat{w}$'
+        elif str_var == "p":
+            str_p = r'$\hat{p}$'
+        elif str_var == "r":
+            str_p = r'$\hat{\rho}$'
+        else:
+            print("Not an expected string!!!!!")
+
+        str_r = str_p + r'$_r$'
+        str_i = str_p + r'$_i$'
+
+        return str_r, str_i
