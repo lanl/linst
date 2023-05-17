@@ -42,40 +42,7 @@ class SolveGeneralizedEVP:
         else:
             self.eigvals_filtered = self.solve_general_problem(alpha, beta, omega_guess)
 
-        # Switch to another non-dimensionalization
-    
-    
-        #################################################
-        # Re-scale data
-        #################################################
-        # if   ( self.mob.boussinesq == -2 or self.mob.boussinesq == 10 ):  # Only dimensional solver
-        #     #alpha_dim = alpha/bsfl_ref.Lref
-        #     alpha_dim = self.alpha
-        #     beta_dim = self.beta
-
-        #     print("alpha = ", alpha_dim*self.bsfl_ref.Lref)
-        #     print("alpha_dim = ", alpha_dim)
-        #     print("alpha_chandra = ", alpha_dim*bsfl_ref.Lscale_Chandra)
-        
-        # else:
-        #     alpha_dim = self.alpha/self.bsfl_ref.Lref
-        #     beta_dim = self.beta/self.bsfl_ref.Lref
-            
-        #     print("alpha = ", self.alpha)
-        #     print("alpha_dim = ", alpha_dim)
-        #     print("alpha_chandra = ", alpha_dim*self.bsfl_ref.Lscale_Chandra)
-            
-
-        # omega_sol_dim = self.iarr.omega_dim[-1, -1]
-        # omega_sol_nondim = self.iarr.omega_nondim[-1, -1]
-
-        # # Explore additional non-dimensionalizations
-        # mod_util.ReScale_NonDim1(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-        # mod_util.ReScale_NonDim2(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-        # mod_util.ReScale_NonDim3(self.bsfl, self.bsfl_ref, np.imag(omega_sol_dim), alpha_dim, beta_dim)
-
-    #def solve_secant_problem(self, map, alpha, beta, omega, Re, ny, Tracking, mid_idx, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
-    def solve_secant_problem(self, alpha, beta, omega): #, Re, ny, Tracking, bsfl, bsfl_ref, Local, rt_flag, prim_form, baseflowT, iarr, ire, lmap):
+    def solve_secant_problem(self, alpha, beta, omega):
         """
         Function...
         """
@@ -96,29 +63,19 @@ class SolveGeneralizedEVP:
             print("------------------------------------------------")
             print("")
 
-            #if Tracking and Local:
             # Extrapolate omega
             if (i > 1):
-                #pass
                 # Extrapolate in alpha space
                 omega = mod_util.extrapolate_in_alpha(iarr, alpha, i, ire)
                 print("omega extrapolated = ", omega)
             elif (ire > 1):
-                #pass
                 # Extrapolate in Reynolds space
                 omega = mod_util.extrapolate_in_reynolds(iarr, i, ire)
                 
             print("i, alpha[i], beta, omega = ", i, alpha[i], beta, omega)
                 
-            #omega, q_eigvect = self.solve_stability_secant(ny, mid_idx, omega, omega + omega*1e-5, alpha[i], beta, \
-            #                                                  Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form)
             self.omega_array[ire, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha[i], beta )
             
-            # Only tracking a single mode here!!!!!
-            #eigvals_filtered = 0.0
-            
-            #mod_util.write_eigvects_out(q_eigenvects, map.y, i, ny)
-
     def call_to_build_matrices(*args, **kwargs):
         raise NotImplemented("Use a specific equation class, not SolveGeneralizedEVP.")
                 
@@ -135,49 +92,17 @@ class SolveGeneralizedEVP:
         eigvals_filtered = self.EigVal[ np.abs(self.EigVal) < 10000. ]
         q_eigenvects     = self.EigVec
 
-        # if (self.rt_flag==True and self.prim_form==0):
-        #     input("In here")
-            
-        #     neigs = len(eigvals_filtered)
-        #     eigvals_filtered_tmp = eigvals_filtered
-        #     eigvals_filtered = np.zeros(2*neigs, dpc)
-        #     eigvals_filtered[0:neigs] = 1j/np.sqrt(eigvals_filtered_tmp) # I set it to the complex part because growth rate
-        #     eigvals_filtered[neigs:2*neigs] = -1j/np.sqrt(eigvals_filtered_tmp)
-
         idx = mod_util.get_idx_of_max(eigvals_filtered)
         omega = eigvals_filtered[idx]#*self.bsfl.Tscale                
 
-
-        # if (self.rt_flag):
-        #     i = 0
-        #     print("ire, i = ", self.ire, i)
-
-        #     if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
-        #         self.iarr.omega_dim[self.ire, i] = omega
-        #         self.iarr.omega_nondim[self.ire, i] = omega*self.bsfl_ref.Lref/self.bsfl_ref.Uref
-        #         print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
-        #         print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
-        #         print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
-        #     else:
-        #         self.iarr.omega_dim[self.ire, i] = omega*self.bsfl_ref.Uref/self.bsfl_ref.Lref
-        #         self.iarr.omega_nondim[self.ire, i] = omega
-        #         print("omega (dimensional)     = ", self.iarr.omega_dim[self.ire, i])
-        #         print("omega (non-dimensional) = ", self.iarr.omega_nondim[self.ire, i])
-        #         print("omega (non-dimensional Chandrasekhar) = ", self.iarr.omega_dim[self.ire, i]*self.bsfl_ref.Lscale_Chandra/self.bsfl_ref.Uref_Chandra)
-
         return eigvals_filtered
 
-    #def solve_stability_secant(self, ny, mid_idx, omega0, omega00, alpha_in, beta_in, \
-    #                           Re, map, mob, Tracking, bsfl, bsfl_ref, Local, baseflowT, rt_flag, prim_form):
     def solve_stability_secant(self, omega0, omega00, alpha_in, beta_in):
         """
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
 
-        #mid_idx = mod_util.get_mid_idx(ny)
         mid_idx = self.mid_idx
-        
-        #print("omega0, omega00 = ", omega0, omega00)
         
         if self.bsfl.rt_flag == True:
             tol1  = 1.0e-5
@@ -208,42 +133,11 @@ class SolveGeneralizedEVP:
         self.call_to_build_matrices()
         self.assemble_mat_lhs(alpha_in, beta_in, omega00)
         self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
-
-        #mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
-        #mob.assemble_mat_lhs(alpha_in, beta_in, omega00, Tracking, Local, bsfl_ref)
-
-        #if (rt_flag == True):
-            #print("BC R-T")
-            #mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-        #else:
-            #if baseflowT == 1:
-                #mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            #elif baseflowT == 2:
-                #print("plane poiseuille")
-                #mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            #else:
-                #sys.exit("No function associated with that value")
             
         # Solve Linear System
         SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
-        #SOL = SOL/np.max(SOL)
-        
-        #SOL = np.linalg.lstsq(mob.mat_lhs, mob.vec_rhs, rcond=None)
-
-        #print("mid_idx = ", mid_idx)
-
-        #print("SOL = ", SOL)
-        #Extract boundary condition
-        #print("SOL[0*ny+mid_idx] = ", SOL[0*ny+mid_idx])
-        #print("SOL[1*ny+mid_idx] = ", SOL[1*ny+mid_idx])
-        #print("SOL[2*ny+mid_idx] = ", SOL[2*ny+mid_idx])
-        #print("SOL[3*ny+mid_idx] = ", SOL[3*ny+mid_idx])
-        #print("SOL[4*ny+mid_idx] = ", SOL[4*ny+mid_idx])
-        
+                
         u00 = SOL[jxu]
-
-        #print("SOL[jxu]=",SOL[jxu])
-        #print("u00 = ", u00)
 
         res = 1
         
@@ -252,48 +146,24 @@ class SolveGeneralizedEVP:
         #
         
         while ( ( abs(u0) > tol2 or abs(res) > tol1 ) and iter < maxiter ):
-        #while ( ( abs(u0) > tol**1.5 or abs(res) > tol ) and iter < maxiter ):
-        #while ( ( abs(u0) > tol or abs(res) > tol ) and iter < maxiter ):
-        #while ( abs(res) > tol and iter < maxiter ):
         
             iter=iter+1
 
             # Assemble stability matrices
-            # mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking, Local, bsfl_ref)
-
-            # if (rt_flag == True):
-            #     mob.set_bc_rayleigh_taylor_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            # else:
-            #     if baseflowT == 1:
-            #         mob.set_bc_shear_layer_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            #     elif baseflowT == 2:
-            #         #print("plane poiseuille")
-            #         mob.set_bc_plane_poiseuille_secant(mob.mat_lhs, mob.vec_rhs, ny, map, alpha_in, beta_in)
-            #     else:
-            #         sys.exit("No function associated with that value -----  22222222")
-            
             self.assemble_mat_lhs(alpha_in, beta_in, omega0)
+            # Set BCs
             self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
 
             #Solve Linear System
             SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
-            #SOL = linalg.solve(mob.mat_lhs, mob.vec_rhs)
-            #SOL = SOL/np.max(SOL)
-            #SOL = np.linalg.lstsq(mob.mat_lhs, mob.vec_rhs, rcond=None)
         
             # Extract boundary condition
             u0  = SOL[jxu]
             q   = SOL
 
-            #print("SOL[jxu]=",SOL[jxu])
-            #print("u0=", u0)
-            
             #
             # Update
             #
-
-            #print("u0-u00 = ", u0-u00)
-            
             omegaNEW = omega0 - u0*(omega0-omega00)/(u0-u00)
             
             omega00  = omega0
@@ -308,52 +178,11 @@ class SolveGeneralizedEVP:
             
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
-        # if   ( mob.boussinesq == -2 or mob.boussinesq == 10 ):
-        #     print("omega (dimensional)     = ", omega0.imag)
-        #     print("omega (non-dimensional) = ", omega0.imag*bsfl_ref.Lref/bsfl_ref.Uref)
-        #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
-        # else:
-        #     print("omega (dimensional)     = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref)
-        #     print("omega (non-dimensional) = ", omega0.imag)
-        #     print("omega (non-dimensional Chandrasekhar) = ", omega0.imag*bsfl_ref.Uref/bsfl_ref.Lref*bsfl_ref.Lscale_Chandra/bsfl_ref.Uref_Chandra)
-
         # Get final eigenvectors
-        #mob.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-8, Tracking, Local, bsfl_ref)
-        #qfinal = linalg.solve(mob.mat_lhs, mob.vec_rhs)
         self.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-10)
-        #self.assemble_mat_lhs(alpha_in, beta_in, omega0)
         self.qfinal = linalg.solve(self.mat_lhs, self.vec_rhs)
-        
 
-        # UseEigs=0
-        
-        # if UseEigs==1:
-        #     # Build main stability matrices
-        #     mob.call_to_build_matrices(rt_flag, prim_form, ny, bsfl, bsfl_ref, Re, map, alpha_in)
-
-        #     # Assemble matrices
-        #     print("omega0 = ",omega0)
-
-        #     Tracking = False
-        #     Local = False
-        #     mob.assemble_mat_lhs(alpha_in, beta_in, omega0, Tracking , Local, bsfl_ref)
-        #     mob.call_to_set_bc(rt_flag, prim_form, ny, map)
-
-        #     values, vectors = scipy.sparse.linalg.eigs(mob.mat_lhs, k=1, M=mob.mat_rhs, sigma=omega0, tol=1.e-10)
-            
-        #     print("values = ", values)
-        #     print("vectors=",vectors)
-        #     len_vec = len(vectors)
-        #     print("The size of vectors is:", len_vec)
-
-        #     Tracking = True
-        #     Local = True
-
-        #     mod_util.plot_real_imag_part(vectors[0*ny:1*ny], "u", map.y, rt_flag, mob)
-        #     mod_util.plot_real_imag_part(vectors[4*ny:5*ny], "r", map.y, rt_flag, mob)
-
-        #     input("Pause after ARPACK")
-        
+        # Plot eigenvector locally if desired
         plot_eig_vec = 0
         if (plot_eig_vec==1):
             ylimp = 0.0
@@ -365,7 +194,6 @@ class SolveGeneralizedEVP:
             self.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, ylimp)
             
             input("Local solver: check eigenfunctions 2222222222222")
-
 
         return omega0
 
