@@ -43,7 +43,7 @@ def get_idx_of_max(eigvals):
     xxxxx
     """
     idx = -666
-    max_tmp = 0.
+    max_tmp = -1.e50
     
     for i in range(0, len(eigvals)):
         if ( eigvals[i].imag > max_tmp ):

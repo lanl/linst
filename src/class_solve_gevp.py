@@ -93,7 +93,9 @@ class SolveGeneralizedEVP:
         q_eigenvects     = self.EigVec
 
         idx = mod_util.get_idx_of_max(eigvals_filtered)
-        omega = eigvals_filtered[idx]#*self.bsfl.Tscale                
+        self.omega_max = eigvals_filtered[idx]#*self.bsfl.Tscale
+        print("")
+        print("Filtered eigenvalue with maximumgrowth rate: ", self.omega_max)
 
         return eigvals_filtered
 
