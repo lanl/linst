@@ -38,7 +38,7 @@ solver = mbm.Boussinesq(
     Re=1000,
     Fr=0.101936799,
     Sc=1.e50,
-    bsfl=bsfl, 
+    bsfl=bsfl,
     )
 
 solver.solve(alpha=4.672, beta=0.0, omega_guess=1.e-12+0.816j)
