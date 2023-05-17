@@ -222,9 +222,7 @@ class SolveGeneralizedEVP:
         
     def plot_eigvals(self, ax=None):
 
-        if (self.Local):
-            warnings.warn("Ignoring in plot_eigvals: Plotting eigenvalues (alpha_i vs alpha_r) does not make sense for Local solution")
-        else:
+        try:
             if not ax:
                 ax = plt.gca()
             ax.plot(
@@ -237,7 +235,10 @@ class SolveGeneralizedEVP:
             #ax.set_title('Eigenvalue spectrum')
             #ax.set_xlim([-10, 10])
             #ax.set_ylim([-1, 1])
-
+        except AttributeError:
+            plt.close()
+            warnings.warn("Ignoring in plot_eigvals: Plotting eigenvalues (alpha_i vs alpha_r) does not make sense for Local solution")
+        
     def identify_eigenvector_from_target(self):
 
         if (self.Local):
