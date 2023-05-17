@@ -224,7 +224,12 @@ class PlanePoiseuille(Baseflow):
         bsfl_ref.Tscale_Chandra = 0.0
         bsfl_ref.Lscale_Chandra = 0.0
         bsfl_ref.Uref_Chandra   = 0.0
-        
+        bsfl_ref.rhoref = 1.0
+        print("Setting the following parameters in class Poiseuille")
+        print("bsfl_ref.Tscale_Chandra = ", bsfl_ref.Tscale_Chandra)
+        print("bsfl_ref.Lscale_Chandra = ", bsfl_ref.Lscale_Chandra)
+        print("bsfl_ref.Uref_Chandra = ", bsfl_ref.Uref_Chandra)
+        print("bsfl_ref.rhoref = ", bsfl_ref.rhoref)
         
 
 class RayleighTaylorBaseflow(Baseflow):

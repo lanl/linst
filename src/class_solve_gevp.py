@@ -182,7 +182,7 @@ class SolveGeneralizedEVP:
         jxu  = 5*ny-1 # 0
 
         # Generally you want to use density (don't know why)
-        if (rt_flag): jxu  = 5*ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
+        if (rt_flag): jxu  = 3*ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
 
         #
         # Compute u00

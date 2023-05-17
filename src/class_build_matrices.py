@@ -37,7 +37,7 @@ class BuildMatrices:
                                  # -555 -> compressible -----------> (non-dimensional)
                 """
                 
-                self.boussinesq = 1
+                self.boussinesq = 999
 
                 if   (self.boussinesq == 1 ):
                     pass
@@ -397,7 +397,7 @@ class BuildMatrices:
             print("Matrix norm of mat_d1 = ", mat_d1_norm)
             print("")
             
-            input("Check norms!")
+            input("Check norms before!")
             
         if ( self.boussinesq == -3 or self.boussinesq == -4 ):
             self.mat_lhs = self.mat_lhs + alpha*beta*self.mat_ab 
@@ -405,6 +405,16 @@ class BuildMatrices:
         if (Tracking and Local):
             self.mat_lhs = self.mat_lhs - omega*self.mat_rhs
             
+        if (check_norms == 1):
+
+            mat_lhs_norm = np.linalg.norm(self.mat_lhs)
+
+            print("")
+            print("Matrix norm of mat_lhs = ", mat_lhs_norm)
+            print("")
+            
+            input("Check norms after!")
+
         #print("np.shape(self.mat_lhs)=", np.shape(self.mat_lhs))
         #print("np.shape(alpha*self.mat_a1)=", np.shape(alpha*self.mat_a1))
 
@@ -941,14 +951,14 @@ class BuildMatrices:
         lhs[idx_w_ymin, idx_w_ymin] = 1.0
 
         # ymax
-        lhs[idx_w_ymax,:] = 0.0
-        rhs[idx_w_ymax  ] = 0.0
-        lhs[idx_w_ymax, idx_w_ymax] = 1.0
+        #lhs[idx_w_ymax,:] = 0.0
+        #rhs[idx_w_ymax  ] = 0.0
+        #lhs[idx_w_ymax, idx_w_ymax] = 1.0
 
         # Replace w(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy w(ymax)=0
-        #lhs[2*ny+mid_idx,:] = 0.0
-        #rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        #lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
+        lhs[2*ny+mid_idx,:] = 0.0
+        rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+        lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
 
         ##################
         # pressure BCs #
@@ -987,15 +997,15 @@ class BuildMatrices:
             lhs[idx_r_ymin, idx_r_ymin] = 1.0
             
             # ymax
-            #lhs[idx_r_ymax,:] = 0.0
-            #rhs[idx_r_ymax  ] = 0.0
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
             #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
-            #lhs[idx_r_ymax, idx_r_ymax] = 1.0
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
 
             # Replace rho(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy rho(ymax)=0
-            lhs[4*ny+mid_idx,:] = 0.0
-            rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-            lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+            #lhs[4*ny+mid_idx,:] = 0.0
+            #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+            #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
 
             
     def set_matrices_rayleigh_taylor_boussinesq_mixing(self, ny, bsfl, bsfl_ref, map):
