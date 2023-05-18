@@ -182,8 +182,8 @@ class SolveGeneralizedEVP:
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
         # Get final eigenvectors
-        eps_c = 1e-10*(1.+1.*1j)
-        self.assemble_mat_lhs(alpha_in, beta_in, omega0+eps_c)
+        self.assemble_mat_lhs(alpha_in, beta_in, omega0)
+        self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
         self.qfinal = linalg.solve(self.mat_lhs, self.vec_rhs)
 
         # Plot eigenvector locally if desired

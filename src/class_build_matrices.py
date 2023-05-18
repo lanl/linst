@@ -1762,7 +1762,7 @@ class Poiseuille(ShearLayer):
         #super(Poiseuille, self).__init__(map.y.size)
         super(Poiseuille, self).__init__(map, *args, **kwargs)
         # This needs to be after super!
-        self.jxu = 0
+        self.jxu = 0 # map.y.size is ny which is index of v at ymin
 
     #def set_bc_plane_poiseuille_secant(self, lhs, rhs, ny, map, alpha, beta):
     def call_to_set_bc_secant(self, lhs, rhs, ny, map, alpha, beta):
@@ -1770,25 +1770,26 @@ class Poiseuille(ShearLayer):
         This function sets the boundary conditions for the free shear layer test case:
         SECANT METHOD!!!!!!!!!!!!!!!!!
         """
-        #print("call_to_set_bc_secant for Poiseuille")
-        ######################################
-        # (1) FREESTREAM BOUNDARY-CONDITIONS #
-        ######################################
+        mid_idx = mod_util.get_mid_idx(ny)
         
         ##################
-        # u-velocity BCs #
+        # u-velocity BCs # ==> u=0 at y=ymin replaced by p=1 at y=ymin
         ##################
-        #idx_u_ymin = 0*ny # replace this by p=1
+        idx_u_ymin = 0*ny
         idx_u_ymax = 1*ny-1
-
-        # ymin: replce u(ymin) = 0 by p(ymin) = 1
-        #lhs[idx_u_ymin,:] = 0.0
-        #lhs[idx_u_ymin, 3*ny ] = 1.0
-
-        # I tried 1 and 1 + 1j but eigenvalues are same (eigenfunctions could be different)
-        #rhs[idx_u_ymin  ] = -1.0 #+ 1j       
         
-        # ymax
+        # u=0 at y=ymin ==> replace this bc by p=1 at y=ymin and iterate (i.e. secant method) to satisfy u(ymin) = 0
+        #lhs[idx_u_ymin,:] = 0.0
+        #rhs[idx_u_ymin  ] = 0.0
+        #lhs[idx_u_ymin, idx_u_ymin] = 1.0
+
+        # ymin: replace u(ymin) = 0 by p(ymin) = 1 ==> need an inhomogenous bc to get a non-trivial solution of linear system
+        lhs[idx_u_ymin,:] = 0.0
+        lhs[idx_u_ymin, 3*ny ] = 1.0
+        # I tried 1 and 1 + 1j but eigenvalues are same (eigenfunctions could be different)
+        rhs[idx_u_ymin  ] = 1.0 #+ 1.0*1j       
+        
+        # u=0 at y=ymax
         lhs[idx_u_ymax,:] = 0.0
         rhs[idx_u_ymax  ] = 0.0
         lhs[idx_u_ymax, idx_u_ymax] = 1.0
@@ -1799,12 +1800,12 @@ class Poiseuille(ShearLayer):
         idx_v_ymin = 1*ny
         idx_v_ymax = 2*ny-1
 
-        # ymin
+        # v=0 at y=ymin
         lhs[idx_v_ymin,:] = 0.0
         rhs[idx_v_ymin  ] = 0.0        
         lhs[idx_v_ymin, idx_v_ymin] = 1.0
 
-        # ymax
+        # v=0 at y=ymax
         lhs[idx_v_ymax,:] = 0.0
         rhs[idx_v_ymax  ] = 0.0
         lhs[idx_v_ymax, idx_v_ymax] = 1.0
@@ -1815,12 +1816,12 @@ class Poiseuille(ShearLayer):
         idx_w_ymin = 2*ny
         idx_w_ymax = 3*ny-1
 
-        # ymin
+        # w=0 at y=ymin
         lhs[idx_w_ymin,:] = 0.0
         rhs[idx_w_ymin  ] = 0.0        
         lhs[idx_w_ymin, idx_w_ymin] = 1.0
 
-        # ymax
+        # w=0 at y=ymax
         lhs[idx_w_ymax,:] = 0.0
         rhs[idx_w_ymax  ] = 0.0
         lhs[idx_w_ymax, idx_w_ymax] = 1.0
@@ -1831,12 +1832,4 @@ class Poiseuille(ShearLayer):
         idx_p_ymin = 3*ny
         idx_p_ymax = 4*ny-1
 
-        # ymin
-        lhs[idx_p_ymin,:] = 0.0
-        rhs[idx_p_ymin  ] = 1.0
-        lhs[idx_p_ymin, idx_p_ymin] = 1.
-
-        # ymax
-        lhs[idx_p_ymax,:] = 0.0
-        rhs[idx_p_ymax  ] = -rhs[idx_p_ymin  ]
-        lhs[idx_p_ymax, idx_p_ymax] = 1.0
+        # not required
