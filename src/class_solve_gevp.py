@@ -38,7 +38,23 @@ class SolveGeneralizedEVP:
         self.omega_array = np.zeros((1, np.size(alpha)), dpc)
 
         self.Local = False
-        if ( np.size(alpha) != 1 or np.size(beta) != 1 ):#or np.size(Re) != 1 ):
+
+        # if ( np.size(alpha) != 1 ):
+        #      if ( alpha[0] == alpha[-1] ):
+        #          self.alpha = np.zeros(1, dp)
+        #          self.alpha = alpha[0]
+             
+        # if ( np.size(beta) != 1 ):
+        #     if ( beta[0] == beta[-1] ):
+        #         self.beta = np.zeros(1, dp)
+        #         self.beta = beta[0]
+
+        # if ( np.size(self.Re) != 1 ):
+        #     if ( self.Re[0] == self.Re[-1] ):
+        #         self.Re = np.zeros(1, dp)
+        #         self.Re = self.Re[0]
+        
+        if ( np.size(alpha) != 1 or np.size(beta) != 1 or np.size(self.Re) != 1 ):
             self.Local = True
 
         if (self.Local):
@@ -52,28 +68,34 @@ class SolveGeneralizedEVP:
         """
         ire = 0
         input("Hardcoded ire to 0!!!!!!")
-        
+
+        #nre = len(self.Re)
         npts = len(alpha)
         q_eigvect = np.zeros(np.size(self.vec_rhs), dpc)
+
+        #for ire in range(0, nre):
+
+        #print("")
+        #print("Solving for Reynolds number Re = %10.5e (%i/%i)" % (self.Re[ire], ire, nre-1) )
+        #print("==================================================")
+
         
         for i in range(0, npts):
-
+            
             print("")
             print("Solving for wavenumber alpha = %10.5e (%i/%i)" % (alpha[i], i, npts-1) )
             print("------------------------------------------------")
             print("")
-
+            
             # Extrapolate omega
             if (i > 1):
                 # Extrapolate in alpha space
                 omega = mod_util.extrapolate_in_alpha(self.omega_array, alpha, i, ire)
-                print("omega extrapolated = ", omega)
             elif (ire > 1):
                 # Extrapolate in Reynolds space
                 omega = mod_util.extrapolate_in_reynolds(self.omega_array, i, ire)
                 
-            print("i, alpha[i], beta, omega = ", i, alpha[i], beta, omega)
-                
+            #self.omega_array[ire, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha[i], beta, self.Re[ire] )
             self.omega_array[ire, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha[i], beta )
             
     def call_to_build_matrices(*args, **kwargs):

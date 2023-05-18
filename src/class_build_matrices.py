@@ -1381,6 +1381,7 @@ class ShearLayer(BuildMatrices):
     def __init__(self, map, Re=10000, *args, **kwargs):
         self.boussinesq = 999
         self.Re = Re
+        print("self.Re in class ShearLayer(BuildMatrices)= ", self.Re)
         #print("qwerty: map.y = ", map.y)
         super(ShearLayer, self).__init__(4*map.y.size, map, *args, **kwargs)
     
@@ -1757,12 +1758,10 @@ class ShearLayer(BuildMatrices):
 class Poiseuille(ShearLayer):
     def __init__(self, map, Re=10000, *args, **kwargs):
         self.boussinesq = 998
-        self.Re = Re
-        #print("map.y.size = ", map.y.size)
-        #super(Poiseuille, self).__init__(map.y.size)
-        super(Poiseuille, self).__init__(map, *args, **kwargs)
+        #self.Re = Re
+        super(Poiseuille, self).__init__(map, Re, *args, **kwargs) # had to add Re here
         # This needs to be after super!
-        self.jxu = 0 # map.y.size is ny which is index of v at ymin
+        self.jxu = 0
 
     #def set_bc_plane_poiseuille_secant(self, lhs, rhs, ny, map, alpha, beta):
     def call_to_set_bc_secant(self, lhs, rhs, ny, map, alpha, beta):
@@ -1771,6 +1770,8 @@ class Poiseuille(ShearLayer):
         SECANT METHOD!!!!!!!!!!!!!!!!!
         """
         mid_idx = mod_util.get_mid_idx(ny)
+
+        #print("self.Re in secant method: ", self.Re)
         
         ##################
         # u-velocity BCs # ==> u=0 at y=ymin replaced by p=1 at y=ymin
