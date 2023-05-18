@@ -1394,10 +1394,10 @@ def write_stability_banana(npts_alp, npts_re, iarr, alpha, Re_range, filename):
     fileoutFinal.close()
 
 
-def extrapolate_in_alpha(iarr, alpha, i, ire):
+def extrapolate_in_alpha(omega_array, alpha, i, ire):
 
-    om1   = iarr.omega_array[ire, i-1]
-    om2   = iarr.omega_array[ire, i-2]
+    om1   = omega_array[ire, i-1]
+    om2   = omega_array[ire, i-2]
     al1   = alpha[i-1]
     al2   = alpha[i-2]
     
@@ -1412,18 +1412,18 @@ def extrapolate_in_alpha(iarr, alpha, i, ire):
 
     return omega
 
-def extrapolate_in_reynolds(iarr, i, ire):
+def extrapolate_in_reynolds(omega_array, i, ire):
 
     print("Reynolds extrapol")
-    om1   = iarr.omega_array[ire-1, i]
-    om2   = iarr.omega_array[ire-2, i]
-    re1   = iarr.re_array[ire-1]
-    re2   = iarr.re_array[ire-2]
+    om1   = omega_array[ire-1, i]
+    om2   = omega_array[ire-2, i]
+    re1   = re_array[ire-1]
+    re2   = re_array[ire-2]
     
     acoef = ( om1 - om2 )/( re1 - re2 )
     bcoef = om1 - acoef*re1
     
-    omega = acoef*iarr.re_array[ire] + bcoef
+    omega = acoef*re_array[ire] + bcoef
 
     return omega
 

@@ -40,6 +40,8 @@ class BuildMatrices(msg.SolveGeneralizedEVP):
 
         self.vec_rhs = np.zeros(size, dpc)
 
+        self.jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho for RT
+
     def assemble_mat_lhs(self, alpha, beta, omega):
         """
         This function assemble the lhs matrix mat_lhs
@@ -1759,6 +1761,8 @@ class Poiseuille(ShearLayer):
         #print("map.y.size = ", map.y.size)
         #super(Poiseuille, self).__init__(map.y.size)
         super(Poiseuille, self).__init__(map, *args, **kwargs)
+        # This needs to be after super!
+        self.jxu = 0
 
     #def set_bc_plane_poiseuille_secant(self, lhs, rhs, ny, map, alpha, beta):
     def call_to_set_bc_secant(self, lhs, rhs, ny, map, alpha, beta):
@@ -1766,6 +1770,7 @@ class Poiseuille(ShearLayer):
         This function sets the boundary conditions for the free shear layer test case:
         SECANT METHOD!!!!!!!!!!!!!!!!!
         """
+        #print("call_to_set_bc_secant for Poiseuille")
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
         ######################################
@@ -1773,15 +1778,15 @@ class Poiseuille(ShearLayer):
         ##################
         # u-velocity BCs #
         ##################
-        idx_u_ymin = 0*ny # replace this by p=1
+        #idx_u_ymin = 0*ny # replace this by p=1
         idx_u_ymax = 1*ny-1
 
         # ymin: replce u(ymin) = 0 by p(ymin) = 1
-        lhs[idx_u_ymin,:] = 0.0
-        lhs[idx_u_ymin, 3*ny ] = 1.0
+        #lhs[idx_u_ymin,:] = 0.0
+        #lhs[idx_u_ymin, 3*ny ] = 1.0
 
         # I tried 1 and 1 + 1j but eigenvalues are same (eigenfunctions could be different)
-        rhs[idx_u_ymin  ] = 1.0 #+ 1j       
+        #rhs[idx_u_ymin  ] = -1.0 #+ 1j       
         
         # ymax
         lhs[idx_u_ymax,:] = 0.0
@@ -1819,3 +1824,19 @@ class Poiseuille(ShearLayer):
         lhs[idx_w_ymax,:] = 0.0
         rhs[idx_w_ymax  ] = 0.0
         lhs[idx_w_ymax, idx_w_ymax] = 1.0
+
+        ##################
+        # pressure BCs #
+        ##################
+        idx_p_ymin = 3*ny
+        idx_p_ymax = 4*ny-1
+
+        # ymin
+        lhs[idx_p_ymin,:] = 0.0
+        rhs[idx_p_ymin  ] = 1.0
+        lhs[idx_p_ymin, idx_p_ymin] = 1.
+
+        # ymax
+        lhs[idx_p_ymax,:] = 0.0
+        rhs[idx_p_ymax  ] = -rhs[idx_p_ymin  ]
+        lhs[idx_p_ymax, idx_p_ymax] = 1.0

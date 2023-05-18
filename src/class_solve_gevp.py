@@ -35,7 +35,11 @@ class SolveGeneralizedEVP:
         self.beta = beta
         self.target1 = omega_guess
 
-        self.Local = self.check_if_local_problem(self.alpha, self.beta)
+        self.omega_array = np.zeros((1, np.size(alpha)), dpc)
+
+        self.Local = False
+        if ( np.size(alpha) != 1 or np.size(beta) != 1 ):#or np.size(Re) != 1 ):
+            self.Local = True
 
         if (self.Local):
             self.solve_secant_problem(alpha, beta, omega_guess)
@@ -50,10 +54,6 @@ class SolveGeneralizedEVP:
         input("Hardcoded ire to 0!!!!!!")
         
         npts = len(alpha)
-
-        omega_all = np.zeros(npts, dpc)
-
-        #print("np.size(self.vec_rhs) = ", np.size(self.vec_rhs))        
         q_eigvect = np.zeros(np.size(self.vec_rhs), dpc)
         
         for i in range(0, npts):
@@ -66,11 +66,11 @@ class SolveGeneralizedEVP:
             # Extrapolate omega
             if (i > 1):
                 # Extrapolate in alpha space
-                omega = mod_util.extrapolate_in_alpha(iarr, alpha, i, ire)
+                omega = mod_util.extrapolate_in_alpha(self.omega_array, alpha, i, ire)
                 print("omega extrapolated = ", omega)
             elif (ire > 1):
                 # Extrapolate in Reynolds space
-                omega = mod_util.extrapolate_in_reynolds(iarr, i, ire)
+                omega = mod_util.extrapolate_in_reynolds(self.omega_array, i, ire)
                 
             print("i, alpha[i], beta, omega = ", i, alpha[i], beta, omega)
                 
@@ -112,9 +112,9 @@ class SolveGeneralizedEVP:
             print("tol1, tol2 = ", tol1, tol2)
         else:
             #if baseflowT == 1:
-            tol  = 1.0e-8
+            tol1  = 1.0e-5
             #elif baseflowT == 2:
-            tol  = 1.0e-8
+            tol2  = 1.0e-5
             #else:
             #    sys.exit("XXXXXXXXXXXXXXXXXXXXXX 12345")
 
@@ -123,9 +123,10 @@ class SolveGeneralizedEVP:
         iter = 0
         maxiter = 100
 
-        jxu  = 5*self.ny-1 # 0
-
-        if (self.bsfl.rt_flag): jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
+        print("self.jxu = ", self.jxu)
+        
+        #jxu  = 5*self.ny-1 # 0
+        #if (self.bsfl.rt_flag): jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
 
         #
         # Compute u00
@@ -139,7 +140,7 @@ class SolveGeneralizedEVP:
         # Solve Linear System
         SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
                 
-        u00 = SOL[jxu]
+        u00 = SOL[self.jxu]
 
         res = 1
         
@@ -160,7 +161,7 @@ class SolveGeneralizedEVP:
             SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
         
             # Extract boundary condition
-            u0  = SOL[jxu]
+            u0  = SOL[self.jxu]
             q   = SOL
 
             #
@@ -181,7 +182,8 @@ class SolveGeneralizedEVP:
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
         # Get final eigenvectors
-        self.assemble_mat_lhs(alpha_in, beta_in, omega0+1.e-10)
+        eps_c = 1e-10*(1.+1.*1j)
+        self.assemble_mat_lhs(alpha_in, beta_in, omega0+eps_c)
         self.qfinal = linalg.solve(self.mat_lhs, self.vec_rhs)
 
         # Plot eigenvector locally if desired
@@ -189,29 +191,26 @@ class SolveGeneralizedEVP:
         if (plot_eig_vec==1):
             ylimp = 0.0
             ny = self.ny
-            self.plot_real_imag_part(qfinal[0*ny:1*ny], "u", map.y, rt_flag, ylimp)
-            self.plot_real_imag_part(qfinal[1*ny:2*ny], "v", map.y, rt_flag, ylimp)
-            self.plot_real_imag_part(qfinal[2*ny:3*ny], "w", map.y, rt_flag, ylimp)
-            self.plot_real_imag_part(qfinal[3*ny:4*ny], "p", map.y, rt_flag, ylimp)
-            self.plot_real_imag_part(qfinal[4*ny:5*ny], "r", map.y, rt_flag, ylimp)
+            self.get_normalized_eigvects(self.qfinal, self.bsfl.rt_flag)
+            #self.plot_real_imag_part(self.qfinal[0*ny:1*ny], "u", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(self.qfinal[1*ny:2*ny], "v", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(self.qfinal[2*ny:3*ny], "w", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(self.qfinal[3*ny:4*ny], "p", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(self.qfinal[4*ny:5*ny], "r", self.map.y, self.bsfl.rt_flag, ylimp)
+            
+            self.plot_real_imag_part(self.ueig, "u", self.map.y, self.bsfl.rt_flag, ylimp)
+            self.plot_real_imag_part(self.veig, "v", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(self.weig, "w", self.map.y, self.bsfl.rt_flag, ylimp)
+            self.plot_real_imag_part(self.peig, "p", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(self.reig, "r", self.map.y, self.bsfl.rt_flag, ylimp)
+
+            #self.plot_real_imag_part(np.abs(self.ueig), "u", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(np.abs(self.veig), "v", self.map.y, self.bsfl.rt_flag, ylimp)
+            #self.plot_real_imag_part(np.abs(self.peig), "p", self.map.y, self.bsfl.rt_flag, ylimp)
             
             input("Local solver: check eigenfunctions 2222222222222")
 
         return omega0
-
-    def check_if_local_problem(self, alpha, beta):
-
-        #print("np.size(alpha) = ", np.size(alpha))
-        #print("np.size(beta) = ", np.size(beta))
-        
-        if ( np.size(alpha) != 1 or np.size(beta) != 1 ):
-            Local = True
-        else:
-            Local = False
-
-        self.omega_array = np.zeros((1, np.size(alpha)), dpc)
-
-        return Local
         
     def write_eigvals(self):
         if (self.Local):
