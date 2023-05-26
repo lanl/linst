@@ -94,8 +94,8 @@ class HypTan(Baseflow):
     """
     This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
     """
-    def __init__(self, size, y): # here I pass ny
-        self.size = size
+    def __init__(self, y): # here I pass ny
+        size = len(y)
 
         # I used that to see that as fac goes to zero, perturbation frequency decreases
         # In the limit of no baseflow velocity, the perturbations should be steady
@@ -105,15 +105,14 @@ class HypTan(Baseflow):
 
         if   (hyptan==1):
             print("")
-            print("Using hyperbolic tangent in mixing-layer test case")
+            print("Using hyperbolic tangent in shear-layer test case")
             print("")
-            sys.exit("hyptan==1 ===> check before use")
             self.U    = fac*0.5*( 1. + np.tanh(y) )
             self.Up   = fac*0.5*( 1.0 - np.tanh(y)**2. )
         elif (hyptan==0):
             # Using erf function instead of hyperbolic tangent
             print("")
-            print("Using error function (erf) in mixing-layer test case")
+            print("Using error function (erf) in shear-layer test case")
             print("")
             pi      = math.pi
             delta   = 1.0
@@ -128,6 +127,8 @@ class HypTan(Baseflow):
         
         self.W    = np.zeros(size, dp)
         self.Wp   = np.zeros(size, dp)
+
+        self.rt_flag = False
 
 class PlanePoiseuille(Baseflow):
     """
