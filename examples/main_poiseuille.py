@@ -4,19 +4,16 @@ import time
 import warnings
 import numpy as np
 #from scipy import linalg
-import class_gauss_lobatto as mgl
-import class_baseflow as mbf
-import class_build_matrices as mbm
-import class_mapping as mma
+import gauss_lobatto as mgl
+import baseflow as mbf
+import build_matrices as mbm
+import mapping as mma
 
 import matplotlib
 matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 
-
 import module_utilities as mod_util
-
-import class_main_arrays as marray
 
 from matplotlib import cm
 from matplotlib import ticker

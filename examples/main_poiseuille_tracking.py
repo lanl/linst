@@ -26,21 +26,27 @@ plt.rcParams['font.size'] = '16'
 plt.rc('font', family='serif')
 
 # Create instance for class GaussLobatto
-cheb = mgl.GaussLobatto(size=251)
-map = mma.MapShearLayer(sinf=10, cheb=cheb, l=0.2)
-bsfl = mbf.RTSimple(y=map.y, At=0.4)
+cheb = mgl.GaussLobatto(size=351)
+map = mma.MapVoid(sinf=100, cheb=cheb, l=5.0)
+bsfl = mbf.PlanePoiseuille(y=map.y)
 
-solver = mbm.Boussinesq(
+solver = mbm.Poiseuille(
     map=map,
-    Re=1000,
-    Fr=0.101936799,
-    Sc=1.e50,
+    Re=10100,
+    #Re=np.linspace(10000., 10000., 1),
     bsfl=bsfl,
     )
 
-solver.solve(alpha=4.672, beta=0.0, omega_guess=1.e-12+0.816j)
+solver.solve(alpha=np.linspace(1.,1.1,10), beta=0.0, omega_guess=0.2375264888204682+0.0037396706229799*1j)
+#solver.solve(alpha=np.linspace(1.1,1.1,1), beta=0.0, omega_guess=0.27165860955625076-0.0003299141440528646*1j)
 solver.plot_eigvals()
 plt.show()
+solver.write_eigvals()
+
+q_eigvect = solver.identify_eigenvector_from_target()
+solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
+solver.plot_eigvects(bsfl.rt_flag)
+
 
 ###################################
 #     Plot and write out data     #
