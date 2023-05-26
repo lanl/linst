@@ -1,4 +1,4 @@
-import class_solve_gevp as msg
+import solve_gevp as msg
 
 #from termios import N_TTY
 import module_utilities as mod_util

@@ -5,7 +5,7 @@ import scipy as sp
 import scipy.sparse.linalg
 from scipy import linalg
 import module_utilities as mod_util
-import class_build_matrices as mbm
+import build_matrices as mbm
 #import scipy as sp
 import matplotlib.pyplot as plt
 

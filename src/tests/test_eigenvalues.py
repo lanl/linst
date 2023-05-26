@@ -1,10 +1,10 @@
 import numpy as np
 import unittest
 
-import class_gauss_lobatto as mgl
-import class_baseflow as mbf
-import class_build_matrices as mbm
-import class_mapping as mma
+import gauss_lobatto as mgl
+import baseflow as mbf
+import build_matrices as mbm
+import mapping as mma
 
 
 class TestPoiseuille(unittest.TestCase):

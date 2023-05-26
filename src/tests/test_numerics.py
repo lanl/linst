@@ -8,7 +8,7 @@ from numpy import testing as nptest
 from module_utilities import trapezoid_integration
 from module_utilities import get_mid_idx
 
-import class_gauss_lobatto as mgl
+import gauss_lobatto as mgl
 
 class TestDifferentiationMatrix(unittest.TestCase):
 
