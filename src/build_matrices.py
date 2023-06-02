@@ -411,9 +411,9 @@ class Boussinesq(BuildMatrices):
         ######################################
         # (1) FREESTREAM BOUNDARY-CONDITIONS #
         ######################################
-        print("")
-        print("call_to_set_bc in class Boussinesq(BuildMatrices)")
-        print("")
+        #print("")
+        #print("call_to_set_bc in class Boussinesq(BuildMatrices)")
+        #print("")
         ##################
         # u-velocity BCs #
         ##################
@@ -748,13 +748,15 @@ class Sandoval(Boussinesq):
         # Flag to add terms that arise when I do not neglect the w-vel of the baseflow
         AddWTerms = 0
         if (AddWTerms==1):
-            print("==============================================================================")
-            print("Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
-            print("==============================================================================")
+            pass
+            #print("==============================================================================")
+            #print("Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
+            #print("==============================================================================")
         else:
-            print("==================================================================================")
-            print("NOT Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
-            print("==================================================================================")
+            pass
+            #print("==================================================================================")
+            #print("NOT Adding w-vel baseflow terms in set_matrices_rayleigh_taylor_sandoval_equations")
+            #print("==================================================================================")
 
         # non-dimensional set of equations
         grav = 1 #bsfl_ref.gref/bsfl_ref.gref

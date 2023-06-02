@@ -8,9 +8,18 @@ import mapping as mma
 
 
 class TestPoiseuille(unittest.TestCase):
+
+    def __str__(self):
+
+        return f"""      
+Unit test(s) for Poiseuille
+===========================        
+"""
+
     def test_poiseuille(self):
         """Test Poiseuille case of Kirchner (2000)
         """
+        print(str(self))
         cheb = mgl.GaussLobatto(size=351)
         map = mma.MapVoid(sinf=100, cheb=cheb, l=5.0)
         bsfl = mbf.PlanePoiseuille(y=map.y)
@@ -26,9 +35,18 @@ class TestPoiseuille(unittest.TestCase):
         self.assertAlmostEqual(solver.omega_max, 0.2375264888204682+0.0037396706229799*1j)
 
 class TestShearLayer(unittest.TestCase):
+
+    def __str__(self):
+
+        return f"""
+Unit test(s) for Shear-Layer
+============================
+"""
+
     def test_shear_layer(self):
         """Test Shear-Layer case of Michalke
         """
+        print(str(self))
         cheb = mgl.GaussLobatto(size=351)
         map = mma.MapShearLayer(sinf=150, cheb=cheb, l=10.)
         bsfl = mbf.HypTan(y=map.y)
@@ -38,6 +56,7 @@ class TestShearLayer(unittest.TestCase):
             Re=1.e50,
             bsfl=bsfl,
         )
+
         solver.solve(alpha=np.linspace(0.4446,0.4446,1), beta=0., omega_guess=0.2223+0.09485*1j)
 
         self.assertAlmostEqual(solver.omega_max, 0.2223+0.09485*1j, places=5)
@@ -50,11 +69,19 @@ class TestShearLayer(unittest.TestCase):
         #omega_r_michalke = 0.5*alpha_michalke # cr=0.5, see Michalke JFM 1964
 
 class TestRayleighTaylor(unittest.TestCase):
+
+    def __str__(self):
+
+        return f"""     
+Unit test(s) for Rayleigh-Taylor
+================================
+"""
+
     def test_rayleigh_taylor(self):
         """Cross-validate eigenvalue by comparing eigenvalue obtained with Boussinesq and Sandoval RT solvers
         for a small Atwood number At=0.01
         """
-
+        print(str(self))
         # Setup and solver with Boussinesq RT solver 
         cheb = mgl.GaussLobatto(size=351)
         map = mma.MapShearLayer(sinf=100, cheb=cheb, l=5.0)
@@ -68,7 +95,7 @@ class TestRayleighTaylor(unittest.TestCase):
             bsfl=bsfl,
         )
 
-        solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.1523*1j)
+        solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.056263*1j)
         omega_boussinesq = solver.omega_max
 
         # Setup and solver with Sandoval RT solver
@@ -84,7 +111,7 @@ class TestRayleighTaylor(unittest.TestCase):
             bsfl=bsfl,
         )
         
-        solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.1523*1j)
+        solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.056263*1j)
         omega_sandoval = solver.omega_max
         
         self.assertAlmostEqual(omega_boussinesq, omega_sandoval, places=5)
