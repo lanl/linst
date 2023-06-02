@@ -42,6 +42,32 @@ class BuildMatrices(msg.SolveGeneralizedEVP):
 
         self.jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho for RT
 
+    def __str__(self):
+
+        #Atwood number At               = {self.At}
+        #Reference gravity gref [m/s^2] = {self.gref}
+        #Reference velocity Uref [m/s]  = {self.Uref}
+        #Ref. mass diffusivity Dref [m^2/s] ( Dref = nuref/Sc )          = {self.Dref}
+
+        return f"""
+Main non-dimensional numbers and corresponding reference quantities:
+====================================================================
+Reynolds number Re             = {self.Re}
+Froude number Fr               = {self.Fr}
+Schmidt number Sc              = {self.Sc}
+
+Other reference quantities:
+---------------------------
+Mass transfer Peclet number ( Pe = Re*Sc )                      = {self.Re*self.Sc}
+"""
+        # if (nondim_flag==1):
+        #     print("Ref. length scale Lref [m] set to Lref                      = ", self.Lref)
+        # else:
+        #     print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )     = ", self.Lref)
+        # print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
+        # print("")
+
+
     def assemble_mat_lhs(self, alpha, beta, omega):
         """
         This function assemble the lhs matrix mat_lhs
@@ -259,9 +285,17 @@ class Boussinesq(BuildMatrices):
     def __init__(self, map, Re=1, Fr=1, Sc=1, *args, **kwargs):
         self.boussinesq = 1
         self.Re = Re
-        self.Fr2 = Fr**2
         self.Sc = Sc
-        super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs) 
+        self.Fr = Fr
+        #self.Fr2 = Fr**2
+
+        super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs)
+
+#    def __str__(self):
+#        super(Boussinesq, self).__str__()
+#        return f"""
+#+ that
+#"""
     
     def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """

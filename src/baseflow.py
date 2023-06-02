@@ -51,44 +51,6 @@ class Baseflow:
             self.nuref = self.Uref*self.Lref/self.Re
         # Set dimensional diffusivity reference value
         self.Dref  = self.nuref/self.Sc
-
-    def __str__(self):
-        # if (nondim_flag==1):
-        #     print("")
-        #     print("USING NEW NON-DIMENSIONALIZATION")
-        #     print("")
-        #     print("Setting Lref to: ", self.Lref)
-
-        #     print("")
-        #     print("Overwritting Uref and Froude...")
-        #     print("")
-        # else:
-        #     print("")
-        #     print("USING OLD NON-DIMENSIONALIZATION")
-        #     print("")
-
-        return f"""
-Main non-dimensional numbers and corresponding reference quantities:
-====================================================================
-Atwood number At               = {self.At}
-Froude number Fr               = {self.Fr}
-Schmidt number Sc              = {self.Sc}
-Reynolds number Re             = {self.Re}
-Reference gravity gref [m/s^2] = {self.gref}
-Reference velocity Uref [m/s]  = {self.Uref}
-
-Other reference quantities:
----------------------------
-Mass transfer Peclet number ( Pe = Re*Sc )                      = {self.Re*self.Sc}
-Ref. mass diffusivity Dref [m^2/s] ( Dref = nuref/Sc )          = {self.Dref}
-"""
-        # if (nondim_flag==1):
-        #     print("Ref. length scale Lref [m] set to Lref                      = ", self.Lref)
-        # else:
-        #     print("Ref. length scale Lref [m]( Lref = Uref^2/(Fr^2*gref) )     = ", self.Lref)
-        # print("Ref. kinematic viscosity nuref [m^2/s] ( nuref = Uref*Lref/Re ) = ", self.nuref)
-        # print("")
-            
         
 class HypTan(Baseflow):
     """
@@ -152,7 +114,6 @@ class RTSimple(object):
         self.Rhop_nd = At*( 2.0*np.exp( -znondim**2/delta**2 )/( delta*np.sqrt(math.pi) ) )
 
         self.rt_flag = True
-    
 
 class RayleighTaylorBaseflow(Baseflow):
     """

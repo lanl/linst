@@ -38,6 +38,7 @@ solver = mbm.Boussinesq(
     bsfl=bsfl,
     )
 
+#print(str(solver))
 #print("bsfl.rt_flag = ", bsfl.rt_flag)
 #print("solver.boussinesq = ", solver.boussinesq)
 
