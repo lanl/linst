@@ -287,7 +287,6 @@ class Boussinesq(BuildMatrices):
         self.Re = Re
         self.Sc = Sc
         self.Fr = Fr
-        #self.Fr2 = Fr**2
 
         super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs)
 
@@ -732,10 +731,10 @@ class ChandrasekharDim(Boussinesq):
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id        
 
-
 class Sandoval(Boussinesq):
-    def __init__(self, ny):
-        super(Sandoval, self).__init__(ny) 
+    def __init__(self, map, Re, Fr, Sc, *args, **kwargs):
+        super(Sandoval, self).__init__(map, Re, Fr, Sc, *args, **kwargs)
+        # This line needs to be after super becomes I am overwriting
         self.boussinesq = -3
     
     #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
@@ -758,16 +757,16 @@ class Sandoval(Boussinesq):
             print("==================================================================================")
 
         # non-dimensional set of equations
-        grav = bsfl_ref.gref/bsfl_ref.gref
+        grav = 1 #bsfl_ref.gref/bsfl_ref.gref
 
         if ( grav != 1. ):
             print("")
             print("Sandoval R-T solver: gravity should be non-dimensional, g = ", grav)
             input("Check gravity")
 
-        Fr2      = bsfl_ref.Fr**2.
-        Sc       = bsfl_ref.Sc
-        Re       = bsfl_ref.Re
+        Fr2      = Fr_in**2.
+        Sc       = Sc_in
+        Re       = Re_in
 
         # To match Chandrasekhar equations
         MatchChandrasekhar = 0
@@ -796,24 +795,23 @@ class Sandoval(Boussinesq):
         # print("Peclet number (mass transfer) = ", Re*Sc)
         # print("")
 
-        D1 = map.D1
-        D2 = map.D2
+        D1 = self.map.D1
+        D2 = self.map.D2
+
+        ny = self.ny
         
         # Identity matrix id
         id      = np.identity(ny)
 
         # Create diagonal matrices from baseflow vectors
-        dRho    = np.diag(bsfl.Rho_nd)
-        dRhop   = np.diag(bsfl.Rhop_nd)
-        dRhopp  = np.diag(bsfl.Rhopp_nd)
+        dRho    = np.diag(self.bsfl.Rho_nd)
+        dRhop   = np.diag(self.bsfl.Rhop_nd)
+        dRhopp  = np.diag(self.bsfl.Rhopp_nd)
 
-        rho2    = np.multiply(bsfl.Rho_nd, bsfl.Rho_nd)
-        rho3    = np.multiply(rho2, bsfl.Rho_nd)
+        rho2    = np.multiply(self.bsfl.Rho_nd, self.bsfl.Rho_nd)
+        rho3    = np.multiply(rho2, self.bsfl.Rho_nd)
 
-        #print("bsfl.Rho_nd = ", bsfl.Rho_nd)
-        #print("rho2 = ", rho2)
-        
-        rho_inv  = 1/bsfl.Rho_nd
+        rho_inv  = 1/self.bsfl.Rho_nd
         rho2_inv = 1/rho2
         rho3_inv = 1/rho3
 

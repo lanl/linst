@@ -110,8 +110,11 @@ class RTSimple(object):
     def __init__(self, y, At):
         delta = 1
         znondim = y
+        pi = math.pi
+        
         self.Rho_nd = 1. + At*erf(znondim/delta)
         self.Rhop_nd = At*( 2.0*np.exp( -znondim**2/delta**2 )/( delta*np.sqrt(math.pi) ) )
+        self.Rhopp_nd = 2*At/(delta*np.sqrt(pi))*(-2.*znondim/delta**2.)*np.exp(-znondim**2./delta**2.)
 
         self.rt_flag = True
 

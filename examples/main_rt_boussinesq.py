@@ -28,7 +28,7 @@ plt.rc('font', family='serif')
 # Create instance for class GaussLobatto
 cheb = mgl.GaussLobatto(size=351)
 map = mma.MapShearLayer(sinf=100, cheb=cheb, l=5.0)
-bsfl = mbf.RTSimple(y=map.y, At=0.05)
+bsfl = mbf.RTSimple(y=map.y, At=0.01)
 
 solver = mbm.Boussinesq(
     map=map,
@@ -39,10 +39,8 @@ solver = mbm.Boussinesq(
     )
 
 #print(str(solver))
-#print("bsfl.rt_flag = ", bsfl.rt_flag)
-#print("solver.boussinesq = ", solver.boussinesq)
 
-solver.solve(alpha=np.linspace(0.9333809511662428,0.93338096,2), beta=0.9333809511662428, omega_guess=0.0+0.152*1j)
+solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.1523*1j)
 solver.plot_eigvals()
 plt.show()
 solver.write_eigvals()
