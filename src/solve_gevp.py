@@ -1,5 +1,10 @@
+import os
 import sys
 import warnings
+try:
+    import cupy as cp
+except ImportError:
+    warnings.warn('Failed to import cupy')
 import numpy as np
 import scipy as sp
 import scipy.sparse.linalg
@@ -8,6 +13,8 @@ import module_utilities as mod_util
 import build_matrices as mbm
 #import scipy as sp
 import matplotlib.pyplot as plt
+
+hascupy = 'cupy' in sys.modules
 
 dp  = np.dtype('d')        # double precision
 dpc = np.dtype(np.cdouble) # double precision complex
@@ -35,74 +42,34 @@ class SolveGeneralizedEVP:
         self.beta = beta
         self.target1 = omega_guess
 
-        self.omega_array = np.zeros((1, np.size(alpha)), dpc)
+        self.Local = self.check_params_setup_loops()
 
-        self.Local = False
-
-        # if ( np.size(alpha) != 1 ):
-        #      if ( alpha[0] == alpha[-1] ):
-        #          self.alpha = np.zeros(1, dp)
-        #          self.alpha = alpha[0]
-             
-        # if ( np.size(beta) != 1 ):
-        #     if ( beta[0] == beta[-1] ):
-        #         self.beta = np.zeros(1, dp)
-        #         self.beta = beta[0]
-
-        # if ( np.size(self.Re) != 1 ):
-        #     if ( self.Re[0] == self.Re[-1] ):
-        #         self.Re = np.zeros(1, dp)
-        #         self.Re = self.Re[0]
+        #print("self.Local = ", self.Local)
+        #print("self.Fr = ", self.Fr)
+        #print("self.Sc = ", self.Sc)
         
-        if ( np.size(alpha) != 1 or np.size(beta) != 1 or np.size(self.Re) != 1 ):
-            self.Local = True
-
         if (self.Local):
-            self.solve_secant_problem(alpha, beta, omega_guess)
+            self.solve_secant_problem(omega_guess)
         else:
-            self.eigvals_filtered = self.solve_general_problem(alpha, beta, omega_guess)
+            self.eigvals_filtered = self.solve_general_problem(self.alpha, self.beta, omega_guess)
 
-    def solve_secant_problem(self, alpha, beta, omega):
+    def solve_secant_problem(self, omega):
         """
         Function...
         """
-        ire = 0
-        input("Hardcoded ire to 0!!!!!!")
-
-        #nre = len(self.Re)
-        npts = len(alpha)
         q_eigvect = np.zeros(np.size(self.vec_rhs), dpc)
 
-        #for ire in range(0, nre):
-
-        #print("")
-        #print("Solving for Reynolds number Re = %10.5e (%i/%i)" % (self.Re[ire], ire, nre-1) )
-        #print("==================================================")
-
-        
-        for i in range(0, npts):
-            
-            print("")
-            print("Solving for wavenumber alpha = %10.5e (%i/%i)" % (alpha[i], i, npts-1) )
-            print("------------------------------------------------")
-            print("")
-            
-            # Extrapolate omega
-            if (i > 1):
-                # Extrapolate in alpha space
-                omega = mod_util.extrapolate_in_alpha(self.omega_array, alpha, i, ire)
-            elif (ire > 1):
-                # Extrapolate in Reynolds space
-                omega = mod_util.extrapolate_in_reynolds(self.omega_array, i, ire)
-                
-            #self.omega_array[ire, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha[i], beta, self.Re[ire] )
-            self.omega_array[ire, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha[i], beta )
+        if   ( self.niter == 2 ):
+            self.iterate_both(omega)
+        elif ( self.niter == 1):
+            ivar = 0
+            self.iterate_single(ivar, omega)
             
     def call_to_build_matrices(*args, **kwargs):
         raise NotImplemented("Use a specific equation class, not SolveGeneralizedEVP.")
                 
     def solve_general_problem(self, alpha, beta, omega_guess):
-        self.call_to_build_matrices()
+        self.call_to_build_matrices(Re_in=self.Re, Fr_in=self.Fr, Sc_in=self.Sc)
         self.assemble_mat_lhs(alpha, beta, omega_guess)
         self.call_to_set_bc()
 
@@ -121,17 +88,16 @@ class SolveGeneralizedEVP:
 
         return eigvals_filtered
 
-    def solve_stability_secant(self, omega0, omega00, alpha_in, beta_in):
+    def solve_stability_secant(self, omega0, omega00, alpha_in, beta_in, re_in, fr_in, sc_in):
         """
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
-
         mid_idx = self.mid_idx
         
         if self.bsfl.rt_flag == True:
             tol1  = 1.0e-5
             tol2  = 1.0e-5
-            print("tol1, tol2 = ", tol1, tol2)
+            #print("tol1, tol2 = ", tol1, tol2)
         else:
             #if baseflowT == 1:
             tol1  = 1.0e-5
@@ -144,8 +110,6 @@ class SolveGeneralizedEVP:
         
         iter = 0
         maxiter = 100
-
-        print("self.jxu = ", self.jxu)
         
         #jxu  = 5*self.ny-1 # 0
         #if (self.bsfl.rt_flag): jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
@@ -155,12 +119,15 @@ class SolveGeneralizedEVP:
         #
         
         # Build main stability matrices and assemble them
-        self.call_to_build_matrices()
+        self.call_to_build_matrices(Re_in=re_in, Fr_in=fr_in, Sc_in=sc_in)
         self.assemble_mat_lhs(alpha_in, beta_in, omega00)
         self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
             
         # Solve Linear System
-        SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
+        if (hascupy):
+            SOL = cp.linalg.solve(self.mat_lhs, self.vec_rhs)
+        else:
+            SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
                 
         u00 = SOL[self.jxu]
 
@@ -180,7 +147,10 @@ class SolveGeneralizedEVP:
             self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
 
             #Solve Linear System
-            SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
+            if (hascupy):
+                SOL = cp.linalg.solve(self.mat_lhs, self.vec_rhs)
+            else:
+                SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
         
             # Extract boundary condition
             u0  = SOL[self.jxu]
@@ -199,14 +169,21 @@ class SolveGeneralizedEVP:
             # New
             u00      = u0
             
-            print("Iteration %2d: abs(u0) = %10.5e, abs(res) = %10.5e, omega = %21.11e, %21.11e" % (iter, np.abs(u0), abs(res), omega0.real, omega0.imag))
+            print("     Iteration %2d: abs(u0) = %10.5e, abs(res) = %10.5e, omega = %21.11e, %21.11e" % (iter, np.abs(u0), abs(res), omega0.real, omega0.imag))
             
         if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
 
         # Get final eigenvectors
-        self.assemble_mat_lhs(alpha_in, beta_in, omega0)
-        self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
-        self.qfinal = linalg.solve(self.mat_lhs, self.vec_rhs)
+        final_ev = 0
+        if (final_ev==1):
+            self.assemble_mat_lhs(alpha_in, beta_in, omega0)
+            self.call_to_set_bc_secant(self.mat_lhs, self.vec_rhs, self.ny, self.map, alpha_in, beta_in)
+            if (hascupy):
+                self.qfinal = cp.linalg.solve(self.mat_lhs, self.vec_rhs)
+            else:
+                self.qfinal = linalg.solve(self.mat_lhs, self.vec_rhs)
+        else:
+            self.qfinal = q
 
         # Plot eigenvector locally if desired
         plot_eig_vec = 0
@@ -425,3 +402,257 @@ class SolveGeneralizedEVP:
         str_i = str_p + r'$_i$'
 
         return str_r, str_i
+
+    def write_stab_banana(self):
+
+        if ( self.Local ):
+            filename      = "Stability_banana.dat"
+            work_dir      = "./"
+            save_path     = work_dir #+ '/' + folder1
+            completeName  = os.path.join(save_path, filename)
+            fileoutFinal  = open(completeName,'w')
+
+            if ( np.size(self.npts_list) == 2 ):
+                npts1 = self.npts_list[0]
+                npts2 = self.npts_list[1]
+
+                Xvar = self.list_iter[0]
+                Yvar = self.list_iter[1]
+                flag2 = True
+            else:
+                npts1 = self.npts_list[0]
+                npts2 = 1
+
+                Xvar = self.list_iter[0]
+                flag2 = False
+
+
+            #print('VARIABLES = "%s" "%s" "omega_r" "omega_i"\n' % (Xvar, Xvar))
+            
+            #zname2D       = 'ZONE T="2-D Zone", I = ' + str(npts1) + ', J = ' + str(npts2) + '\n'
+            zname2D       = 'ZONE T="2-D Zone", I = ' + str(npts2) + ', J = ' + str(npts1) + '\n'
+            fileoutFinal.write('TITLE     = "2D DATA"\n')
+            if (flag2):
+                fileoutFinal.write('VARIABLES = "%s" "%s" "omega_r" "omega_i"\n' % (Yvar, Xvar))
+            else:
+                fileoutFinal.write('VARIABLES = "%s" "omega_r" "omega_i"\n' % Xvar)
+                
+            fileoutFinal.write(zname2D)
+            
+            # for j in range(0, npts2):
+            #     for i in range(0, npts1):
+            #         if (flag2):
+            #             fileoutFinal.write("%25.15e %25.15e %25.15e %25.15e \n" % ( self.vars_dict[Xvar][i], self.vars_dict[Yvar][j], self.omega_array[j,i].real, self.omega_array[j,i].imag ) )
+            #         else:
+            #             fileoutFinal.write("%25.15e %25.15e %25.15e \n" % ( self.vars_dict[Xvar][i], self.omega_array[j,i].real, self.omega_array[j,i].imag ) )
+
+            for i in range(0, npts1):
+                for j in range(0, npts2):
+                    if (flag2):
+                        fileoutFinal.write("%25.15e %25.15e %25.15e %25.15e \n" % ( self.vars_dict[Yvar][j], self.vars_dict[Xvar][i], self.omega_array[j,i].real, self.omega_array[j,i].imag ) )
+                    else:
+                        fileoutFinal.write("%25.15e %25.15e %25.15e \n" % ( self.vars_dict[Xvar][i], self.omega_array[j,i].real, self.omega_array[j,i].imag ) )
+
+            fileoutFinal.close()
+
+            
+        else:
+            pass
+
+
+    def check_params_setup_loops(self):    
+
+        Local = False
+        self.niter = 0
+
+        #hasSc = hasattr(self, "Sc")
+        #hasFr = hasattr(self, "Fr")
+
+        self.mylist = []
+        self.npts_list = []
+        self.list_iter = []
+        self.vars_dict = {}
+        
+        self.alpha = self.check_size_reset(self.alpha)
+        self.beta = self.check_size_reset(self.beta)
+        self.Re = self.check_size_reset(self.Re)
+
+        self.Fr = self.check_size_reset(self.Fr)
+        self.Sc = self.check_size_reset(self.Sc)
+
+        #if ( hasFr ): self.Fr = self.check_size_reset(self.Fr)
+        #if ( hasSc ): self.Sc = self.check_size_reset(self.Sc)
+
+        self.mylist.append("alpha")
+        self.vars_dict["alpha"] = self.alpha
+
+        self.mylist.append("beta")
+        self.vars_dict["beta"] = self.beta
+
+        self.mylist.append("Re")
+        self.vars_dict["Re"] = self.Re
+
+        #if (hasSc):
+        self.mylist.append("Sc")
+        self.vars_dict["Sc"] = self.Sc
+
+        #if (hasFr):
+        self.mylist.append("Fr")
+        self.vars_dict["Fr"] = self.Fr
+
+        if ( np.size(self.alpha) != 1 ):
+            Local = True
+            self.npts_list.append(np.size(self.alpha))
+            self.niter = self.niter + 1
+            self.list_iter.append("alpha")
+
+        if ( np.size(self.beta) != 1 ):
+            sys.exit("consider only a single beta for now")
+            Local = True
+            self.npts_list.append(np.size(self.beta))
+            self.niter = self.niter + 1
+            self.list_iter.append("beta")
+
+        if ( np.size(self.Re) != 1 ):
+            Local = True
+            self.npts_list.append(np.size(self.Re))
+            self.niter = self.niter + 1
+            self.list_iter.append("Re")
+
+        #if (hasSc):
+        if ( np.size(self.Sc) != 1 ):
+            Local = True
+            self.npts_list.append(np.size(self.Sc))
+            self.niter = self.niter + 1
+            self.list_iter.append("Sc")
+
+        #if (hasFr):
+        if ( np.size(self.Fr) != 1 ):
+            Local = True
+            self.npts_list.append(np.size(self.Fr))
+            self.niter = self.niter + 1
+            self.list_iter.append("Fr")
+
+        if ( self.niter > 2 ):
+            sys.exit("Maximum number of parameters is 2")
+
+        for i in range(0, len(self.npts_list)):
+            print("self.npts_list[i] = ", self.npts_list[i])
+            print("self.list_iter[i] = ", self.list_iter[i])
+
+        if (Local):
+            if ( np.size(self.npts_list) == 2 ):
+                self.omega_array = np.zeros((self.npts_list[1], self.npts_list[0]), dpc)
+            else:
+                self.omega_array = np.zeros((1, self.npts_list[0]), dpc)
+
+            # You need to use copy other reference to same variable
+            self.vars_dict_loc = self.vars_dict.copy()
+
+            
+        return Local
+
+    def check_size_reset(self, var_in):
+        
+        if ( np.size(var_in) != 1 ):
+            if ( var_in[0] == var_in[-1] ):
+                var_out = np.linspace(var_in[0], var_in[0], 1)
+
+                return var_out
+            else:
+                return var_in
+
+        else:
+            var_out = np.linspace(var_in, var_in, 1)
+            return var_out
+
+
+    def iterate_both(self, omega):
+
+        self.outer_var = self.list_iter[1]
+        #print("self.outer_var = ", self.outer_var)
+
+        for i in range(0, self.npts_list[1]):
+
+            self.outer_var_val_loc = self.vars_dict[self.outer_var][i]
+            self.vars_dict_loc[self.outer_var] = np.linspace(self.outer_var_val_loc, self.outer_var_val_loc, 1)
+
+            #print("self.vars_dict_loc = ", self.vars_dict_loc)
+
+            print("")
+            print("Solving for %s = %10.5e (%i/%i)" % (self.outer_var, self.outer_var_val_loc, i, self.npts_list[1]-1 ))
+            print("=====================================")
+            print("self.jxu = ", self.jxu)
+            print("")
+
+            self.iterate_single(i, omega)
+
+    def iterate_single(self, ivar, omega):
+
+        for i in range(0, self.npts_list[0]):
+
+            idx_a = min(i, np.size(self.vars_dict_loc[self.mylist[0]])-1 )
+            idx_b = min(i, np.size(self.vars_dict_loc[self.mylist[1]])-1 )
+            idx_re = min(i, np.size(self.vars_dict_loc[self.mylist[2]])-1 )
+            idx_sc = min(i, np.size(self.vars_dict_loc[self.mylist[3]])-1 )
+            idx_fr = min(i, np.size(self.vars_dict_loc[self.mylist[4]])-1 )
+
+            alpha_in = self.vars_dict_loc[self.mylist[0]][idx_a]
+            beta_in = self.vars_dict_loc[self.mylist[1]][idx_b]
+            re_in = self.vars_dict_loc[self.mylist[2]][idx_re]
+            sc_in = self.vars_dict_loc[self.mylist[3]][idx_sc]
+            fr_in = self.vars_dict_loc[self.mylist[4]][idx_fr]
+
+            #print("idx_a, idx_b, idx_re, idx_sc, idx_fr = ", idx_a, idx_b, idx_re, idx_sc, idx_fr)
+            #print("alpha_in, beta_in, re_in, fr_in, sc_in = ", alpha_in, beta_in, re_in, sc_in, fr_in)
+
+            print("")
+            print("     Solving for %s = %10.5e (%i/%i)" % (self.list_iter[0], self.vars_dict[self.list_iter[0]][i], i, self.npts_list[0]-1 ))
+            print("     -------------------------------------")
+            
+            # Extrapolate omega
+            if (i >= 1):
+                # Extrapolation for inner loop
+                omega = mod_util.extrapolate_in_inner_loop(self.omega_array, self.vars_dict[self.list_iter[0]], i, ivar)
+            elif (ivar >= 1):
+                # Extrapolation for outer loop
+                omega = mod_util.extrapolate_in_outer_loop(self.omega_array, self.vars_dict[self.list_iter[1]], i, ivar)
+
+            #print("omega = ", omega)
+            self.omega_array[ivar, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha_in, beta_in, re_in, fr_in, sc_in )
+
+
+
+
+
+
+
+
+
+            
+            #print("self.mylist[0] = ", self.mylist[0])
+            #print("self.vars_dict[self.mylist[0]][i] = ", self.vars_dict[self.mylist[0]][i])
+            #print("i = ", i)
+            #print("self.npts_list[0] = ", self.npts_list[0])
+
+            # self.list_iter[i]
+
+            #print("alpha = ",self.vars_dict["alpha"][])
+            #print("self.vars_dict[self.mylist[0]] = ", self.vars_dict[self.mylist[0]])
+
+        #list_restrict = self.mylist
+        #print("list_restrict = ", list_restrict)
+        #list_restrict.remove(self.list_iter[1])
+
+        #idx_max_a = np.min(np.size(self.vars_dict["alpha"]))
+        #idx_max_b = np.min(np.size(self.vars_dict["beta"]))
+        #idx_max_Re = np.min(np.size(self.vars_dict["Re"]))
+
+
+        #print("list_restrict = ", list_restrict)
+        #input("check here")
+
+        #print("self.mylist = ", self.mylist)
+        #print("self.vars_dict[self.mylist[0]][0] = ", self.vars_dict[self.mylist[0]][0])
+        #print("self.vars_dict[self.mylist[1]] = ", self.vars_dict[self.mylist[1]])
+        #print("self.vars_dict = ", self.vars_dict)

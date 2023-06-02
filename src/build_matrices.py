@@ -263,7 +263,7 @@ class Boussinesq(BuildMatrices):
         self.Sc = Sc
         super(Boussinesq, self).__init__(5*map.y.size, map, *args, **kwargs) 
     
-    def call_to_build_matrices(self):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """
         Equations from Livescu Annual Review of Fluid Mechanics:
         "Turbulence with Large Thermal and Compositional Density Variations"
@@ -287,13 +287,12 @@ class Boussinesq(BuildMatrices):
             print("R-T Boussinesq Equations (non-dimensional)")
             print("-----------------------------------------------------------------")
             print("Gravity                       = ", grav)
-            print("Froude number Fr              = ", np.sqrt(self.Fr2))
-            print("Schmidt number Sc             = ", self.Sc)
-            print("Reynolds number Re            = ", self.Re)
-            print("Peclet number (mass transfer) = ", self.Re*self.Sc)
+            print("Froude number Fr              = ", Fr_in)
+            print("Schmidt number Sc             = ", Sc_in)
+            print("Reynolds number Re            = ", Re_in)
+            print("Peclet number (mass transfer) = ", Re_in*Sc_in)
             print("")
-            
-            
+                        
             mat_D1_norm = np.linalg.norm(self.map.D1)
             mat_D2_norm = np.linalg.norm(self.map.D2)
             
@@ -314,11 +313,11 @@ class Boussinesq(BuildMatrices):
 
         self.mat_a1[imin:imax, imin+3*self.ny:imax+3*self.ny] = -1j*id
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/self.Re
+        self.mat_a2[imin:imax, imin:imax]           = -id/Re_in
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/self.Re
+        self.mat_b2[imin:imax, imin:imax]           = -id/Re_in
 
-        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/self.Re
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/Re_in
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
@@ -326,13 +325,13 @@ class Boussinesq(BuildMatrices):
         imin = imin + self.ny
         imax = imax + self.ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/self.Re
+        self.mat_a2[imin:imax, imin:imax]           = -id/Re_in
 
         self.mat_b1[imin:imax, imin+2*self.ny:imax+2*self.ny] = -1j*id
                 
-        self.mat_b2[imin:imax, imin:imax]           = -id/self.Re
+        self.mat_b2[imin:imax, imin:imax]           = -id/Re_in
 
-        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/self.Re
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/Re_in
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
@@ -340,13 +339,13 @@ class Boussinesq(BuildMatrices):
         imin = imin + self.ny
         imax = imax + self.ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/self.Re
+        self.mat_a2[imin:imax, imin:imax]           = -id/Re_in
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/self.Re
+        self.mat_b2[imin:imax, imin:imax]           = -id/Re_in
 
-        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/self.Re
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/Re_in
         self.mat_d1[imin:imax, imin+1*self.ny:imax+1*self.ny] = -self.map.D1 
-        self.mat_d1[imin:imax, imin+2*self.ny:imax+2*self.ny] = -grav*id/self.Fr2 
+        self.mat_d1[imin:imax, imin+2*self.ny:imax+2*self.ny] = -grav*id/Fr_in**2. 
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
 
@@ -364,11 +363,11 @@ class Boussinesq(BuildMatrices):
         imin = imin + self.ny
         imax = imax + self.ny
 
-        self.mat_a2[imin:imax, imin:imax]           = -id/(self.Re*self.Sc)
+        self.mat_a2[imin:imax, imin:imax]           = -id/(Re_in*Sc_in)
 
-        self.mat_b2[imin:imax, imin:imax]           = -id/(self.Re*self.Sc)
+        self.mat_b2[imin:imax, imin:imax]           = -id/(Re_in*Sc_in)
 
-        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/(self.Re*self.Sc) 
+        self.mat_d1[imin:imax, imin:imax]           = self.map.D2/(Re_in*Sc_in) 
         self.mat_d1[imin:imax, imin-2*self.ny:imax-2*self.ny] = -dRhop
 
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id
@@ -476,7 +475,8 @@ class BoussinesqDim(Boussinesq):
         super(BoussinesqDim, self).__init__(ny) 
         self.boussinesq = 10
     
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """
         """
         nu = bsfl_ref.nuref # 2.54841997961264e-06
@@ -601,7 +601,8 @@ class ChandrasekharDim(Boussinesq):
         super(ChandrasekharDim, self).__init__(ny) 
         self.boussinesq = -2
     
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """
         """
         # Identity matrix id
@@ -703,7 +704,8 @@ class Sandoval(Boussinesq):
         super(Sandoval, self).__init__(ny) 
         self.boussinesq = -3
     
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """
         Equations from Sndoval PhD Thesis:
         The Dynamics of Variable-Density Turbulence
@@ -948,7 +950,8 @@ class SandovalVariableMu(Boussinesq):
         super(SandovalVariableMu, self).__init__(ny) 
         self.boussinesq = -4
     
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """
         Modified Sandoval Equations (variable mu)
         """
@@ -1123,8 +1126,9 @@ class RayleighTaylorCompressibleInviscid(BuildMatrices):
     def __init__(self, ny):
         self.boussinesq = -555
         super(RayleighTaylorCompressibleInviscid, self).__init__(4*ny) 
-    
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
     #def set_matrices_rayleigh_taylor_compressible_inviscid(self, ny, bsfl, bsfl_ref, map, alpha_in): # here I pas ny
         """
         This system is build for a vertical interface with heavy fluid on left side, light fluid on right side,
@@ -1301,7 +1305,8 @@ class RayleighTaylorIncompressibleInviscid_W_Equation(BuildMatrices):
         self.boussinesq = 1999
         super(RayleighTaylorIncompressibleInviscid_W_Equation, self).__init__(1*ny) 
 
-    def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
         """
         Hello
         """
@@ -1381,11 +1386,14 @@ class ShearLayer(BuildMatrices):
     def __init__(self, map, Re=10000, *args, **kwargs):
         self.boussinesq = 999
         self.Re = Re
-        print("self.Re in class ShearLayer(BuildMatrices)= ", self.Re)
+        self.Fr = -10
+        self.Sc = -10
+        
+        #print("self.Re in class ShearLayer(BuildMatrices)= ", self.Re)
         #print("qwerty: map.y = ", map.y)
         super(ShearLayer, self).__init__(4*map.y.size, map, *args, **kwargs)
     
-    def call_to_build_matrices(self):
+    def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
     #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
     #def set_matrices(self, ny, Re, bsfl, map): # here I pas ny
         """
@@ -1416,7 +1424,7 @@ class ShearLayer(BuildMatrices):
                  0     D       0   0 ]
         """
         nt  = 4*self.ny
-        Re  = self.Re
+        Re  = Re_in
 
         # Identity matrix id
         id      = np.identity(self.ny)

@@ -1394,17 +1394,21 @@ def write_stability_banana(npts_alp, npts_re, iarr, alpha, Re_range, filename):
     fileoutFinal.close()
 
 
-def extrapolate_in_alpha(omega_array, alpha, i, ire):
+def extrapolate_in_inner_loop(omega_array, var_in, i, ire):
 
-    om1   = omega_array[ire, i-1]
-    om2   = omega_array[ire, i-2]
-    al1   = alpha[i-1]
-    al2   = alpha[i-2]
-    
-    acoef = ( om1 - om2 )/( al1 - al2 )
-    bcoef = om1 - acoef*al1
-    
-    omega = acoef*alpha[i] + bcoef
+    if (i > 1):
+        om1   = omega_array[ire, i-1]
+        om2   = omega_array[ire, i-2]
+        al1   = var_in[i-1]
+        al2   = var_in[i-2]
+        
+        acoef = ( om1 - om2 )/( al1 - al2 )
+        bcoef = om1 - acoef*al1
+        
+        omega = acoef*var_in[i] + bcoef
+
+    else:
+        omega = omega_array[ire, i-1]
 
     #print("alpha[i] = ",alpha[i])
     #print("acoef*alpha[i] = ", acoef*alpha[i])
@@ -1412,18 +1416,22 @@ def extrapolate_in_alpha(omega_array, alpha, i, ire):
 
     return omega
 
-def extrapolate_in_reynolds(omega_array, i, ire):
+def extrapolate_in_outer_loop(omega_array, var_in, i, ire):
 
-    print("Reynolds extrapol")
-    om1   = omega_array[ire-1, i]
-    om2   = omega_array[ire-2, i]
-    re1   = re_array[ire-1]
-    re2   = re_array[ire-2]
+    print("     Outer loop extrapolation")
     
-    acoef = ( om1 - om2 )/( re1 - re2 )
-    bcoef = om1 - acoef*re1
-    
-    omega = acoef*re_array[ire] + bcoef
+    if (ire > 1):
+        om1   = omega_array[ire-1, i]
+        om2   = omega_array[ire-2, i]
+        re1   = var_in[ire-1]
+        re2   = var_in[ire-2]
+        
+        acoef = ( om1 - om2 )/( re1 - re2 )
+        bcoef = om1 - acoef*re1
+        
+        omega = acoef*var_in[ire] + bcoef
+    else:
+        omega = omega_array[ire-1, i]
 
     return omega
 
