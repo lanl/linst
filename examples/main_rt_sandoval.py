@@ -42,7 +42,7 @@ solver = mbm.Sandoval(
 #print("bsfl.rt_flag = ", bsfl.rt_flag)
 #print("solver.boussinesq = ", solver.boussinesq)
 
-solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.1523*1j)
+solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.056263*1j)
 solver.plot_eigvals()
 plt.show()
 solver.write_eigvals()
