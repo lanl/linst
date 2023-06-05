@@ -26,28 +26,37 @@ plt.rcParams['font.size'] = '16'
 plt.rc('font', family='serif')
 
 # Create instance for class GaussLobatto
-cheb = mgl.GaussLobatto(size=351)
-map = mma.MapShearLayer(sinf=500, cheb=cheb, l=10.0)
-bsfl = mbf.RTSimple(y=map.y, At=0.05)
+cheb = mgl.GaussLobatto(size=301)
+map = mma.MapShearLayer(sinf=1000, cheb=cheb, l=10.0)
 #bsfl = mbf.RTSimple(y=map.y, At=0.01)
+bsfl = mbf.RTSimple(y=map.y, At=0.05)
 
 solver = mbm.Boussinesq(
     map=map,
     Re=100,
     Fr=1.0,
-    Sc=1.0,
+    #Fr=mod_util.nonlinspace_beg_end(0.5, 3.0, 50),
+    #Sc=1.0,
+    Sc=mod_util.nonlinspace_beg_end(0.01, 20., 200),
     bsfl=bsfl,
     )
 
-#print(str(solver))
+#test = mod_util.nonlinspace_beg_end(1.0, 0.01, 50)
+#print("test = ", test)
+#input("")
 
-#solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.056263*1j)
-#solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.0, omega_guess=0.0+0.1471*1j)
-#solver.solve(alpha=np.linspace(0.5,0.5,1), beta=0.0, omega_guess=0.0+0.12753*1j)
-solver.solve(alpha=np.linspace(0.02,0.02,1), beta=0.0, omega_guess=0.0+0.12753*1j)
-solver.plot_eigvals()
-plt.show()
-solver.write_eigvals()
+# print(str(solver))
+# alpha=mod_util.nonlinspace_beg_end(0.02,10.,50)
+# print("alpha = ", alpha)
+
+# alpha=np.linspace(0.02,10.,50)
+# print("alpha = ", alpha)
+
+# input("test 101")
+
+#solver.solve(alpha=np.linspace(0.02,4.,100), beta=0.0, omega_guess=0.0+3.13765549364e-01*1j)
+solver.solve(alpha=mod_util.nonlinspace_beg_end(0.02,20.,200), beta=0.0, omega_guess=0.0+2.970850598265641e-02*1j)
+solver.write_stab_banana()
 
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)

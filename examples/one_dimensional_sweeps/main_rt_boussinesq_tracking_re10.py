@@ -26,28 +26,21 @@ plt.rcParams['font.size'] = '16'
 plt.rc('font', family='serif')
 
 # Create instance for class GaussLobatto
-cheb = mgl.GaussLobatto(size=351)
-map = mma.MapShearLayer(sinf=500, cheb=cheb, l=10.0)
-bsfl = mbf.RTSimple(y=map.y, At=0.05)
+cheb = mgl.GaussLobatto(size=201)
+map = mma.MapShearLayer(sinf=800, cheb=cheb, l=10.0)
 #bsfl = mbf.RTSimple(y=map.y, At=0.01)
+bsfl = mbf.RTSimple(y=map.y, At=0.05)
 
 solver = mbm.Boussinesq(
     map=map,
-    Re=100,
+    Re=10.0,
     Fr=1.0,
     Sc=1.0,
     bsfl=bsfl,
     )
 
-#print(str(solver))
-
-#solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.9, omega_guess=0.0+0.056263*1j)
-#solver.solve(alpha=np.linspace(0.9,0.9,1), beta=0.0, omega_guess=0.0+0.1471*1j)
-#solver.solve(alpha=np.linspace(0.5,0.5,1), beta=0.0, omega_guess=0.0+0.12753*1j)
-solver.solve(alpha=np.linspace(0.02,0.02,1), beta=0.0, omega_guess=0.0+0.12753*1j)
-solver.plot_eigvals()
-plt.show()
-solver.write_eigvals()
+solver.solve(alpha=mod_util.nonlinspace_beg_end(0.02,2.,300), beta=0.0, omega_guess=0.0+0.03*1j)
+solver.write_stab_banana()
 
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
