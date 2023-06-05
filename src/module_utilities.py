@@ -26,6 +26,46 @@ i8  = np.dtype('i8') # integer 8
 
 opt_taylor = 1
 
+def nonlinspace_beg_end(xmin, xmax, npts):
+    '''Intervall from xmin to xmax with n points, the higher the power, the more dense towards the ends'''
+    power = 2
+    if (xmax > xmin):
+        xm = (xmax - xmin) / 2
+    else:
+        xm = (xmin - xmax) / 2
+    
+    x = np.linspace(-xm**power, xm**power, npts)
+
+    if (xmax > xmin):
+        return np.sign(x)*abs(x)**(1/power) + xm + xmin
+    else:
+        return -(np.sign(x)*abs(x)**(1/power) + xm - xmin)
+    
+def nonlinspace(xmin, xmax, npts):
+
+    # Decrease coef for more clustering at beginning
+    coef = 0.1
+    eta = np.linspace(0., 1., npts)
+        
+    ymin = 0
+    ymax = xmax-xmin
+
+    yl = coef*ymax
+
+    a = (ymax*yl)/(ymax-2.*yl)
+    b = 1. + a/ymax
+
+    y = a*eta/(b-eta)
+    y = y + xmin
+    
+    y[0] = xmin
+    y[-1] = xmax
+
+    return y
+
+    
+    
+
 def get_mid_idx(ny):
 
     if (ny % 2) != 0:

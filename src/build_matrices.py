@@ -211,27 +211,91 @@ Mass transfer Peclet number ( Pe = Re*Sc )                      = {self.Re*self.
         rhs[idx_v_ymax  ] = 0.0
         lhs[idx_v_ymax, idx_v_ymax] = 1.0
 
-        ##################
-        # w-velocity BCs #
-        ##################
-        idx_w_ymin = 2*ny
-        idx_w_ymax = 3*ny-1
+        # use 3*ny-1 for w and 5*ny-1 for rho
+        if ( self.jxu == 3*ny-1 ):
 
-        # ymin
-        lhs[idx_w_ymin,:] = 0.0
-        rhs[idx_w_ymin  ] = 0.0        
-        lhs[idx_w_ymin, idx_w_ymin] = 1.0
+            ##################
+            # w-velocity BCs #
+            ##################
+            idx_w_ymin = 2*ny
+            idx_w_ymax = 3*ny-1
+            
+            # ymin
+            lhs[idx_w_ymin,:] = 0.0
+            rhs[idx_w_ymin  ] = 0.0        
+            lhs[idx_w_ymin, idx_w_ymin] = 1.0
+            
+            # ymax
+            #lhs[idx_w_ymax,:] = 0.0
+            #rhs[idx_w_ymax  ] = 0.0
+            #lhs[idx_w_ymax, idx_w_ymax] = 1.0
+            
+            # Replace w(ymax)=0 by bc below and iterate in member solve_stability_secant (cf. class SolveGeneralizedEVP) to satisfy w(ymax)=0
+            lhs[2*ny+mid_idx,:] = 0.0
+            rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+            lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
 
-        # ymax
-        #lhs[idx_w_ymax,:] = 0.0
-        #rhs[idx_w_ymax  ] = 0.0
-        #lhs[idx_w_ymax, idx_w_ymax] = 1.0
+            ##################
+            # density BCs #
+            ##################
+            idx_r_ymin = 4*ny
+            idx_r_ymax = 5*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0
+            #lhs[idx_r_ymin, idx_r_ymin:5*ny] = map.D1[0, :]
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_r_ymax,:] = 0.0
+            rhs[idx_r_ymax  ] = 0.0
+            #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
+            lhs[idx_r_ymax, idx_r_ymax] = 1.0
 
-        # Replace w(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy w(ymax)=0
-        lhs[2*ny+mid_idx,:] = 0.0
-        rhs[2*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        lhs[2*ny+mid_idx, 2*ny+mid_idx] = 1.0
+        elif ( self.jxu == 5*ny-1 ):
 
+            ##################
+            # w-velocity BCs #
+            ##################
+            idx_w_ymin = 2*ny
+            idx_w_ymax = 3*ny-1
+            
+            # ymin
+            lhs[idx_w_ymin,:] = 0.0
+            rhs[idx_w_ymin  ] = 0.0        
+            lhs[idx_w_ymin, idx_w_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_w_ymax,:] = 0.0
+            rhs[idx_w_ymax  ] = 0.0
+            lhs[idx_w_ymax, idx_w_ymax] = 1.0
+            
+            ##################
+            # density BCs #
+            ##################
+            idx_r_ymin = 4*ny
+            idx_r_ymax = 5*ny-1
+            
+            # ymin
+            lhs[idx_r_ymin,:] = 0.0
+            rhs[idx_r_ymin  ] = 0.0
+            #lhs[idx_r_ymin, idx_r_ymin:5*ny] = map.D1[0, :]
+            lhs[idx_r_ymin, idx_r_ymin] = 1.0
+            
+            # ymax
+            #lhs[idx_r_ymax,:] = 0.0
+            #rhs[idx_r_ymax  ] = 0.0
+            #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
+            #lhs[idx_r_ymax, idx_r_ymax] = 1.0
+            
+            # Replace rho(ymax)=0 by bc below and iterate in member solve_stability_secant (cf. class SolveGeneralizedEVP) to satisfy rho(ymax)=0
+            lhs[4*ny+mid_idx,:] = 0.0
+            rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
+            lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
+
+        else:
+            sys.exit("Not a proper index for secant method bc in RT")
 
         ##################
         # pressure BCs #
@@ -253,33 +317,6 @@ Mass transfer Peclet number ( Pe = Re*Sc )                      = {self.Re*self.
             rhs[idx_p_ymax  ] = 0.0
             #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
             lhs[idx_p_ymax, idx_p_ymax]      = 1.0
-
-        ##################
-        # density BCs #
-        ##################
-        set_dens = 1
-
-        if (set_dens==1):
-            idx_r_ymin = 4*ny
-            idx_r_ymax = 5*ny-1
-            
-            # ymin
-            lhs[idx_r_ymin,:] = 0.0
-            rhs[idx_r_ymin  ] = 0.0
-            #lhs[idx_r_ymin, idx_r_ymin:5*ny] = map.D1[0, :]
-            lhs[idx_r_ymin, idx_r_ymin] = 1.0
-            
-            # ymax
-            lhs[idx_r_ymax,:] = 0.0
-            rhs[idx_r_ymax  ] = 0.0
-            #lhs[idx_r_ymax, idx_r_ymin:5*ny] = map.D1[-1, :]
-            lhs[idx_r_ymax, idx_r_ymax] = 1.0
-
-            # Replace rho(ymax)=0 by bc below and iterate in class_solve_gevp to satisfy rho(ymax)=0
-            #lhs[4*ny+mid_idx,:] = 0.0
-            #rhs[4*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-            #lhs[4*ny+mid_idx, 4*ny+mid_idx] = 1.0
-
 
 class Boussinesq(BuildMatrices):
     def __init__(self, map, Re=1, Fr=1, Sc=1, *args, **kwargs):

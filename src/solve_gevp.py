@@ -93,6 +93,8 @@ class SolveGeneralizedEVP:
         Function of class SolveGeneralizedEVP that solves locally for a single eigenvalue at a time (a guess is required)
         """
         mid_idx = self.mid_idx
+
+        tol_nrm = 1.e6
         
         if self.bsfl.rt_flag == True:
             tol1  = 1.0e-5
@@ -109,7 +111,7 @@ class SolveGeneralizedEVP:
         u0   = 10
         
         iter = 0
-        maxiter = 100
+        maxiter = 20
         
         #jxu  = 5*self.ny-1 # 0
         #if (self.bsfl.rt_flag): jxu = 3*self.ny-1 # use 3*ny-1 for w and 5*ny-1 for rho
@@ -128,6 +130,7 @@ class SolveGeneralizedEVP:
             SOL = cp.linalg.solve(self.mat_lhs, self.vec_rhs)
         else:
             SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
+            #print("np.linalg.norm(SOL) = ", np.linalg.norm(SOL))
                 
         u00 = SOL[self.jxu]
 
@@ -137,7 +140,7 @@ class SolveGeneralizedEVP:
         # Main loop
         #
         
-        while ( ( abs(u0) > tol2 or abs(res) > tol1 ) and iter < maxiter ):
+        while ( ( abs(u0) > tol2 or abs(res) > tol1 ) and iter < maxiter and np.linalg.norm(SOL) < tol_nrm ):
         
             iter=iter+1
 
@@ -151,6 +154,7 @@ class SolveGeneralizedEVP:
                 SOL = cp.linalg.solve(self.mat_lhs, self.vec_rhs)
             else:
                 SOL = linalg.solve(self.mat_lhs, self.vec_rhs)
+                #print("np.linalg.norm(SOL) = ", np.linalg.norm(SOL))
         
             # Extract boundary condition
             u0  = SOL[self.jxu]
@@ -171,8 +175,6 @@ class SolveGeneralizedEVP:
             
             print("     Iteration %2d: abs(u0) = %10.5e, abs(res) = %10.5e, omega = %21.11e, %21.11e" % (iter, np.abs(u0), abs(res), omega0.real, omega0.imag))
             
-        if ( iter == maxiter ): sys.exit("No Convergence in Secant Method...")
-
         # Get final eigenvectors
         final_ev = 0
         if (final_ev==1):
@@ -209,7 +211,11 @@ class SolveGeneralizedEVP:
             
             input("Local solver: check eigenfunctions 2222222222222")
 
-        return omega0
+        if ( iter == maxiter or np.linalg.norm(SOL) > tol_nrm ):
+            return 0.0, iter, maxiter, np.linalg.norm(SOL), tol_nrm
+            #sys.exit("No Convergence in Secant Method...")
+        else:
+            return omega0, iter, maxiter, np.linalg.norm(SOL), tol_nrm
         
     def write_eigvals(self):
         if (self.Local):
@@ -619,8 +625,9 @@ class SolveGeneralizedEVP:
                 omega = mod_util.extrapolate_in_outer_loop(self.omega_array, self.vars_dict[self.list_iter[1]], i, ivar)
 
             #print("omega = ", omega)
-            self.omega_array[ivar, i] = self.solve_stability_secant(omega, omega + omega*1e-5, alpha_in, beta_in, re_in, fr_in, sc_in )
-
+            self.omega_array[ivar, i], iter, maxiter, sol_nrm, tol_nrm = self.solve_stability_secant(omega, omega + omega*1e-5, alpha_in, beta_in, re_in, fr_in, sc_in )
+            if ( iter == maxiter or sol_nrm > tol_nrm ):
+                break
 
 
 
