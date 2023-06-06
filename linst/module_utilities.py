@@ -1165,12 +1165,6 @@ def compute_growth_rate_from_energy_balance(ueig, veig, peig, U, Uy, D1, y, alph
 
     plot_dissipation_only(np.real(Dissipation_integrand), np.real(Dissipation_integrand_other), np.real(Dissipation_integrand_other333), y)
     
-def compute_inner_prod(f, g):
-
-    inner_prod = 0.5*( np.multiply(np.conj(f), g) + np.multiply(f, np.conj(g)) )
-
-    return inner_prod
-
     
 def trapezoid_integration(fct, y):
 

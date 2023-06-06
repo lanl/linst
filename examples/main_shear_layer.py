@@ -14,6 +14,7 @@ matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 
 import module_utilities as mod_util
+import solve_gevp as solgevp
 
 from matplotlib import cm
 from matplotlib import ticker
@@ -26,7 +27,7 @@ plt.rcParams['font.size'] = '16'
 plt.rc('font', family='serif')
 
 # Create instance for class GaussLobatto
-cheb = mgl.GaussLobatto(size=401)
+cheb = mgl.GaussLobatto(size=101)
 map = mma.MapShearLayer(sinf=150, cheb=cheb, l=10.)
 bsfl = mbf.HypTan(y=map.y)
 
@@ -44,6 +45,9 @@ solver.write_eigvals()
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
 solver.plot_eigvects(bsfl.rt_flag)
+
+postproc = solgevp.PostShearLayer(solver)
+postproc.get_balance_reynolds_stress(solver.omega_max.imag)
 
 
 ###################################

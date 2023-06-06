@@ -84,11 +84,13 @@ class HypTan(Baseflow):
         else:
             sys.exit("Not a proper value for flag hyptan")
 
-        #self.U    = np.tanh(y)
-        #self.Up   = ( 1.0 - np.tanh(y)**2. )
-        
-        self.W    = np.zeros(size, dp)
-        self.Wp   = np.zeros(size, dp)
+        flag_3d = False
+        if (flag_3d):
+            self.W    = self.U
+            self.Wp   = self.Up
+        else:
+            self.W    = 0.*self.U
+            self.Wp   = 0.*self.U
 
         self.rt_flag = False
 

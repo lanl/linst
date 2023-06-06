@@ -629,24 +629,293 @@ class SolveGeneralizedEVP:
             if ( iter == maxiter or sol_nrm > tol_nrm ):
                 break
 
+class PostProcess(SolveGeneralizedEVP):
+    """
+    This class define a post-processing object
+    """
+    def __init__(self, solver):
+        """
+        Constructor of class PostProcess
+        """
+        #super(PostProcess, self).__init__(*args, **kwargs)
+        self.solver = solver
+
+    def compute_inner_prod(self, f, g):
+        inner_prod = 0.5*( np.multiply(np.conj(f), g) + np.multiply(f, np.conj(g)) )    
+        return inner_prod
+
+    def get_dist_prods_lhs(self):
+        
+        self.rxx = self.compute_inner_prod(self.solver.ueig, self.solver.ueig)
+        self.ryy = self.compute_inner_prod(self.solver.veig, self.solver.veig)
+        self.rzz = self.compute_inner_prod(self.solver.weig, self.solver.weig)
+        
+        self.rxy = self.compute_inner_prod(self.solver.ueig, self.solver.veig)
+        self.ryz = self.compute_inner_prod(self.solver.veig, self.solver.weig)
+
+        self.drxxdx = 2.*self.compute_inner_prod(self.solver.ueig, self.dudx)
+        self.drxxdz = 2.*self.compute_inner_prod(self.solver.ueig, self.dudz)
+
+        self.dryydx = 2.*self.compute_inner_prod(self.solver.veig, self.dvdx)
+        self.dryydz = 2.*self.compute_inner_prod(self.solver.veig, self.dvdz)
+
+        self.drzzdx = 2.*self.compute_inner_prod(self.solver.weig, self.dwdx)
+        self.drzzdz = 2.*self.compute_inner_prod(self.solver.weig, self.dwdz)
+
+        self.drxydx = self.compute_inner_prod(self.solver.ueig, self.dvdx) + self.compute_inner_prod(self.solver.veig, self.dudx)
+        self.drxydz = self.compute_inner_prod(self.solver.ueig, self.dvdz) + self.compute_inner_prod(self.solver.veig, self.dudz)
+
+        self.lhs_rxx = 2.*self.omega_i*self.rxx.real
+        self.lhs_ryy = 2.*self.omega_i*self.ryy.real
+        self.lhs_rzz = 2.*self.omega_i*self.rzz.real
+        self.lhs_rxy = 2.*self.omega_i*self.rxy.real
+
+        # Rxx equation
+        self.lap_rxx = 2.*( self.compute_inner_prod(self.dudx, self.dudx)
+                            +self.compute_inner_prod(self.dudy, self.dudy)
+                            +self.compute_inner_prod(self.dudz, self.dudz)
+                           )
+        
+        self.lap_rxx = self.lap_rxx + 2.*( self.compute_inner_prod(self.solver.ueig, self.d2udx2)
+                                           +self.compute_inner_prod(self.solver.ueig, self.d2udy2)
+                                           +self.compute_inner_prod(self.solver.ueig, self.d2udz2)
+                                          )
+        
+        self.dissip_rxx = 2.*( self.compute_inner_prod(self.dudx, self.dudx)
+                               +self.compute_inner_prod(self.dudy, self.dudy)
+                               +self.compute_inner_prod(self.dudz, self.dudz)
+                              )
+
+        # Ryy equation
+        self.lap_ryy = 2.*( self.compute_inner_prod(self.dvdx, self.dvdx)
+                            +self.compute_inner_prod(self.dvdy, self.dvdy)
+                            +self.compute_inner_prod(self.dvdz, self.dvdz)
+                           )
+        
+        self.lap_ryy = self.lap_ryy + 2.*( self.compute_inner_prod(self.solver.veig, self.d2vdx2)
+                                           +self.compute_inner_prod(self.solver.veig, self.d2vdy2)
+                                           +self.compute_inner_prod(self.solver.veig, self.d2vdz2)
+                                          )
+        
+        self.dissip_ryy = 2.*( self.compute_inner_prod(self.dvdx, self.dvdx)
+                               +self.compute_inner_prod(self.dvdy, self.dvdy)
+                               +self.compute_inner_prod(self.dvdz, self.dvdz)
+                              )
+
+        # Rxy equation
+        self.lap_rxy = 2.*( self.compute_inner_prod(self.dudx, self.dvdx)
+                            +self.compute_inner_prod(self.dudy, self.dvdy)
+                            +self.compute_inner_prod(self.dudz, self.dvdz)
+                           )
+        
+        self.lap_rxy = self.lap_rxy + ( self.compute_inner_prod(self.solver.ueig, self.d2vdx2)
+                                        +self.compute_inner_prod(self.solver.ueig, self.d2vdy2)
+                                        +self.compute_inner_prod(self.solver.ueig, self.d2vdz2)
+                                       )
+
+        self.lap_rxy = self.lap_rxy + ( self.compute_inner_prod(self.solver.veig, self.d2udx2)
+                                        +self.compute_inner_prod(self.solver.veig, self.d2udy2)
+                                        +self.compute_inner_prod(self.solver.veig, self.d2udz2)
+                                       )
+
+        self.dissip_rxy = 2.*( self.compute_inner_prod(self.dudx, self.dvdx)
+                               +self.compute_inner_prod(self.dudy, self.dvdy)
+                               +self.compute_inner_prod(self.dudz, self.dvdz)
+                              )
+        
+        # Rzz equation
+        self.lap_rzz = 2.*( self.compute_inner_prod(self.dwdx, self.dwdx)
+                            +self.compute_inner_prod(self.dwdy, self.dwdy)
+                            +self.compute_inner_prod(self.dwdz, self.dwdz)
+                           )
+        
+        self.lap_rzz = self.lap_rzz + 2.*( self.compute_inner_prod(self.solver.weig, self.d2wdx2)
+                                           +self.compute_inner_prod(self.solver.weig, self.d2wdy2)
+                                           +self.compute_inner_prod(self.solver.weig, self.d2wdz2)
+                                          )
+        
+        self.dissip_rzz = 2.*( self.compute_inner_prod(self.dwdx, self.dwdx)
+                               +self.compute_inner_prod(self.dwdy, self.dwdy)
+                               +self.compute_inner_prod(self.dwdz, self.dwdz)
+                              )
+
+        # Other terms
+        self.udpdx = self.compute_inner_prod(self.solver.ueig, self.dpdx)
+        self.udpdy = self.compute_inner_prod(self.solver.ueig, self.dpdy)
+
+        self.vdpdx = self.compute_inner_prod(self.solver.veig, self.dpdx)
+        self.vdpdy = self.compute_inner_prod(self.solver.veig, self.dpdy)
+
+        self.wdpdz = self.compute_inner_prod(self.solver.weig, self.dpdz)
 
 
 
+class PostShearLayer(PostProcess):
+    def __init__(self, solver):
+        """
+        Constructor of class PostShearLayer
+        """
+        super(PostShearLayer, self).__init__(solver)
 
+    def get_eigenfcts_derivatives(self):
 
+        D1 = self.solver.map.D1
+        D2 = self.solver.map.D2
+        
+        ia = 1j*self.solver.alpha
+        ib = 1j*self.solver.beta
+
+        ia2 = ( 1j*self.solver.alpha )**2.
+        ib2 = ( 1j*self.solver.beta )**2.
+
+        iab = ( 1j*self.solver.alpha )*( 1j*self.solver.beta )
+
+        self.dudx = ia*self.solver.ueig
+        self.dudy = np.matmul(D1, self.solver.ueig)
+        self.dudz = ib*self.solver.ueig
+        
+        self.dvdx = ia*self.solver.veig
+        self.dvdy = np.matmul(D1, self.solver.veig)
+        self.dvdz = ib*self.solver.veig
+        
+        self.dwdx = ia*self.solver.weig
+        self.dwdy = np.matmul(D1, self.solver.weig)
+        self.dwdz = ib*self.solver.weig
+        
+        self.dpdx = ia*self.solver.peig
+        self.dpdy = np.matmul(D1, self.solver.peig)
+        self.dpdz = ib*self.solver.peig
+        
+        self.drdx = ia*self.solver.reig
+        self.drdy = np.matmul(D1, self.solver.reig)
+        self.drdz = ib*self.solver.reig
+        
+        self.d2udx2 = ia2*self.solver.ueig
+        self.d2udy2 = np.matmul(D2, self.solver.ueig)
+        self.d2udz2 = ib2*self.solver.ueig
+                
+        self.d2vdx2 = ia2*self.solver.veig
+        self.d2vdy2 = np.matmul(D2, self.solver.veig)
+        self.d2vdz2 = ib2*self.solver.veig
+        
+        self.d2wdx2 = ia2*self.solver.weig
+        self.d2wdy2 = np.matmul(D2, self.solver.weig)
+        self.d2wdz2 = ib2*self.solver.weig
+        
+        self.d2pdx2 = ia2*self.solver.peig
+        self.d2pdy2 = np.matmul(D2, self.solver.peig)
+        self.d2pdz2 = ib2*self.solver.peig
+        
+        self.d2rdx2 = ia2*self.solver.reig
+        self.d2rdy2 = np.matmul(D2, self.solver.reig)
+        self.d2rdz2 = ib2*self.solver.reig
+
+    def get_balance_reynolds_stress(self, omega_i):
+
+        self.omega_i = omega_i
+        
+        self.get_eigenfcts_derivatives()
+        self.get_dist_prods_lhs()
+                
+        Re = self.solver.Re
+
+        # Build rhs for Rxx equation
+        self.rhs_rxx = ( -np.multiply(self.solver.bsfl.U, self.drxxdx)
+                         -np.multiply(self.solver.bsfl.W, self.drxxdz)
+                         -2.*np.multiply(self.rxy, self.solver.bsfl.Up)
+                         -2.*self.udpdx
+                         +1./Re*( self.lap_rxx - self.dissip_rxx )
+                        )
+
+        self.rhs_rxx = self.rhs_rxx[0,:].real
+
+        # Build rhs for Ryy equation
+        self.rhs_ryy = ( -np.multiply(self.solver.bsfl.U, self.dryydx)
+                         -np.multiply(self.solver.bsfl.W, self.dryydz)
+                         -2.*self.vdpdy
+                         +1./Re*( self.lap_ryy - self.dissip_ryy )
+                        )
+
+        self.rhs_ryy = self.rhs_ryy.real
+
+        # Build rhs for Rzz equation
+        self.rhs_rzz = ( -np.multiply(self.solver.bsfl.U, self.drzzdx)
+                         -np.multiply(self.solver.bsfl.W, self.drzzdz)
+                         -2.*np.multiply(self.solver.bsfl.Wp, self.ryz)
+                         -2.*self.wdpdz
+                         +1./Re*( self.lap_rzz - self.dissip_rzz )
+                        )
+
+        self.rhs_rzz = self.rhs_rzz.real
+
+        # Build rhs for Rxy equation                 
+        self.rhs_rxy = ( -np.multiply(self.solver.bsfl.U, self.drxydx)
+                         -np.multiply(self.solver.bsfl.W, self.drxydz)
+                         -self.udpdy
+                         -self.vdpdx
+                         -np.multiply(self.ryy, self.solver.bsfl.Up)
+                         +1./Re*( self.lap_rxy - self.dissip_rxy )
+                        )
+
+        self.rhs_rxy = self.rhs_rxy.real
+
+        ax = plt.gca()
+        ax.plot( self.rhs_rxx, self.solver.map.y, 'k')
+        ax.plot( self.lhs_rxx, self.solver.map.y, 'b--')
+        #ax.set_xlabel(r'$\omega_r$', fontsize=20)
+        #ax.set_ylabel(r'$\omega_i$', fontsize=20)
+        #ax.set_title('Eigenvalue spectrum')
+        #ax.set_xlim([-10, 10])
+        #ax.set_ylim([-1, 1])
+        plt.show()
+
+        print("")
+        print("Balance Rxx equation:")
+        print("=====================")
+        print("bal_rxx = ", np.amax(np.abs(self.lhs_rxx-self.rhs_rxx)))
+        
+        print("Balance Ryy equation:")
+        print("=====================")
+        print("bal_ryy = ", np.amax(np.abs(self.lhs_ryy-self.rhs_ryy)))
+        
+        print("Balance Rzz equation:")
+        print("=====================")
+        print("bal_rzz = ", np.amax(np.abs(self.lhs_rzz-self.rhs_rzz)))
+
+        print("Balance Rxy equation:")
+        print("=====================")
+        print("bal_rxy = ", np.amax(np.abs(self.lhs_rxy-self.rhs_rxy)))
+        print("")
+    
+class PostRayleighTaylor(PostProcess):
+    def __init__(self):
+        """
+        Constructor of class PostShearLayer
+        """
+        super(PostRayleighTaylor, self).__init__(*args, **kwargs)
+
+class PostPoiseuille(PostProcess):
+    def __init__(self):
+        """
+        Constructor of class PostPoiseuille
+        """
+        super(PostPoiseuille, self).__init__(*args, **kwargs)
+    
+
+        
 
 
             
-            #print("self.mylist[0] = ", self.mylist[0])
-            #print("self.vars_dict[self.mylist[0]][i] = ", self.vars_dict[self.mylist[0]][i])
-            #print("i = ", i)
-            #print("self.npts_list[0] = ", self.npts_list[0])
-
-            # self.list_iter[i]
-
-            #print("alpha = ",self.vars_dict["alpha"][])
-            #print("self.vars_dict[self.mylist[0]] = ", self.vars_dict[self.mylist[0]])
-
+        #print("self.mylist[0] = ", self.mylist[0])
+        #print("self.vars_dict[self.mylist[0]][i] = ", self.vars_dict[self.mylist[0]][i])
+        #print("i = ", i)
+        #print("self.npts_list[0] = ", self.npts_list[0])
+        
+        # self.list_iter[i]
+        
+        #print("alpha = ",self.vars_dict["alpha"][])
+        #print("self.vars_dict[self.mylist[0]] = ", self.vars_dict[self.mylist[0]])
+        
         #list_restrict = self.mylist
         #print("list_restrict = ", list_restrict)
         #list_restrict.remove(self.list_iter[1])
