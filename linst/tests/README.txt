@@ -1,4 +1,4 @@
-from src directory, do for instance:
+from linst/linst directory, do for instance:
 
 python -m unittest tests.test_eigenvalues
 

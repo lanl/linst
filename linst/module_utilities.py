@@ -2722,12 +2722,7 @@ def normalize_eigenvectors(ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec, rt_
         
 
     return norm_s, ueig_vec, veig_vec, weig_vec, peig_vec, reig_vec
-
-
-
-
-
-
+    
 def write_energy_balance_terms(npts, y, t1, t2, t3, filename):
     
     work_dir      = "./"

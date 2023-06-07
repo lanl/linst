@@ -238,6 +238,10 @@ class SolveGeneralizedEVP:
             )
             ax.set_xlabel(r'$\omega_r$', fontsize=20)
             ax.set_ylabel(r'$\omega_i$', fontsize=20)
+
+            plt.gcf().subplots_adjust(left=0.145)
+            plt.gcf().subplots_adjust(bottom=0.145)
+
             #ax.set_title('Eigenvalue spectrum')
             #ax.set_xlim([-10, 10])
             #ax.set_ylim([-1, 1])
@@ -356,8 +360,8 @@ class SolveGeneralizedEVP:
         else:
             ax.set_ylim([-mv, mv])
 
-        plt.gcf().subplots_adjust(left=0.17)
-        plt.gcf().subplots_adjust(bottom=0.15)
+        plt.gcf().subplots_adjust(left=0.145)
+        plt.gcf().subplots_adjust(bottom=0.145)
 
         plt.show()
 
@@ -382,8 +386,8 @@ class SolveGeneralizedEVP:
         else:
             ax.set_ylim([-mv, mv])
 
-        plt.gcf().subplots_adjust(left=0.17)
-        plt.gcf().subplots_adjust(bottom=0.15)
+        plt.gcf().subplots_adjust(left=0.145)
+        plt.gcf().subplots_adjust(bottom=0.145)
 
         plt.show()
 
@@ -645,134 +649,190 @@ class PostProcess(SolveGeneralizedEVP):
         return inner_prod
 
     def get_dist_prods_lhs(self):
+
+        Re = self.solver.Re
         
         self.rxx = self.compute_inner_prod(self.solver.ueig, self.solver.ueig)
         self.ryy = self.compute_inner_prod(self.solver.veig, self.solver.veig)
         self.rzz = self.compute_inner_prod(self.solver.weig, self.solver.weig)
         
         self.rxy = self.compute_inner_prod(self.solver.ueig, self.solver.veig)
+        self.rxz = self.compute_inner_prod(self.solver.ueig, self.solver.weig)
         self.ryz = self.compute_inner_prod(self.solver.veig, self.solver.weig)
 
         self.drxxdx = 2.*self.compute_inner_prod(self.solver.ueig, self.dudx)
+        self.drxxdy = 2.*self.compute_inner_prod(self.solver.ueig, self.dudy)
         self.drxxdz = 2.*self.compute_inner_prod(self.solver.ueig, self.dudz)
+        #
+        self.d2rxxdxdy = 2.*( self.compute_inner_prod(self.dudx, self.dudy)
+                              +self.compute_inner_prod(self.solver.ueig, self.d2udxdy)
+                             ) 
 
         self.dryydx = 2.*self.compute_inner_prod(self.solver.veig, self.dvdx)
+        self.dryydy = 2.*self.compute_inner_prod(self.solver.veig, self.dvdy)
         self.dryydz = 2.*self.compute_inner_prod(self.solver.veig, self.dvdz)
+        #
+        self.d2ryydy2 = 2.*( self.compute_inner_prod(self.dvdy, self.dvdy)
+                             +self.compute_inner_prod(self.solver.veig, self.d2vdy2)
+                            ) 
 
         self.drzzdx = 2.*self.compute_inner_prod(self.solver.weig, self.dwdx)
+        self.drzzdy = 2.*self.compute_inner_prod(self.solver.weig, self.dwdy)
         self.drzzdz = 2.*self.compute_inner_prod(self.solver.weig, self.dwdz)
 
         self.drxydx = self.compute_inner_prod(self.solver.ueig, self.dvdx) + self.compute_inner_prod(self.solver.veig, self.dudx)
+        self.drxydy = self.compute_inner_prod(self.solver.ueig, self.dvdy) + self.compute_inner_prod(self.solver.veig, self.dudy)
         self.drxydz = self.compute_inner_prod(self.solver.ueig, self.dvdz) + self.compute_inner_prod(self.solver.veig, self.dudz)
+        #
+        self.d2rxydx2 = ( 2.*self.compute_inner_prod(self.dudx, self.dvdx)
+                          +self.compute_inner_prod(self.solver.ueig, self.d2vdx2)
+                          +self.compute_inner_prod(self.solver.veig, self.d2udx2)
+                         ) 
+        #
+        self.d2rxydy2 = ( 2.*self.compute_inner_prod(self.dudy, self.dvdy)
+                          +self.compute_inner_prod(self.solver.ueig, self.d2vdy2)
+                          +self.compute_inner_prod(self.solver.veig, self.d2udy2)
+                         ) 
+        #
+        self.d2rxydxdy = ( self.compute_inner_prod(self.dudy, self.dvdx)
+                           +self.compute_inner_prod(self.solver.ueig, self.d2vdxdy)
+                           +self.compute_inner_prod(self.dudx, self.dvdy)
+                           +self.compute_inner_prod(self.solver.veig, self.d2udxdy)
+                         ) 
 
-        self.lhs_rxx = 2.*self.omega_i*self.rxx.real
-        self.lhs_ryy = 2.*self.omega_i*self.ryy.real
-        self.lhs_rzz = 2.*self.omega_i*self.rzz.real
-        self.lhs_rxy = 2.*self.omega_i*self.rxy.real
+
+        # Build left-hand-sides for Reynolds stress equations
+        self.rxx_lhs = 2.*self.omega_i*self.rxx.real
+        self.ryy_lhs = 2.*self.omega_i*self.ryy.real
+        self.rzz_lhs = 2.*self.omega_i*self.rzz.real
+        self.rxy_lhs = 2.*self.omega_i*self.rxy.real
 
         # Rxx equation
-        self.lap_rxx = 2.*( self.compute_inner_prod(self.dudx, self.dudx)
+        self.rxx_lap = 2.*( self.compute_inner_prod(self.dudx, self.dudx)
                             +self.compute_inner_prod(self.dudy, self.dudy)
                             +self.compute_inner_prod(self.dudz, self.dudz)
-                           )
+                           )/Re
         
-        self.lap_rxx = self.lap_rxx + 2.*( self.compute_inner_prod(self.solver.ueig, self.d2udx2)
+        self.rxx_lap = self.rxx_lap + 2.*( self.compute_inner_prod(self.solver.ueig, self.d2udx2)
                                            +self.compute_inner_prod(self.solver.ueig, self.d2udy2)
                                            +self.compute_inner_prod(self.solver.ueig, self.d2udz2)
-                                          )
+                                          )/Re
         
-        self.dissip_rxx = 2.*( self.compute_inner_prod(self.dudx, self.dudx)
+        self.rxx_dissip = 2.*( self.compute_inner_prod(self.dudx, self.dudx)
                                +self.compute_inner_prod(self.dudy, self.dudy)
                                +self.compute_inner_prod(self.dudz, self.dudz)
-                              )
+                              )/Re
+
+        self.rxx_advection = -np.multiply(self.solver.bsfl.U, self.drxxdx) -np.multiply(self.solver.bsfl.W, self.drxxdz)
+        self.rxx_production = -2.*np.multiply(self.rxy, self.solver.bsfl.Up)
+
+        self.rxx_pres_diffus = -2.* ( self.compute_inner_prod(self.solver.ueig, self.dpdx) + self.compute_inner_prod(self.solver.peig, self.dudx) )
+        self.rxx_pres_strain = 2.*self.compute_inner_prod(self.solver.peig, self.dudx)
 
         # Ryy equation
-        self.lap_ryy = 2.*( self.compute_inner_prod(self.dvdx, self.dvdx)
+        self.ryy_lap = 2.*( self.compute_inner_prod(self.dvdx, self.dvdx)
                             +self.compute_inner_prod(self.dvdy, self.dvdy)
                             +self.compute_inner_prod(self.dvdz, self.dvdz)
-                           )
+                           )/Re
         
-        self.lap_ryy = self.lap_ryy + 2.*( self.compute_inner_prod(self.solver.veig, self.d2vdx2)
+        self.ryy_lap = self.ryy_lap + 2.*( self.compute_inner_prod(self.solver.veig, self.d2vdx2)
                                            +self.compute_inner_prod(self.solver.veig, self.d2vdy2)
                                            +self.compute_inner_prod(self.solver.veig, self.d2vdz2)
-                                          )
+                                          )/Re
         
-        self.dissip_ryy = 2.*( self.compute_inner_prod(self.dvdx, self.dvdx)
+        self.ryy_dissip = 2.*( self.compute_inner_prod(self.dvdx, self.dvdx)
                                +self.compute_inner_prod(self.dvdy, self.dvdy)
                                +self.compute_inner_prod(self.dvdz, self.dvdz)
-                              )
+                              )/Re
+
+        self.ryy_advection = -np.multiply(self.solver.bsfl.U, self.dryydx) -np.multiply(self.solver.bsfl.W, self.dryydz)
+        self.ryy_production = 0.0*self.ryy_advection
+
+        self.ryy_pres_diffus = -2.*( self.compute_inner_prod(self.solver.veig, self.dpdy) + self.compute_inner_prod(self.solver.peig, self.dvdy) )
+        self.ryy_pres_strain = 2.*self.compute_inner_prod(self.solver.peig, self.dvdy)
 
         # Rxy equation
-        self.lap_rxy = 2.*( self.compute_inner_prod(self.dudx, self.dvdx)
+        self.rxy_lap = 2.*( self.compute_inner_prod(self.dudx, self.dvdx)
                             +self.compute_inner_prod(self.dudy, self.dvdy)
                             +self.compute_inner_prod(self.dudz, self.dvdz)
-                           )
+                           )/Re
         
-        self.lap_rxy = self.lap_rxy + ( self.compute_inner_prod(self.solver.ueig, self.d2vdx2)
+        self.rxy_lap = self.rxy_lap + ( self.compute_inner_prod(self.solver.ueig, self.d2vdx2)
                                         +self.compute_inner_prod(self.solver.ueig, self.d2vdy2)
                                         +self.compute_inner_prod(self.solver.ueig, self.d2vdz2)
-                                       )
+                                       )/Re
 
-        self.lap_rxy = self.lap_rxy + ( self.compute_inner_prod(self.solver.veig, self.d2udx2)
+        self.rxy_lap = self.rxy_lap + ( self.compute_inner_prod(self.solver.veig, self.d2udx2)
                                         +self.compute_inner_prod(self.solver.veig, self.d2udy2)
                                         +self.compute_inner_prod(self.solver.veig, self.d2udz2)
-                                       )
+                                       )/Re
 
-        self.dissip_rxy = 2.*( self.compute_inner_prod(self.dudx, self.dvdx)
+        self.rxy_dissip = 2.*( self.compute_inner_prod(self.dudx, self.dvdx)
                                +self.compute_inner_prod(self.dudy, self.dvdy)
                                +self.compute_inner_prod(self.dudz, self.dvdz)
+                              )/Re
+
+        self.rxy_advection = -np.multiply(self.solver.bsfl.U, self.drxydx) -np.multiply(self.solver.bsfl.W, self.drxydz)
+        self.rxy_production = -np.multiply(self.ryy, self.solver.bsfl.Up)
+
+        self.rxy_pres_diffus = -( self.compute_inner_prod(self.solver.ueig, self.dpdy)
+                               +self.compute_inner_prod(self.solver.peig, self.dudy)
+                               +self.compute_inner_prod(self.solver.veig, self.dpdx)
+                               +self.compute_inner_prod(self.solver.peig, self.dvdx)
                               )
+    
+        
+        self.rxy_pres_strain = ( self.compute_inner_prod(self.solver.peig, self.dudy)
+                                 +self.compute_inner_prod(self.solver.peig, self.dvdx)
+                                )
         
         # Rzz equation
-        self.lap_rzz = 2.*( self.compute_inner_prod(self.dwdx, self.dwdx)
+        self.rzz_lap = 2.*( self.compute_inner_prod(self.dwdx, self.dwdx)
                             +self.compute_inner_prod(self.dwdy, self.dwdy)
                             +self.compute_inner_prod(self.dwdz, self.dwdz)
-                           )
+                           )/Re
         
-        self.lap_rzz = self.lap_rzz + 2.*( self.compute_inner_prod(self.solver.weig, self.d2wdx2)
+        self.rzz_lap = self.rzz_lap + 2.*( self.compute_inner_prod(self.solver.weig, self.d2wdx2)
                                            +self.compute_inner_prod(self.solver.weig, self.d2wdy2)
                                            +self.compute_inner_prod(self.solver.weig, self.d2wdz2)
-                                          )
+                                          )/Re
         
-        self.dissip_rzz = 2.*( self.compute_inner_prod(self.dwdx, self.dwdx)
+        self.rzz_dissip = 2.*( self.compute_inner_prod(self.dwdx, self.dwdx)
                                +self.compute_inner_prod(self.dwdy, self.dwdy)
                                +self.compute_inner_prod(self.dwdz, self.dwdz)
-                              )
+                              )/Re
 
-        # Other terms
-        self.udpdx = self.compute_inner_prod(self.solver.ueig, self.dpdx)
-        self.udpdy = self.compute_inner_prod(self.solver.ueig, self.dpdy)
+        self.rzz_advection = -np.multiply(self.solver.bsfl.U, self.drzzdx) -np.multiply(self.solver.bsfl.W, self.drzzdz)
+        self.rzz_production = -2.*np.multiply(self.ryz, self.solver.bsfl.Wp)
 
-        self.vdpdx = self.compute_inner_prod(self.solver.veig, self.dpdx)
-        self.vdpdy = self.compute_inner_prod(self.solver.veig, self.dpdy)
-
-        self.wdpdz = self.compute_inner_prod(self.solver.weig, self.dpdz)
-
-
-
-class PostShearLayer(PostProcess):
+        self.rzz_pres_diffus = -2.*( self.compute_inner_prod(self.solver.weig, self.dpdz) + self.compute_inner_prod(self.solver.peig, self.dwdz) )
+        self.rzz_pres_strain = 2.*self.compute_inner_prod(self.solver.peig, self.dwdz)
+        
+class PostSingleFluid(PostProcess):
     def __init__(self, solver):
         """
-        Constructor of class PostShearLayer
+        Constructor of class PostSingleFluid
         """
-        super(PostShearLayer, self).__init__(solver)
+        super(PostSingleFluid, self).__init__(solver)
 
     def get_eigenfcts_derivatives(self):
 
         D1 = self.solver.map.D1
         D2 = self.solver.map.D2
         
-        ia = 1j*self.solver.alpha
-        ib = 1j*self.solver.beta
+        ia = 1j*self.solver.alpha[0]
+        ib = 1j*self.solver.beta[0]
 
-        ia2 = ( 1j*self.solver.alpha )**2.
-        ib2 = ( 1j*self.solver.beta )**2.
+        ia2 = ( ia )**2.
+        ib2 = ( ib )**2.
 
-        iab = ( 1j*self.solver.alpha )*( 1j*self.solver.beta )
+        iab = ia*ib
 
         self.dudx = ia*self.solver.ueig
         self.dudy = np.matmul(D1, self.solver.ueig)
         self.dudz = ib*self.solver.ueig
+
+        #print("self.dudx.shape, self.dudy.shape, self.dudz.shape = ", self.dudx.shape, self.dudy.shape, self.dudz.shape)
         
         self.dvdx = ia*self.solver.veig
         self.dvdy = np.matmul(D1, self.solver.veig)
@@ -793,10 +853,12 @@ class PostShearLayer(PostProcess):
         self.d2udx2 = ia2*self.solver.ueig
         self.d2udy2 = np.matmul(D2, self.solver.ueig)
         self.d2udz2 = ib2*self.solver.ueig
+        self.d2udxdy = ia*np.matmul(D1, self.solver.ueig)
                 
         self.d2vdx2 = ia2*self.solver.veig
         self.d2vdy2 = np.matmul(D2, self.solver.veig)
         self.d2vdz2 = ib2*self.solver.veig
+        self.d2vdxdy = ia*np.matmul(D1, self.solver.veig)
         
         self.d2wdx2 = ia2*self.solver.weig
         self.d2wdy2 = np.matmul(D2, self.solver.weig)
@@ -817,76 +879,281 @@ class PostShearLayer(PostProcess):
         self.get_eigenfcts_derivatives()
         self.get_dist_prods_lhs()
                 
-        Re = self.solver.Re
-
-        # Build rhs for Rxx equation
-        self.rhs_rxx = ( -np.multiply(self.solver.bsfl.U, self.drxxdx)
-                         -np.multiply(self.solver.bsfl.W, self.drxxdz)
-                         -2.*np.multiply(self.rxy, self.solver.bsfl.Up)
-                         -2.*self.udpdx
-                         +1./Re*( self.lap_rxx - self.dissip_rxx )
+        # Build rhs for Rxx equation                                         
+        self.rxx_rhs = ( self.rxx_advection
+                         +self.rxx_production
+                         +self.rxx_pres_diffus
+                         +self.rxx_pres_strain
+                         +self.rxx_lap
+                         -self.rxx_dissip
                         )
 
-        self.rhs_rxx = self.rhs_rxx[0,:].real
+        self.rxx_rhs = self.rxx_rhs.real
 
         # Build rhs for Ryy equation
-        self.rhs_ryy = ( -np.multiply(self.solver.bsfl.U, self.dryydx)
-                         -np.multiply(self.solver.bsfl.W, self.dryydz)
-                         -2.*self.vdpdy
-                         +1./Re*( self.lap_ryy - self.dissip_ryy )
+        self.ryy_rhs = ( self.ryy_advection
+                         +self.ryy_pres_diffus
+                         +self.ryy_pres_strain
+                         +self.ryy_lap
+                         -self.ryy_dissip
                         )
 
-        self.rhs_ryy = self.rhs_ryy.real
+        self.ryy_rhs = self.ryy_rhs.real
 
-        # Build rhs for Rzz equation
-        self.rhs_rzz = ( -np.multiply(self.solver.bsfl.U, self.drzzdx)
-                         -np.multiply(self.solver.bsfl.W, self.drzzdz)
-                         -2.*np.multiply(self.solver.bsfl.Wp, self.ryz)
-                         -2.*self.wdpdz
-                         +1./Re*( self.lap_rzz - self.dissip_rzz )
+        # Build rhs for Rzz equation        
+        self.rzz_rhs = ( self.rzz_advection
+                         +self.rzz_production
+                         +self.rzz_pres_diffus
+                         +self.rzz_pres_strain
+                         +self.rzz_lap
+                         -self.rzz_dissip
                         )
 
-        self.rhs_rzz = self.rhs_rzz.real
+        self.rzz_rhs = self.rzz_rhs.real
 
         # Build rhs for Rxy equation                 
-        self.rhs_rxy = ( -np.multiply(self.solver.bsfl.U, self.drxydx)
-                         -np.multiply(self.solver.bsfl.W, self.drxydz)
-                         -self.udpdy
-                         -self.vdpdx
-                         -np.multiply(self.ryy, self.solver.bsfl.Up)
-                         +1./Re*( self.lap_rxy - self.dissip_rxy )
+        self.rxy_rhs = ( self.rxy_advection
+                         +self.rxy_production
+                         +self.rxy_pres_diffus
+                         +self.rxy_pres_strain
+                         +self.rxy_lap
+                         -self.rxy_dissip
                         )
 
-        self.rhs_rxy = self.rhs_rxy.real
-
-        ax = plt.gca()
-        ax.plot( self.rhs_rxx, self.solver.map.y, 'k')
-        ax.plot( self.lhs_rxx, self.solver.map.y, 'b--')
-        #ax.set_xlabel(r'$\omega_r$', fontsize=20)
-        #ax.set_ylabel(r'$\omega_i$', fontsize=20)
-        #ax.set_title('Eigenvalue spectrum')
-        #ax.set_xlim([-10, 10])
-        #ax.set_ylim([-1, 1])
-        plt.show()
-
+        self.rxy_rhs = self.rxy_rhs.real
+        
         print("")
         print("Balance Rxx equation:")
         print("=====================")
-        print("bal_rxx = ", np.amax(np.abs(self.lhs_rxx-self.rhs_rxx)))
+        print("rxx_bal = ", np.amax(np.abs(self.rxx_lhs-self.rxx_rhs)))
         
         print("Balance Ryy equation:")
         print("=====================")
-        print("bal_ryy = ", np.amax(np.abs(self.lhs_ryy-self.rhs_ryy)))
+        print("ryy_bal = ", np.amax(np.abs(self.ryy_lhs-self.ryy_rhs)))
         
         print("Balance Rzz equation:")
         print("=====================")
-        print("bal_rzz = ", np.amax(np.abs(self.lhs_rzz-self.rhs_rzz)))
+        print("rzz_bal = ", np.amax(np.abs(self.rzz_lhs-self.rzz_rhs)))
 
         print("Balance Rxy equation:")
         print("=====================")
-        print("bal_rxy = ", np.amax(np.abs(self.lhs_rxy-self.rhs_rxy)))
+        print("rxy_bal = ", np.amax(np.abs(self.rxy_lhs-self.rxy_rhs)))
         print("")
-    
+
+        self.get_model_terms()
+
+        self.plot_balance_reynolds_stress(self.rxx_lhs,
+                                          self.rxx_rhs,
+                                          self.rxx_advection,
+                                          self.rxx_production,
+                                          self.rxx_pres_diffus,
+                                          self.rxx_pres_strain,
+                                          self.rxx_lap,
+                                          self.rxx_dissip,
+                                          self.rxx_pres_strain_model,
+                                          self.solver.map.y,
+                                          '$R_{xx}$ balance'
+                          )
+        self.plot_balance_reynolds_stress(self.ryy_lhs,
+                                          self.ryy_rhs,
+                                          self.ryy_advection,
+                                          self.ryy_production,
+                                          self.ryy_pres_diffus,
+                                          self.ryy_pres_strain,
+                                          self.ryy_lap,
+                                          self.ryy_dissip,
+                                          self.ryy_pres_strain_model,
+                                          self.solver.map.y,
+                                          '$R_{yy}$ balance'
+                          )
+        self.plot_balance_reynolds_stress(self.rzz_lhs,
+                                          self.rzz_rhs,
+                                          self.rzz_advection,
+                                          self.rzz_production,
+                                          self.rzz_pres_diffus,
+                                          self.rzz_pres_strain,
+                                          self.rzz_lap,
+                                          self.rzz_dissip,
+                                          0.0*self.rxx_pres_strain_model,
+                                          self.solver.map.y,
+                                          '$R_{zz}$ balance'
+                                          )
+        self.plot_balance_reynolds_stress(self.rxy_lhs,
+                                          self.rxy_rhs,
+                                          self.rxy_advection,
+                                          self.rxy_production,
+                                          self.rxy_pres_diffus,
+                                          self.rxy_pres_strain,
+                                          self.rxy_lap,
+                                          self.rxy_dissip,
+                                          self.rxy_pres_strain_model,
+                                          self.solver.map.y,
+                                          '$R_{xy}$ balance'
+                                          )
+        
+        self.plot_reynolds_stress(self.rxx,
+                                  self.ryy,
+                                  self.rzz,
+                                  self.rxy,
+                                  self.rxz,
+                                  self.ryz,
+                                  self.solver.map.y,
+                                  'Reynolds stresses'
+                          )
+
+        #print("self.rxx_advection = ", self.rxx_advection)
+
+    def plot_balance_reynolds_stress(self, lhs, rhs, advection, production, pres_diffus, pres_strain, laplacian, dissipation, pres_strain_model, y, str_bal):
+
+        # Plot
+        ax = plt.gca()
+        ax.plot( lhs.real,
+                 y,
+                 'k',
+                 label=r"Lhs",
+                 linewidth=1.5 )
+        #
+        ax.plot( rhs.real,
+                 y,
+                 'g--',
+                 label=r"Rhs",
+                 linewidth=1.5 )
+        #
+        ax.plot( advection.real,
+                 y,
+                 'r',
+                 label=r"Advection",
+                 linewidth=1.5 )
+
+        #
+        ax.plot( production.real,
+                 y,
+                 'b',
+                 label=r"Production",
+                 linewidth=1.5 )
+        #
+        ax.plot( pres_diffus.real,
+                 y,
+                 'y-.',
+                 label=r"Pres. diffusion",
+                 linewidth=1.5 )
+        #
+        ax.plot( pres_strain.real,
+                 y,
+                 'm-',
+                 label=r"Pres. strain",
+                 linewidth=1.5 )
+        #
+        ax.plot( laplacian.real,
+                 y,
+                 'c',
+                 label=r"Laplacian",
+                 linewidth=1.5 )
+        #
+        ax.plot( dissipation.real,
+                 y,
+                 'orange',
+                 label=r"Dissipation",
+                 linewidth=1.5 )
+        #
+        ax.plot( pres_strain_model.real,
+                 y,
+                 'm-.',
+                 #color='grey',
+                 markevery=3,
+                 markerfacecolor='none',
+                 label=r"Pres. strain model",
+                 linewidth=1.5 )
+
+        title_lab = "%s" % str_bal #str('{:.2e}'.format(scale_pd))
+        ax.set_xlabel(title_lab, fontsize=20)
+        ax.set_ylabel(r'y', fontsize=20)
+
+        plt.gcf().subplots_adjust(left=0.145)
+        plt.gcf().subplots_adjust(bottom=0.145)
+
+        #plt.xscale("log")
+
+        ymin, ymax = mod_util.FindResonableYminYmax(lhs, y)
+        
+        #ax.set_title('Eigenvalue spectrum')
+        #ax.set_xlim([-10, 10])
+        ax.set_ylim(ymin, ymax)
+        ax.legend(loc='upper center', bbox_to_anchor=(0.48, 1.15),   # box with lower left corner at (x, y)
+                  ncol=3, fancybox=True, shadow=True, fontsize=10, framealpha = 0.8)
+        plt.show()
+
+    def plot_reynolds_stress(self, rxx, ryy, rzz, rxy, rxz, ryz, y, str_bal):
+
+        # Plot
+        ax = plt.gca()
+        ax.plot( rxx.real,
+                 y,
+                 'k',
+                 label=r"$R_{xx}$",
+                 linewidth=1.5 )
+        #
+        ax.plot( ryy.real,
+                 y,
+                 'r',
+                 label=r"$R_{yy}$",
+                 linewidth=1.5 )
+        #
+        ax.plot( rzz.real,
+                 y,
+                 'b',
+                 label=r"$R_{zz}$",
+                 linewidth=1.5 )
+
+        #
+        ax.plot( rxy.real,
+                 y,
+                 'm-.',
+                 label=r"$R_{xy}$",
+                 linewidth=1.5 )
+        #
+        line, = ax.plot( ryz.real,
+                 y,
+                 'y-',
+                 label=r"$R_{yz}$",
+                 linewidth=1.5 )
+        line.set_dashes([8, 4, 2, 4, 2, 4])
+        #
+        ax.plot( rxz.real,
+                 y,
+                 ':',
+                 color='orange',
+                 label=r"$R_{xz}$",
+                 linewidth=1.5 )
+        #
+        title_lab = "%s" % str_bal #str('{:.2e}'.format(scale_pd))
+        ax.set_xlabel(title_lab, fontsize=20)
+        ax.set_ylabel(r'y', fontsize=20)
+
+        plt.gcf().subplots_adjust(left=0.145)
+        plt.gcf().subplots_adjust(bottom=0.145)
+
+        ymin, ymax = mod_util.FindResonableYminYmax(rxy, y)
+        
+        #ax.set_title('Eigenvalue spectrum')
+        #ax.set_xlim([-10, 10])
+        ax.set_ylim(ymin, ymax)
+        ax.legend(loc='upper center', bbox_to_anchor=(0.48, 1.15),   # box with lower left corner at (x, y)
+                  ncol=3, fancybox=True, shadow=True, fontsize=10, framealpha = 0.8)
+        plt.show()
+
+    def get_model_terms(self):
+
+        # self.rxx_pres_diffus_model = 
+        # self.ryy_pres_diffus_model =
+        # self.rxy_pres_diffus_model = 
+
+        Cr1 = 1.
+        self.rxx_pres_strain_model = 4./3.*Cr1*np.multiply(self.rxy, self.solver.bsfl.Up)
+        self.ryy_pres_strain_model = -2./3.*Cr1*np.multiply(self.rxy, self.solver.bsfl.Up)
+        self.rxy_pres_strain_model = Cr1*np.multiply(self.ryy, self.solver.bsfl.Up)
+        
+
 class PostRayleighTaylor(PostProcess):
     def __init__(self):
         """
@@ -894,12 +1161,12 @@ class PostRayleighTaylor(PostProcess):
         """
         super(PostRayleighTaylor, self).__init__(*args, **kwargs)
 
-class PostPoiseuille(PostProcess):
-    def __init__(self):
-        """
-        Constructor of class PostPoiseuille
-        """
-        super(PostPoiseuille, self).__init__(*args, **kwargs)
+# class PostPoiseuille(PostProcess):
+#     def __init__(self):
+#         """
+#         Constructor of class PostPoiseuille
+#         """
+#         super(PostPoiseuille, self).__init__(*args, **kwargs)
     
 
         
