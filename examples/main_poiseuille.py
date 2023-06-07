@@ -14,6 +14,7 @@ matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 
 import module_utilities as mod_util
+import solve_gevp as solgevp
 
 from matplotlib import cm
 from matplotlib import ticker
@@ -43,8 +44,10 @@ solver.write_eigvals()
 
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
-solver.plot_eigvects(bsfl.rt_flag)
+#solver.plot_eigvects(bsfl.rt_flag)
 
+postproc = solgevp.PostSingleFluid(solver)
+postproc.get_balance_reynolds_stress(solver.omega_max.imag)
 
 ###################################
 #     Plot and write out data     #
