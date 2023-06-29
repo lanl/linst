@@ -222,7 +222,88 @@ class SolveGeneralizedEVP:
             warnings.warn("Ignoring in write_eigvals: Writing eigenvalues (alpha_i vs alpha_r) does not make sense for Local solution")
         else:
             mod_util.write_out_eigenvalues(self.EigVal, self.ny)
+
+    #def write_eigvects_out_new(self, y, ueig, veig, weig, peig, reig, Local, bsfl_ref):
+    def write_eigvects_out_new(self):
+
+        y = self.map.y
+        
+        ueig = self.ueig
+        veig = self.veig
+        weig = self.weig
+        peig = self.peig
+        reig = self.reig
+        
+        ny = len(y)
+        # variables are u, v, w, p
+        # data_out = np.column_stack([ y, np.abs(q[idx_u]), np.abs(q[idx_v]), np.abs(q[idx_w]), np.abs(q[idx_p]), \
+        #                              q[idx_u].real, q[idx_v].real, q[idx_w].real, q[idx_p].real, \
+        #                              q[idx_u].imag, q[idx_v].imag, q[idx_w].imag, q[idx_p].imag                  ])
+
+        data_out = np.column_stack([ y, np.abs(ueig), np.abs(veig), np.abs(weig), np.abs(peig), np.abs(reig), \
+                                     ueig.real, veig.real, weig.real, peig.real, reig.real, \
+                                     ueig.imag, veig.imag, weig.imag, peig.imag, reig.imag                  ])
+
+        if (self.Local):
+            datafile_path = "./Eigenfunctions_Local_Solution_nondimensional_" + str(ny) + "_pts.txt"
+        else:
+            datafile_path = "./Eigenfunctions_Global_Solution_nondimensional_" + str(ny) + "_pts.txt"
+            
+        np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
+                                                  '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+
+
+        # # Now write out dimensional eigenfunctions
+        # Lref = bsfl_ref.Lref
+        # Uref = bsfl_ref.Uref
+        # rhoref = bsfl_ref.rhoref
+
+        # ueig = ueig*Uref
+        # veig = veig*Uref
+        # weig = weig*Uref
+        # peig = peig*rhoref*Uref**2.
+        # reig = reig*rhoref
+
+        # ydim = y*Lref
     
+        # data_out = np.column_stack([ ydim, np.abs(ueig), np.abs(veig), np.abs(weig), np.abs(peig), np.abs(reig), \
+        #                              ueig.real, veig.real, weig.real, peig.real, reig.real, \
+        #                              ueig.imag, veig.imag, weig.imag, peig.imag, reig.imag                  ])
+
+
+        # if (self.Local):
+        #     datafile_path = "./Eigenfunctions_Local_Solution_dimensional_" + str(ny) + "_pts.txt"
+        # else:
+        #     datafile_path = "./Eigenfunctions_Global_Solution_dimensional_" + str(ny) + "_pts.txt"
+            
+        # np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
+        #                                           '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+
+
+    #def write_baseflow_out(self, ynondim, ydim, Rho, Rhop, Rhopp, W, Wp, Rho_dim, Rhop_dim, Rhopp_dim, W_dim, Wp_dim):
+    def write_baseflow_out(self, solver):
+
+        y = solver.map.y
+        ny = len(y)
+        
+        # Rho, Rhop, Rhopp,  W and Wp are non-dimensional
+        
+        #data_out = np.column_stack([ ynondim, ydim, Rho, Rhop, Rhopp, W, Wp, Rho_dim, Rhop_dim, Rhopp_dim, W_dim, Wp_dim ])
+        data_out = np.column_stack([ y, y+12.5, solver.bsfl.U, solver.bsfl.Up,
+                                     solver.bsfl.W, solver.bsfl.Wp,
+                                     solver.bsfl.Rho_nd, solver.bsfl.Rho_nd-1.0,
+                                     solver.bsfl.Rhop_nd, solver.bsfl.Rhopp_nd])
+        datafile_path = "./Baseflow_" + str(ny) + "_pts.txt"
+        
+        #np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
+        #                                          '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+        np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
+                                                  '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
+        
+        print("")
+        print("Baseflow has been written out")
+        print("")
+
     def plot_baseflow(self):
         mod_util.plot_baseflow(self.ny, self.map.y, yi, self.bsfl.U, self.bsfl.Up, self.map.D1)
         

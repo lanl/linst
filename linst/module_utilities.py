@@ -1316,53 +1316,6 @@ def plot_dissipation_only(dissip1, dissip2, dissip3, y):
 
 
 
-def write_eigvects_out_new(y, ueig, veig, weig, peig, reig, Local, bsfl_ref):
-
-    ny = len(y)
-    # variables are u, v, w, p
-    # data_out = np.column_stack([ y, np.abs(q[idx_u]), np.abs(q[idx_v]), np.abs(q[idx_w]), np.abs(q[idx_p]), \
-    #                              q[idx_u].real, q[idx_v].real, q[idx_w].real, q[idx_p].real, \
-    #                              q[idx_u].imag, q[idx_v].imag, q[idx_w].imag, q[idx_p].imag                  ])
-
-    data_out = np.column_stack([ y, np.abs(ueig), np.abs(veig), np.abs(weig), np.abs(peig), np.abs(reig), \
-                                 ueig.real, veig.real, weig.real, peig.real, reig.real, \
-                                 ueig.imag, veig.imag, weig.imag, peig.imag, reig.imag                  ])
-
-
-    if (Local):
-        datafile_path = "./Eigenfunctions_Local_Solution_nondimensional_" + str(ny) + "_pts.txt"
-    else:
-        datafile_path = "./Eigenfunctions_Global_Solution_nondimensional_" + str(ny) + "_pts.txt"
-
-    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
-                                              '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
-
-
-    # Now write out dimensional eigenfunctions
-    Lref = bsfl_ref.Lref
-    Uref = bsfl_ref.Uref
-    rhoref = bsfl_ref.rhoref
-
-    ueig = ueig*Uref
-    veig = veig*Uref
-    weig = weig*Uref
-    peig = peig*rhoref*Uref**2.
-    reig = reig*rhoref
-
-    ydim = y*Lref
-    
-    data_out = np.column_stack([ ydim, np.abs(ueig), np.abs(veig), np.abs(weig), np.abs(peig), np.abs(reig), \
-                                 ueig.real, veig.real, weig.real, peig.real, reig.real, \
-                                 ueig.imag, veig.imag, weig.imag, peig.imag, reig.imag                  ])
-
-
-    if (Local):
-        datafile_path = "./Eigenfunctions_Local_Solution_dimensional_" + str(ny) + "_pts.txt"
-    else:
-        datafile_path = "./Eigenfunctions_Global_Solution_dimensional_" + str(ny) + "_pts.txt"
-
-    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
-                                              '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
 
     
 def set_local_flag_display_sizes(npts_alp, npts_re, plot_eigvcts):
@@ -5138,25 +5091,6 @@ def IntegrateDistDensity_CompareToPressure(peig, reig, D1, D2, y, alpha, bsfl_re
     
     input("Compare actual pressure and pressure obtained by integrating density")
     
-
-
-
-def write_baseflow_out(ynondim, ydim, Rho, Rhop, Rhopp, W, Wp, Rho_dim, Rhop_dim, Rhopp_dim, W_dim, Wp_dim):
-
-    ny = len(ynondim)
-    
-    # Rho, Rhop, Rhopp,  W and Wp are non-dimensional
-    
-    data_out = np.column_stack([ ynondim, ydim, Rho, Rhop, Rhopp, W, Wp, Rho_dim, Rhop_dim, Rhopp_dim, W_dim, Wp_dim ])
-    datafile_path = "./Baseflow_RT_" + str(ny) + "_pts.dat"
-
-    np.savetxt(datafile_path , data_out, fmt=['%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e',\
-                                              '%21.11e','%21.11e','%21.11e','%21.11e','%21.11e','%21.11e'])
-
-    print("")
-    print("RT Baseflow has been written out to Baseflow_RT.dat")
-    print("")
-
 
 def GetLayerThicknessRT(ny, z, rho_t1, rho_t2, rho):
 

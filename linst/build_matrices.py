@@ -769,6 +769,12 @@ class ChandrasekharDim(Boussinesq):
         self.mat_rhs[imin:imax, imin:imax]          = -1j*id        
 
 class Sandoval(Boussinesq):
+    """This implements the equations of Sandoval (200?).
+
+    The equations are:
+
+    .. math::
+    """
     def __init__(self, map, Re, Fr, Sc, *args, **kwargs):
         super(Sandoval, self).__init__(map, Re, Fr, Sc, *args, **kwargs)
         # This line needs to be after super becomes I am overwriting
