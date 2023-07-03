@@ -630,19 +630,19 @@ class SolveGeneralizedEVP:
             self.niter = self.niter + 1
             self.list_iter.append("Fr")
 
-        if ( self.bsfl.Rho_nd_2d.ndim == 2 ):
-            print("")
-            print("Baseflow has multiple timesteps (from PsDNS)")
-            print("")
-            if ( self.niter != 0 ):
-                sys.exit("Not working for time-variable baseflows!!!!!")
+        if ( hasattr(self.bsfl, "Rho_nd_2d") ):
+            if ( self.bsfl.Rho_nd_2d.ndim == 2 ):
+                print("")
+                print("Baseflow has multiple timesteps (from PsDNS)")
+                print("")
+                if ( self.niter != 0 ):
+                    sys.exit("Not working for time-variable baseflows!!!!!")
 
-            Local = True
-            nt = self.bsfl.Rho_nd_2d.shape[0]
-            self.npts_list.append(nt)
-            self.niter = self.niter + 1
-            self.list_iter.append("Time")
-
+                Local = True
+                nt = self.bsfl.Rho_nd_2d.shape[0]
+                self.npts_list.append(nt)
+                self.niter = self.niter + 1
+                self.list_iter.append("Time")
 
         if ( self.niter > 2 ):
             sys.exit("Maximum number of parameters is 2")
