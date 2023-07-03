@@ -61,7 +61,7 @@ class SolveGeneralizedEVP:
 
         if   ( self.niter == 2 ):
             self.iterate_both(omega)
-        elif ( self.niter == 1):
+        elif ( self.niter == 1 ):
             ivar = 0
             self.iterate_single(ivar, omega)
             
@@ -559,6 +559,8 @@ class SolveGeneralizedEVP:
         #hasSc = hasattr(self, "Sc")
         #hasFr = hasattr(self, "Fr")
 
+        #print(" hasattr(self.bsfl, Rho_nd_2d) = ", hasattr(self.bsfl, "Rho_nd_2d"))
+
         self.mylist = []
         self.npts_list = []
         self.list_iter = []
@@ -590,6 +592,10 @@ class SolveGeneralizedEVP:
         #if (hasFr):
         self.mylist.append("Fr")
         self.vars_dict["Fr"] = self.Fr
+
+        if ( hasattr(self.bsfl, "Rho_nd_2d") ):
+            self.mylist.append("Time")
+            self.vars_dict["Time"] = self.bsfl.time_out
 
         if ( np.size(self.alpha) != 1 ):
             Local = True
@@ -624,6 +630,20 @@ class SolveGeneralizedEVP:
             self.niter = self.niter + 1
             self.list_iter.append("Fr")
 
+        if ( self.bsfl.Rho_nd_2d.ndim == 2 ):
+            print("")
+            print("Baseflow has multiple timesteps (from PsDNS)")
+            print("")
+            if ( self.niter != 0 ):
+                sys.exit("Not working for time-variable baseflows!!!!!")
+
+            Local = True
+            nt = self.bsfl.Rho_nd_2d.shape[0]
+            self.npts_list.append(nt)
+            self.niter = self.niter + 1
+            self.list_iter.append("Time")
+
+
         if ( self.niter > 2 ):
             sys.exit("Maximum number of parameters is 2")
 
@@ -639,7 +659,6 @@ class SolveGeneralizedEVP:
 
             # You need to use copy other reference to same variable
             self.vars_dict_loc = self.vars_dict.copy()
-
             
         return Local
 
@@ -682,6 +701,11 @@ class SolveGeneralizedEVP:
 
         for i in range(0, self.npts_list[0]):
 
+            if ( hasattr(self.bsfl, "Rho_nd_2d") == True ):
+                self.bsfl.Rho_nd = self.bsfl.Rho_nd_2d[i, :]
+                self.bsfl.Rhop_nd = self.bsfl.Rhop_nd_2d[i, :]
+                self.bsfl.Rhopp_nd = self.bsfl.Rhopp_nd_2d[i, :]
+
             idx_a = min(i, np.size(self.vars_dict_loc[self.mylist[0]])-1 )
             idx_b = min(i, np.size(self.vars_dict_loc[self.mylist[1]])-1 )
             idx_re = min(i, np.size(self.vars_dict_loc[self.mylist[2]])-1 )
@@ -713,6 +737,7 @@ class SolveGeneralizedEVP:
             self.omega_array[ivar, i], iter, maxiter, sol_nrm, tol_nrm = self.solve_stability_secant(omega, omega + omega*1e-5, alpha_in, beta_in, re_in, fr_in, sc_in )
             if ( iter == maxiter or sol_nrm > tol_nrm ):
                 break
+
 
 class PostProcess(SolveGeneralizedEVP):
     """

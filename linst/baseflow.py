@@ -1,3 +1,4 @@
+import os
 import sys
 import math
 import warnings
@@ -7,6 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg') #----> Specify the backend
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+from scipy import interpolate
 
 import module_utilities as mod_util
 
@@ -126,6 +128,73 @@ class RTSimple(object):
         self.Rhop_nd = At*( 2.0*np.exp( -znondim**2/delta**2 )/( delta*np.sqrt(math.pi) ) )
         self.Rhopp_nd = 2*At/(delta*np.sqrt(pi))*(-2.*znondim/delta**2.)*np.exp(-znondim**2./delta**2.)
 
+        self.U  = 0.0*self.Rho_nd
+        self.Up = 0.0*self.Rho_nd
+        self.W  = 0.0*self.Rho_nd
+        self.Wp = 0.0*self.Rho_nd
+
+        self.rt_flag = True
+
+class RTPsDNS(object):
+    def __init__(self, y, At, map):
+        delta = 1
+        znondim = y
+        ny = len(znondim)
+        pi = math.pi
+
+        yshift = 12.5
+
+        tini = 0.
+        tend = 65.
+        dt = 0.5
+
+        ntb = int( (tend-tini)/dt + 1 )
+        
+        self.time_out = np.linspace(tini, tend, ntb)
+
+        read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t100_A1emin7_LST/"
+        
+        for i in range(0, ntb):
+            fname  = "Mean_Density_MoleFracHeavy_UVWVel_time_" + str('{:.5f}'.format(self.time_out[i])) + ".txt"
+            fullname = os.path.join(read_path, fname)
+
+            data_collected = np.loadtxt(fullname, skiprows=0, dtype=float)
+
+            if ( i == 0 ):
+                #print("data_collected.shape[0], data_collected.shape[1] = ", data_collected.shape[0], data_collected.shape[1])
+                nyb = data_collected.shape[0]
+                y_base = np.zeros((ntb, nyb), dp)
+                rho_base = np.zeros((ntb, nyb), dp)
+                
+            y_base[i, :] = data_collected[:, 0]
+            rho_base[i, :] = data_collected[:, 1]
+
+            if ( i > 0 ):
+                if ( np.amax( np.abs( y_base[i, :]-y_base[i-1, :] ) ) > 1.0e-14 ):
+                    sys.exit("y-coordinate of baseflow is not consistent!!!!!")
+
+        y_base = y_base - yshift
+
+        self.Rho_nd_2d = np.zeros((ntb, ny), dp)
+        self.Rhop_nd_2d = np.zeros((ntb, ny), dp)
+        self.Rhopp_nd_2d = np.zeros((ntb, ny), dp)
+
+        self.Rho_nd = 0.0*znondim
+        self.Rhop_nd = 0.0*znondim
+        self.Rhopp_nd = 0.0*znondim
+
+        # Interpolate
+        for i in range(0, ntb):
+            if ( y_base[i, 0] > znondim[0] or y_base[i, -1] < znondim[-1] ):
+                print("y_base[i, 0], znondim[0], y_base[i, -1], znondim[-1]", y_base[i, 0], znondim[0], y_base[i, -1], znondim[-1])
+                sys.exit("Cannot interpolate baseflow from PsDNS: Extend PsDNS domain!!!!")
+            else:
+                tck = interpolate.splrep( y_base[i, :], rho_base[i, :] )
+                self.Rho_nd_2d[i, :] = interpolate.splev(znondim, tck)
+                
+                self.Rhop_nd_2d[i, :] = np.matmul( map.D1, self.Rho_nd_2d[i, :])
+                self.Rhopp_nd_2d[i, :] = np.matmul( map.D2, self.Rho_nd_2d[i, :])
+                
         self.U  = 0.0*self.Rho_nd
         self.Up = 0.0*self.Rho_nd
         self.W  = 0.0*self.Rho_nd
