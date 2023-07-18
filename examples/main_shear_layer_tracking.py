@@ -37,11 +37,10 @@ solver = mbm.ShearLayer(
     bsfl=bsfl,
     )
 
-#solver.solve(alpha=np.linspace(0.4446,0.4446,1), beta=0., omega_guess=0.22229+0.081*1j)
-solver.solve(alpha=np.linspace(0.6,0.6,1), beta=0., omega_guess=0.3+6.76760364226e-02*1j)
-solver.plot_eigvals()
-plt.show()
-solver.write_eigvals()
+solver.solve(alpha=np.linspace(0.4446,0.6,50), beta=0., omega_guess=0.22229+0.081*1j)
+#solver.plot_eigvals()
+#plt.show()
+#solver.write_eigvals()
 
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)

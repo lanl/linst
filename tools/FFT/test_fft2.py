@@ -168,12 +168,14 @@ plt.contourf(freq_xx, freq_yy, abs_zf, cmap = 'jet')
 plt.colorbar()
 plt.xlabel('fx')
 plt.ylabel('fy')
+plt.title('double sided spectrum')
 plt.show()
 
 plt.contourf(2.*np.pi*freq_xx, 2.*np.pi*freq_yy, abs_zf, cmap = 'jet')
 plt.colorbar()
 plt.xlabel('kx')
 plt.ylabel('ky')
+plt.title('double sided spectrum')
 plt.show()
 
 # This still needs some work

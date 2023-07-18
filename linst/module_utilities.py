@@ -5090,7 +5090,44 @@ def IntegrateDistDensity_CompareToPressure(peig, reig, D1, D2, y, alpha, bsfl_re
     f.show()
     
     input("Compare actual pressure and pressure obtained by integrating density")
+
     
+def GetLayerThicknessRT_X(ny, z, crit1, crit2, X):
+
+    # Find zmin
+    for i in range(0, ny-1):
+        
+        if ( X[i] <= crit1 and X[i+1] > crit1 ):
+            X1 = X[i]
+            X2 = X[i+1]
+            z1 = z[i]
+            z2 = z[i+1]
+            
+            acoef = (X2-X1)/(z2-z1)
+            bcoef = X2-acoef*z2
+
+            zmin = (crit1-bcoef)/acoef
+            print("Thickness of light fluid = ", zmin)
+            break
+
+    # Find zmax
+    for i in range(0, ny-1):
+        
+        if ( X[i] <= crit2 and X[i+1] > crit2 ):
+            X1 = X[i]
+            X2 = X[i+1]
+            z1 = z[i]
+            z2 = z[i+1]
+            
+            acoef = (X2-X1)/(z2-z1)
+            bcoef = X2-acoef*z2
+
+            zmax = (crit2-bcoef)/acoef
+            print("Thickness of heavy fluid = ", zmax)
+            #print("zmax = ", zmax)
+            break
+
+    H = zmax-zmin
 
 def GetLayerThicknessRT(ny, z, rho_t1, rho_t2, rho):
 

@@ -119,6 +119,8 @@ class SolveGeneralizedEVP:
         #
         # Compute u00
         #
+        #print("self.jxu = ", self.jxu)
+        #print("re_in, fr_in, sc_in = ", re_in, fr_in, sc_in )
         
         # Build main stability matrices and assemble them
         self.call_to_build_matrices(Re_in=re_in, Fr_in=fr_in, Sc_in=sc_in)

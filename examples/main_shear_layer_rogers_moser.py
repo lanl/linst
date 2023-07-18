@@ -27,18 +27,24 @@ plt.rcParams['font.size'] = '16'
 plt.rc('font', family='serif')
 
 # Create instance for class GaussLobatto
-cheb = mgl.GaussLobatto(size=301)
-map = mma.MapShearLayer(sinf=150, cheb=cheb, l=10.)
-bsfl = mbf.HypTan(y=map.y)
+cheb = mgl.GaussLobatto(size=401)
+#map = mma.MapShearLayer(sinf=150, cheb=cheb, l=10.)
+map = mma.MapShearLayer(sinf=100, cheb=cheb, l=5.)
+bsfl = mbf.ShearLayerRogersMoser(y=map.y)
 
 solver = mbm.ShearLayer(
     map=map,
-    Re=100.,
+    Re=1.e50,
     bsfl=bsfl,
     )
 
-#solver.solve(alpha=np.linspace(0.4446,0.4446,1), beta=0., omega_guess=0.22229+0.081*1j)
-solver.solve(alpha=np.linspace(0.6,0.6,1), beta=0., omega_guess=0.3+6.76760364226e-02*1j)
+# This validation alpha=0.062366584253145195 , omega_guess=0.0+0.05*1j is from Monkewitz and Huerre (PoF, 1982, Figure 5: long dash curve is temporal, see Figure 3 for legend)
+# see also my digitized data: Monkewitz_Huerre_1982_PoF.dat
+# For that validation case, flag_monkewitz should be set to 1 in baseflow.py
+# solver.solve(alpha=0.062366584253145195, beta=0., omega_guess=0.0+0.05*1j)
+
+solver.solve(alpha=0.6, beta=0., omega_guess=0.0+0.2837*1j) 
+
 solver.plot_eigvals()
 plt.show()
 solver.write_eigvals()
@@ -46,6 +52,7 @@ solver.write_eigvals()
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
 solver.plot_eigvects(bsfl.rt_flag)
+solver.write_eigvects_out_new()
 
 #postproc = solgevp.PostSingleFluid(solver)
 #postproc.get_balance_reynolds_stress(solver.omega_max.imag)

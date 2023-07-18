@@ -100,6 +100,46 @@ class HypTan(Baseflow):
 
         self.rt_flag = False
 
+
+class ShearLayerRogersMoser(Baseflow):
+    """
+    This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
+    """
+    def __init__(self, y): # here I pass ny
+        size = len(y)
+
+        pi = math.pi
+
+        print("")
+        print("Using erf function from Rogers and Moser (JFM, 1992)")
+        print("")
+
+        flag_monkewitz = 0
+
+        if   (flag_monkewitz==1):
+            # Baseflow to compare with Monkewitz and Huerre PoF (1982) ===> see my validation data in Monkewitz_Huerre_1982_PoF.dat
+            self.U    = erf( np.sqrt(pi)*y/4. )
+            self.Up   = 2.*np.exp( -pi*np.multiply(y, y)/16. )/4.
+        elif (flag_monkewitz==0):
+            # Baseflow from Rogers and Moser (JFM, 1992)
+            self.U    = erf( np.sqrt(pi)*y )
+            self.Up   = 2.*np.exp( -pi*np.multiply(y, y) )
+
+        flag_3d = False
+        if (flag_3d):
+            self.W    = self.U
+            self.Wp   = self.Up
+        else:
+            self.W    = 0.*self.U
+            self.Wp   = 0.*self.U
+
+        self.Rho_nd   = np.divide(self.U, self.U) 
+        self.Rhop_nd  = 0.0*self.U 
+        self.Rhopp_nd = 0.0*self.U 
+
+        self.rt_flag = False
+
+        
 class PlanePoiseuille(Baseflow):
     """
     This child class of class Baseflow defines the plane Poiseuille baseflow
@@ -135,6 +175,42 @@ class RTSimple(object):
 
         self.rt_flag = True
 
+        # Dimensional density of material 1 and 2
+        fac = (1.+At)/(1.-At)
+        
+        self.rho1  = 1.0
+        self.rho2  = self.rho1*fac
+        self.rhoref = 0.5*(self.rho1+self.rho2)
+
+        self.rho1_nd = self.rho1/self.rhoref
+        self.rho2_nd = self.rho2/self.rhoref
+
+    def get_layer_thickness_rt(self, zcoord):
+        ###################################
+        # Compute layer thickness
+        ###################################
+        ny = len(zcoord)
+        thick_crit = 0.01 # criterion
+        
+        delta_rho = self.rho2_nd-self.rho1_nd
+        rho_test1 = self.rho1_nd + thick_crit*delta_rho
+        rho_test2 = self.rho2_nd - thick_crit*delta_rho
+
+        rho_thick1 = rho_test1*np.ones(ny)
+        rho_thick2 = rho_test2*np.ones(ny)
+
+        self.H_thick = mod_util.GetLayerThicknessRT(ny, zcoord, rho_test1, rho_test2, self.Rho_nd)
+
+        X = ( self.Rho_nd-self.rho1_nd )/( self.rho2_nd-self.rho1_nd )
+        self.H_thick_X = mod_util.GetLayerThicknessRT_X(ny, zcoord, 0.01, 0.99, X)
+        
+        self.h_thick = mod_util.GetLayerThicknessRT_CabotCook(ny, zcoord, self.Rho_nd, self.rho1_nd, self.rho2_nd)
+        print("")
+        print("RT Layer Thickness")
+        print("==================")
+        print("H_thick_X = ", self.H_thick_X)
+        print("H_thick (x percent criterion), h_thick (Cabot & Cook), H_thick/h_thick = ", self.H_thick, self.h_thick, self.H_thick/self.h_thick)
+
 class RTPsDNS(object):
     def __init__(self, y, At, map):
         delta = 1
@@ -145,14 +221,17 @@ class RTPsDNS(object):
         yshift = 12.5
 
         tini = 0.
-        tend = 65.
-        dt = 0.5
+        tend = 85. # 20. #65.
+        dt = 0.5 #0.04 #0.5
 
         ntb = int( (tend-tini)/dt + 1 )
         
         self.time_out = np.linspace(tini, tend, ntb)
 
-        read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t100_A1emin7_LST/"
+        read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1e50_delta1_withDisturbance_to_t100_A1emin9_LST"
+        #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t100_A1emin9_LST/"
+        #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t100_A1emin7_LST/"
+        #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t20_A1emin2_LST_FINER_export_baseflow"
         
         for i in range(0, ntb):
             fname  = "Mean_Density_MoleFracHeavy_UVWVel_time_" + str('{:.5f}'.format(self.time_out[i])) + ".txt"
