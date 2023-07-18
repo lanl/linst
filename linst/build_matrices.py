@@ -1800,8 +1800,9 @@ class ShearLayer(BuildMatrices):
 
         # ymin
         lhs[idx_p_ymin,:] = 0.0
-        rhs[idx_p_ymin  ] = 0.0        
-        lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+        rhs[idx_p_ymin  ] = 0.0
+        lhs[idx_p_ymin, idx_p_ymin] = 1.0
+        #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
 
         # I checked from eigenfunctions from global solver:
         # at y = 0, the real part of pressure is zero, while the imaginary part has a max
@@ -1831,7 +1832,6 @@ class ShearLayer(BuildMatrices):
         #lhs[mid_idx,:] = 0.0
         #rhs[mid_idx]   = -1.0
         #lhs[mid_idx, mid_idx] = 1.0
-
         
         # setting v ==> cannot do that because continuity equation already in there ==> singular matrix
         # set rhs from continuity equation dv/dy = -1j*alpha*u - 1j*beta*w
@@ -1844,21 +1844,23 @@ class ShearLayer(BuildMatrices):
         # pressure BCs #
         ##################
 
-        set_pres_bc = 0
+        # set_pres_bc = 0
 
-        if set_pres_bc == 1:
-            idx_p_ymin = 3*ny
-            idx_p_ymax = 4*ny-1
+        # if set_pres_bc == 1:
+        #     idx_p_ymin = 3*ny
+        #     idx_p_ymax = 4*ny-1
             
-            # ymin
-            lhs[idx_p_ymin,:] = 0.0
-            rhs[idx_p_ymin  ] = 0.0        
-            lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+        #     # ymin
+        #     lhs[idx_p_ymin,:] = 0.0
+        #     rhs[idx_p_ymin  ] = 0.0
+        #     #lhs[idx_p_ymin, idx_p_ymin] = 1.0
+        #     lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
             
-            # ymax
-            lhs[idx_p_ymax,:] = 0.0
-            rhs[idx_p_ymax  ] = 0.0
-            lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
+        #     # ymax
+        #     lhs[idx_p_ymax,:] = 0.0
+        #     rhs[idx_p_ymax  ] = 0.0
+        #     #lhs[idx_p_ymax, idx_p_ymax] = 1.0
+        #     lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
                 
 class Poiseuille(ShearLayer):
     def __init__(self, map, Re=10000, *args, **kwargs):
