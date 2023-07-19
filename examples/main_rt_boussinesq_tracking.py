@@ -28,15 +28,16 @@ solver = mbm.Boussinesq(
     bsfl=bsfl,
     )
 
-solver.solve(alpha=1., beta=0., omega_guess=0.0+0.17679*1j)
-solver.plot_eigvals()
-plt.show()
-solver.write_eigvals()
+solver.solve(alpha=np.linspace(1., 5., 100), beta=0., omega_guess=0.0+0.163475*1j)
+#solver.plot_eigvals()
+#plt.show()
+#solver.write_eigvals()
 
 q_eigvect = solver.identify_eigenvector_from_target()
 solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
 solver.plot_eigvects(bsfl.rt_flag)
 solver.write_eigvects_out_new()
 
+solver.write_stab_banana()
 solver.write_baseflow_out(solver)
 

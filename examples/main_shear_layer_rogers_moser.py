@@ -43,7 +43,7 @@ solver = mbm.ShearLayer(
 # For that validation case, flag_monkewitz should be set to 1 in baseflow.py
 # solver.solve(alpha=0.062366584253145195, beta=0., omega_guess=0.0+0.05*1j)
 
-solver.solve(alpha=1.2, beta=0., omega_guess=0.0+0.33475*1j) 
+solver.solve(alpha=0.4, beta=0., omega_guess=0.0+0.33475*1j) 
 
 solver.plot_eigvals()
 plt.show()

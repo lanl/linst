@@ -606,7 +606,7 @@ class SolveGeneralizedEVP:
             self.list_iter.append("alpha")
 
         if ( np.size(self.beta) != 1 ):
-            sys.exit("consider only a single beta for now")
+            #sys.exit("consider only a single beta for now")
             Local = True
             self.npts_list.append(np.size(self.beta))
             self.niter = self.niter + 1

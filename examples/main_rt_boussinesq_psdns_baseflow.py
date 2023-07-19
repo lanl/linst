@@ -36,7 +36,7 @@ solver = mbm.Boussinesq(
     #Re=400,
     Re=1000,
     Fr=1.0,
-    Sc=1.0,
+    Sc=1.0e50,
     #Sc=1.0e50,
     bsfl=bsfl,
     )

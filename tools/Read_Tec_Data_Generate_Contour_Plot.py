@@ -20,20 +20,20 @@ def ReadTecplotFormattedDatta(filename, nx, ny):
     
     #print("data_collected.dtype = ",data_collected.dtype)
     
-    renum_tmp = data_collected[:,0]
-    alpha_tmp = data_collected[:,1]
+    var1_tmp = data_collected[:,0]
+    var2_tmp = data_collected[:,1]
     
-    omegar_tmp = data_collected[:,2]
-    omegai_tmp = data_collected[:,3]
+    var3_tmp = data_collected[:,2]
+    var4_tmp = data_collected[:,3]
     
     
-    renum = np.zeros((nx,ny), dp)
-    alpha = np.zeros((nx,ny), dp)
+    var1 = np.zeros((nx,ny), dp)
+    var2 = np.zeros((nx,ny), dp)
     
-    omegar = np.zeros((nx,ny), dp)
-    omegai = np.zeros((nx,ny), dp)
+    var3 = np.zeros((nx,ny), dp)
+    var4 = np.zeros((nx,ny), dp)
     
-    #print(renum.shape)
+    #print(var1.shape)
     
     count = 0
     
@@ -41,15 +41,15 @@ def ReadTecplotFormattedDatta(filename, nx, ny):
         
         for i in range(0,nx):
             
-            renum[i,j] = renum_tmp[count]
-            alpha[i,j] = alpha_tmp[count]
+            var1[i,j] = var1_tmp[count]
+            var2[i,j] = var2_tmp[count]
             
-            omegar[i,j] = omegar_tmp[count]
-            omegai[i,j] = omegai_tmp[count]
+            var3[i,j] = var3_tmp[count]
+            var4[i,j] = var4_tmp[count]
             
             count = count + 1
         
-    return renum, alpha, omegar, omegai
+    return var1, var2, var3, var4
 
 
 def ReadTecplotFormattedEigenfunction_2D(filename, nx, ny):
@@ -103,10 +103,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-import module_utilities as mod_util
-import incomp_ns as mod_incomp
+#import module_utilities as mod_util
+#import incomp_ns as mod_incomp
 
-import class_main_arrays as marray
+#import class_main_arrays as marray
 
 from matplotlib import cm
 from matplotlib import ticker
@@ -126,7 +126,7 @@ i8  = np.dtype('i8') # integer 8
 #####################################################
 
 # Type of plot
-tplot  = 4 # 1 -> line plot, 2 -> contour plot, 3 -> line plot with alpha as x-axis, 4 -> 2d (reconstructed) eigenfunctions
+tplot  = 2 # 1 -> line plot, 2 -> contour plot, 3 -> line plot with alpha as x-axis, 4 -> 2d (reconstructed) eigenfunctions
 
 # Number of files to read
 nfiles = 1
@@ -134,14 +134,14 @@ nfiles = 1
 # File names and dimensions
 
 # File 1
-nx1 = 51
-ny1 = 351
-filename1 = "Eigenfunction_2d_rho_ny351.dat" #"Banana_tec_bottom_rt_atw0pt5_atwmu0pt5_ny201.dat" #"Banana_tec_poiseuille_top.dat" #"Banana_tec_alpha_1.dat"  "Banana_tec_bottom_rt_atw1over3_atwmu1over3_ny181.dat" #
+nx1 = 30
+ny1 = 30
+filename1 = "/Users/aph/Refactor/linst/linst/Stability_banana_rt_2d.dat" #"Eigenfunction_2d_rho_ny351.dat" #"Banana_tec_bottom_rt_atw0pt5_atwmu0pt5_ny201.dat" #"Banana_tec_poiseuille_top.dat" #"Banana_tec_alpha_1.dat"  "Banana_tec_bottom_rt_atw1over3_atwmu1over3_ny181.dat" #
 
 if (tplot == 4):
     x, z, rho_dist = ReadTecplotFormattedEigenfunction_2D(filename1, nx1, ny1)
 else:
-    re1, alp1, wr1, wi1 = ReadTecplotFormattedDatta(filename1, nx1, ny1)
+    var1, var2, var3, var4 = ReadTecplotFormattedDatta(filename1, nx1, ny1)
 
 if (nfiles == 2 and tplot != 4):
     # File 2
@@ -180,24 +180,41 @@ if   (tplot==1): # line plot
     fig.show()
 
 elif (tplot==2): # contour plot
+
+    # Find max growth rate
+    print("var4.shape = ", var4.shape)
+
+    ijdx = np.unravel_index(np.argmax(var4), var4.shape)
+    idx = ijdx[0]
+    jdx = ijdx[1]
+    
+    print("idx, jdx = ", idx, jdx)
     
     fig = plt.figure()
     
-    Max_gr1 = np.amax(wi1)
-    Max_gr2 = np.amax(wi2)
+    Max_gr1 = np.amax(var4)
+    Min_gr1 = np.amin(var4)
+    #Max_gr2 = np.amax(wi2)
     print("Maximum temporal growth rate = ", Max_gr1)
-    print("Maximum temporal growth rate = ", Max_gr2)
+    print("Mininum temporal growth rate = ", Min_gr1)
+    print("alpha, beta with max. growth rate: ", var2[idx,jdx], var1[idx,jdx])
+
+    print("growth rate var4[idx,jdx]: ", var4[idx,jdx])
+    print("growth rate var4[12,12]: ", var4[12,12])
+    print("growth rate var4[13,13]: ", var4[13,13])
+    #print("Maximum temporal growth rate = ", Max_gr2)
     
-    Max_gr = np.maximum(Max_gr1, Max_gr2)
-    print("Maximum temporal growth rate = ", Max_gr)
+    #Max_gr = np.maximum(Max_gr1, Max_gr2)
     
-    levels = np.linspace(0, Max_gr, 50)
+    #levels = np.linspace(0, Max_gr, 50)
+    levels = np.linspace(Min_gr1, Max_gr1, 50)
+
+    # ok: cm.jet, cm.magma, cm.inferno, cm.viridis, cm.hot, cm.afmhot, cm.Spectral cm.nipy_spectral ; ugly: cm.rainbow, cm.gist_rainbow, cm.plasma
+    cp = plt.contourf(var2, var1, var4, levels=levels, cmap=cm.jet) 
+    #cp = plt.contourf(re2, alp2, wi2, levels=levels, cmap=cm.jet) 
     
-    cp = plt.contourf(re1, alp1, wi1, levels=levels, cmap=cm.jet) # ok: cm.jet, cm.magma, cm.inferno, cm.viridis, cm.hot, cm.afmhot, cm.Spectral cm.nipy_spectral ; ugly: cm.rainbow, cm.gist_rainbow, cm.plasma
-    cp = plt.contourf(re2, alp2, wi2, levels=levels, cmap=cm.jet) # ok: cm.jet, cm.magma, cm.inferno, cm.viridis, cm.hot, cm.afmhot, cm.Spectral cm.nipy_spectral ; ugly: cm.rainbow, cm.gist_rainbow, cm.plasma
-    
-    plt.xlabel("Reynolds number (Re)", fontsize=18)
-    plt.ylabel(r"Wavenumber ($\alpha$)", fontsize=18)
+    plt.xlabel("alpha", fontsize=18)
+    plt.ylabel(r"beta", fontsize=18)
     #plt.title("Stability diagram")
     
     #ax.set_title('Stability diagram')
