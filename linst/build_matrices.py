@@ -1470,7 +1470,7 @@ class ShearLayer(BuildMatrices):
         #print("qwerty: map.y = ", map.y)
         super(ShearLayer, self).__init__(4*map.y.size, map, *args, **kwargs)
         ny = len(map.y)
-        self.jxu = 4*ny-1 # 2*ny-1 for v
+        self.jxu = 4*ny-1 # Can also use 2*ny-1 for v
     
     def call_to_build_matrices(self, Re_in, Fr_in, Sc_in):
     #def call_to_build_matrices(self, ny, bsfl, bsfl_ref, map):
@@ -1756,27 +1756,6 @@ class ShearLayer(BuildMatrices):
         lhs[idx_u_ymax, idx_u_ymax] = 1.0
 
         ##################
-        # v-velocity BCs #
-        ##################
-        idx_v_ymin = 1*ny
-        idx_v_ymax = 2*ny-1
-
-        # ymin
-        lhs[idx_v_ymin,:] = 0.0
-        rhs[idx_v_ymin  ] = 0.0        
-        lhs[idx_v_ymin, idx_v_ymin] = 1.0
-
-        # ymax
-        lhs[idx_v_ymax,:] = 0.0
-        rhs[idx_v_ymax  ] = 0.0
-        lhs[idx_v_ymax, idx_v_ymax] = 1.0
-
-        # Replace v(ymax)=0 by bc below and iterate in member solve_stability_secant (cf. class SolveGeneralizedEVP) to satisfy v(ymax)=0
-        #lhs[1*ny+mid_idx,:] = 0.0
-        #rhs[1*ny+mid_idx  ] = 1.0 + 1.0*1j # 1.0*1j # 
-        #lhs[1*ny+mid_idx, 1*ny+mid_idx] = 1.0
-
-        ##################
         # w-velocity BCs #
         ##################
         idx_w_ymin = 2*ny
@@ -1792,47 +1771,83 @@ class ShearLayer(BuildMatrices):
         rhs[idx_w_ymax  ] = 0.0
         lhs[idx_w_ymax, idx_w_ymax] = 1.0
 
-        ##################
-        # pressure BCs #
-        ##################
-        idx_p_ymin = 3*ny
-        idx_p_ymax = 4*ny-1
+        if ( self.jxu == 2*ny-1 ):
 
-        # ymin
-        lhs[idx_p_ymin,:] = 0.0
-        rhs[idx_p_ymin  ] = 0.0
-        lhs[idx_p_ymin, idx_p_ymin] = 1.0
-        #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            #print("Secant based on v")
+            
+            ##################
+            # v-velocity BCs #
+            ##################
+            idx_v_ymin = 1*ny
+            idx_v_ymax = 2*ny-1
+            
+            # ymin
+            lhs[idx_v_ymin,:] = 0.0
+            rhs[idx_v_ymin  ] = 0.0        
+            lhs[idx_v_ymin, idx_v_ymin] = 1.0
+            
+            # Replace v(ymax)=0 by bc below and iterate in member solve_stability_secant (cf. class SolveGeneralizedEVP) to satisfy v(ymax)=0
+            lhs[1*ny+mid_idx,:] = 0.0
+            rhs[1*ny+mid_idx  ] = 1.0 + 1.0*1j 
+            lhs[1*ny+mid_idx, 1*ny+mid_idx] = 1.0
 
-        # I checked from eigenfunctions from global solver:
-        # at y = 0, the real part of pressure is zero, while the imaginary part has a max
-        # that is why I am setting p = 0 + 1j        
-        lhs[3*ny+mid_idx,:] = 0.0
-        rhs[3*ny+mid_idx]   = 0.0 + 1.0*1j
-        lhs[3*ny+mid_idx, 3*ny+mid_idx] = 1.0
+            ##################
+            # pressure BCs #
+            ##################
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0
+            lhs[idx_p_ymin, idx_p_ymin] = 1.0
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            
+            # ymax
+            lhs[idx_p_ymax,:] = 0.0
+            rhs[idx_p_ymax  ] = 0.0
+            lhs[idx_p_ymax, idx_p_ymax] = 1.0
+            #lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
 
-        #mid_idx = mod_util.get_mid_idx(ny)
-        #lhs[mid_idx,:] = 0.0
-        #lhs[mid_idx, mid_idx] = 1.0
-        #rhs[mid_idx] = 1.0
+        elif ( self.jxu == 4*ny-1):
 
-        ##################
-        # pressure BCs #
-        ##################
-        
-        #mid_idx = mod_util.get_mid_idx(ny)
+            #print("Secant based on p")
 
-        # I checked from eigenfunctions from global solver:
-        # at y = 0, the real part of pressure is zero, while the imaginary part has a max
-        # that is why I am setting p = 0 + 1j
-        #lhs[3*ny+mid_idx,:] = 0.0
-        #rhs[3*ny+mid_idx]   = 0.0 + 1.0*1j
-        #lhs[3*ny+mid_idx, 3*ny+mid_idx] = 1.0
-
-        #lhs[mid_idx,:] = 0.0
-        #rhs[mid_idx]   = -1.0
-        #lhs[mid_idx, mid_idx] = 1.0
-        
+            ##################
+            # v-velocity BCs #
+            ##################
+            idx_v_ymin = 1*ny
+            idx_v_ymax = 2*ny-1
+            
+            # ymin
+            lhs[idx_v_ymin,:] = 0.0
+            rhs[idx_v_ymin  ] = 0.0        
+            lhs[idx_v_ymin, idx_v_ymin] = 1.0
+            
+            # ymax
+            lhs[idx_v_ymax,:] = 0.0
+            rhs[idx_v_ymax  ] = 0.0
+            lhs[idx_v_ymax, idx_v_ymax] = 1.0
+            
+            ##################
+            # pressure BCs #
+            ##################
+            idx_p_ymin = 3*ny
+            idx_p_ymax = 4*ny-1
+            
+            # ymin
+            lhs[idx_p_ymin,:] = 0.0
+            rhs[idx_p_ymin  ] = 0.0
+            lhs[idx_p_ymin, idx_p_ymin] = 1.0
+            #lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
+            
+            # I checked from eigenfunctions from global solver:
+            # at y = 0, the real part of pressure is zero, while the imaginary part has a max
+            # that is why I am setting p = 0 + 1j        
+            lhs[3*ny+mid_idx,:] = 0.0
+            rhs[3*ny+mid_idx]   = 0.0 + 1.0*1j
+            lhs[3*ny+mid_idx, 3*ny+mid_idx] = 1.0
+            
         # setting v ==> cannot do that because continuity equation already in there ==> singular matrix
         # set rhs from continuity equation dv/dy = -1j*alpha*u - 1j*beta*w
         #lhs[1*ny+mid_idx,:] = 0.0
@@ -1840,27 +1855,6 @@ class ShearLayer(BuildMatrices):
         #lhs[1*ny+mid_idx, ny:2*ny] = map.D1[mid_idx,:]
         #print("abs(-1j*alpha -1j*beta) = ", abs(-1j*alpha -1j*beta))
 
-        ##################
-        # pressure BCs #
-        ##################
-
-        # set_pres_bc = 0
-
-        # if set_pres_bc == 1:
-        #     idx_p_ymin = 3*ny
-        #     idx_p_ymax = 4*ny-1
-            
-        #     # ymin
-        #     lhs[idx_p_ymin,:] = 0.0
-        #     rhs[idx_p_ymin  ] = 0.0
-        #     #lhs[idx_p_ymin, idx_p_ymin] = 1.0
-        #     lhs[idx_p_ymin, idx_p_ymin:4*ny] = map.D1[0, :]
-            
-        #     # ymax
-        #     lhs[idx_p_ymax,:] = 0.0
-        #     rhs[idx_p_ymax  ] = 0.0
-        #     #lhs[idx_p_ymax, idx_p_ymax] = 1.0
-        #     lhs[idx_p_ymax, idx_p_ymin:4*ny] = map.D1[-1, :]
                 
 class Poiseuille(ShearLayer):
     def __init__(self, map, Re=10000, *args, **kwargs):
