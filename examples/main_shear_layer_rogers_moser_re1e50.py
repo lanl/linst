@@ -54,8 +54,8 @@ solver.get_normalized_eigvects(q_eigvect, bsfl.rt_flag)
 solver.plot_eigvects(bsfl.rt_flag)
 solver.write_eigvects_out_new()
 
-#postproc = solgevp.PostSingleFluid(solver)
-#postproc.get_balance_reynolds_stress(solver.omega_max.imag)
+postproc = solgevp.PostSingleFluid(solver)
+postproc.get_balance_reynolds_stress(solver.omega_max.imag)
 
 
 ###################################
