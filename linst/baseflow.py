@@ -32,34 +32,42 @@ class Baseflow:
     This class define a general baseflow object
     """
     def __init__(self, Re=1, At=0.01, Fr=1, Sc=1, gref=1, Uref=1):
-        self.Re     = Re
 
-        self.At    = At
-        self.Fr    = Fr
-        self.Sc    = Sc # based on nu_ref because nu might not be constant
+        # This stuff is currently not used because none of the children use __super__
+        print("")
+        print("Main init routine of class Baseflow")
+        input("strike any key")
+
+        sys.exit("I have commented out all the below of this class Baseflow __init__")
         
-        self.gref  = gref
-        self.Uref  = Uref
+        # self.Re     = Re
 
-        if (nondim_flag==1):
-            # Lref is here the dimensional thickness of the layer
-            self.Lref = 0.00025484199796126404
-            self.nuref = np.sqrt(self.gref)*self.Lref**(3./2.)/self.Re
-            self.Uref = np.sqrt(self.gref*self.Lref)
-            self.Fr = self.Uref/np.sqrt(self.gref*self.Lref)
-        else:
-            # Compute reference length (thickness of mixing zone for Rayleigh-Taylor)
-            self.Lref  = self.Uref**2./(self.Fr**2.*self.gref)
-            self.nuref = self.Uref*self.Lref/self.Re
-        # Set dimensional diffusivity reference value
-        self.Dref  = self.nuref/self.Sc
+        # self.At    = At
+        # self.Fr    = Fr
+        # self.Sc    = Sc # based on nu_ref because nu might not be constant
+        
+        # self.gref  = gref
+        # self.Uref  = Uref
+
+        # if (nondim_flag==1):
+        #     # Lref is here the dimensional thickness of the layer
+        #     self.Lref = 0.00025484199796126404
+        #     self.nuref = np.sqrt(self.gref)*self.Lref**(3./2.)/self.Re
+        #     self.Uref = np.sqrt(self.gref*self.Lref)
+        #     self.Fr = self.Uref/np.sqrt(self.gref*self.Lref)
+        # else:
+        #     # Compute reference length (thickness of mixing zone for Rayleigh-Taylor)
+        #     self.Lref  = self.Uref**2./(self.Fr**2.*self.gref)
+        #     self.nuref = self.Uref*self.Lref/self.Re
+        # # Set dimensional diffusivity reference value
+        # self.Dref  = self.nuref/self.Sc
         
 class HypTan(Baseflow):
     """
     This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
     """
-    def __init__(self, y): # here I pass ny
-        size = len(y)
+    def __init__(self, z): # here I pass nz
+        size = len(z)
 
         # I used that to see that as fac goes to zero, perturbation frequency decreases
         # In the limit of no baseflow velocity, the perturbations should be steady
@@ -71,8 +79,8 @@ class HypTan(Baseflow):
             print("")
             print("Using hyperbolic tangent in shear-layer test case")
             print("")
-            self.U    = fac*0.5*( 1. + np.tanh(y) )
-            self.Up   = fac*0.5*( 1.0 - np.tanh(y)**2. )
+            self.U    = fac*0.5*( 1. + np.tanh(z) )
+            self.Up   = fac*0.5*( 1.0 - np.tanh(z)**2. )
         elif (hyptan==0):
             # Using erf function instead of hyperbolic tangent
             print("")
@@ -80,8 +88,8 @@ class HypTan(Baseflow):
             print("")
             pi      = math.pi
             delta   = 1.0
-            self.U  = 0.5*( 1.0 + erf(y/delta) )
-            self.Up = 0.5*( 2.0*np.exp(-y**2./delta**2.)/( math.sqrt(pi)*delta ) )
+            self.U  = 0.5*( 1.0 + erf(z/delta) )
+            self.Up = 0.5*( 2.0*np.exp(-z**2./delta**2.)/( math.sqrt(pi)*delta ) )
             sys.exit("hyptan==0 ===> check before use")
         else:
             sys.exit("Not a proper value for flag hyptan")
@@ -105,8 +113,8 @@ class ShearLayerRogersMoser(Baseflow):
     """
     This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
     """
-    def __init__(self, y): # here I pass ny
-        size = len(y)
+    def __init__(self, z): # here I pass nz
+        size = len(z)
 
         pi = math.pi
 
@@ -118,21 +126,95 @@ class ShearLayerRogersMoser(Baseflow):
 
         if   (flag_monkewitz==1):
             # Baseflow to compare with Monkewitz and Huerre PoF (1982) ===> see my validation data in Monkewitz_Huerre_1982_PoF.dat
-            self.U    = erf( np.sqrt(pi)*y/4. )
-            self.Up   = 2.*np.exp( -pi*np.multiply(y, y)/16. )/4.
+            self.U    = erf( np.sqrt(pi)*z/4. )
+            self.Up   = 2.*np.exp( -pi*np.multiply(z, z)/16. )/4.
         elif (flag_monkewitz==0):
             # Baseflow from Rogers and Moser (JFM, 1992)
-            self.U    = erf( np.sqrt(pi)*y )
-            self.Up   = 2.*np.exp( -pi*np.multiply(y, y) )
+            self.U    = erf( np.sqrt(pi)*z )
+            self.Up   = 2.*np.exp( -pi*np.multiply(z, z) )
 
         flag_3d = False
         if (flag_3d):
+            self.V    = self.U
+            self.Vp   = self.Up
+        else:
+            self.V    = 0.*self.U
+            self.Vp   = 0.*self.U
+
+        self.Rho_nd   = np.divide(self.U, self.U) 
+        self.Rhop_nd  = 0.0*self.U 
+        self.Rhopp_nd = 0.0*self.U 
+
+        self.rt_flag = False
+
+        # Plot baseflow
+        ax = plt.gca()        
+        line7, = ax.plot( self.Up,
+                          z,
+                          'g',
+                          label="Up",
+                          linewidth=1.5 )
+        line7.set_dashes([2,2,2,2])
+
+        ax.set_xlabel('Up', fontsize=20)
+        ax.set_ylabel(r'z', fontsize=20)
+        
+        plt.gcf().subplots_adjust(left=0.145)
+        plt.gcf().subplots_adjust(bottom=0.145)
+            
+        zmin, zmax = mod_util.FindResonableZminZmax(self.Up, z)
+        
+        ncolumns = 1
+        
+        #zmin = -4
+        #zmax = 4
+        #ax.set_title('Eigenvalue spectrum')
+        #ax.set_xlim([-10, 10])
+        #ax.set_ylim(1.*zmin, 1.*zmax)
+        ax.set_ylim(1.*zmin, 1.*zmax)
+        ax.legend(loc='upper right', bbox_to_anchor=(1.14, 1.18),   # box with upper-right corner at (x, y)    
+                  ncol=1, fancybox=True, shadow=True, fontsize=10, framealpha = 0.8)
+        plt.show()
+
+class ShearLayerRogersMoser_OLD(Baseflow):
+    """
+    This child class of class Baseflow defines the hyperbolic tangent baseflow for shear-layer applications
+    """
+    def __init__(self, z): # here I pass nz
+
+        print("")
+        print("OLD SINGLE FLUID SHEAR-LAYER BASEFLOW")
+        print("")
+
+        size = len(z)
+
+        pi = math.pi
+
+        print("")
+        print("Using erf function from Rogers and Moser (JFM, 1992)")
+        print("")
+
+        flag_monkewitz = 0
+
+        if   (flag_monkewitz==1):
+            # Baseflow to compare with Monkewitz and Huerre PoF (1982) ===> see my validation data in Monkewitz_Huerre_1982_PoF.dat
+            self.U    = erf( np.sqrt(pi)*z/4. )
+            self.Up   = 2.*np.exp( -pi*np.multiply(z, z)/16. )/4.
+        elif (flag_monkewitz==0):
+            # Baseflow from Rogers and Moser (JFM, 1992)
+            self.U    = erf( np.sqrt(pi)*z )
+            self.Up   = 2.*np.exp( -pi*np.multiply(z, z) )
+
+        flag_3d = False
+        if (flag_3d):
+            # this is for old implementation with shear-layer in y
             self.W    = self.U
             self.Wp   = self.Up
         else:
+            # this is for old implementation with shear-layer in y
             self.W    = 0.*self.U
-            self.Wp   = 0.*self.U
-
+            self.Wp   = 0.*self.Up
+            
         self.Rho_nd   = np.divide(self.U, self.U) 
         self.Rhop_nd  = 0.0*self.U 
         self.Rhopp_nd = 0.0*self.U 
@@ -144,13 +226,16 @@ class PlanePoiseuille(Baseflow):
     """
     This child class of class Baseflow defines the plane Poiseuille baseflow
     """
-    def __init__(self, y): # here I pass ny
-        size = len(y)
-        self.U    = 1.0 - y**2.
-        self.Up   = -2.0*y
-        
-        self.W    = np.zeros(size, dp)
-        self.Wp   = np.zeros(size, dp)
+    def __init__(self, z): # here I pass nz
+        size = len(z)
+        self.U    = 1.0 - z**2.
+        self.Up   = -2.0*z
+
+        self.V    = np.zeros(size, dp)
+        self.Vp   = np.zeros(size, dp)
+
+        #self.W    = np.zeros(size, dp)
+        #self.Wp   = np.zeros(size, dp)
 
         self.Rho_nd   = np.divide(self.U, self.U) 
         self.Rhop_nd  = 0.0*self.U 
@@ -159,9 +244,9 @@ class PlanePoiseuille(Baseflow):
         self.rt_flag = False
 
 class RTSimple(object):
-    def __init__(self, y, At):
-        delta = 1
-        znondim = y
+    def __init__(self, z, At):
+        delta = 1.0
+        znondim = z
         pi = math.pi
 
         self.Rho_nd = 1. + At*erf(znondim/delta)
@@ -170,6 +255,8 @@ class RTSimple(object):
 
         self.U  = 0.0*self.Rho_nd
         self.Up = 0.0*self.Rho_nd
+        self.V  = 0.0*self.Rho_nd
+        self.Vp = 0.0*self.Rho_nd
         self.W  = 0.0*self.Rho_nd
         self.Wp = 0.0*self.Rho_nd
 
@@ -185,40 +272,66 @@ class RTSimple(object):
         self.rho1_nd = self.rho1/self.rhoref
         self.rho2_nd = self.rho2/self.rhoref
 
+        self.grav = 1.
+
     def get_layer_thickness_rt(self, zcoord):
         ###################################
         # Compute layer thickness
         ###################################
-        ny = len(zcoord)
+        nz = len(zcoord)
         thick_crit = 0.01 # criterion
         
         delta_rho = self.rho2_nd-self.rho1_nd
         rho_test1 = self.rho1_nd + thick_crit*delta_rho
         rho_test2 = self.rho2_nd - thick_crit*delta_rho
 
-        rho_thick1 = rho_test1*np.ones(ny)
-        rho_thick2 = rho_test2*np.ones(ny)
+        rho_thick1 = rho_test1*np.ones(nz)
+        rho_thick2 = rho_test2*np.ones(nz)
 
-        self.H_thick = mod_util.GetLayerThicknessRT(ny, zcoord, rho_test1, rho_test2, self.Rho_nd)
+        self.H_thick = mod_util.GetLayerThicknessRT(nz, zcoord, rho_test1, rho_test2, self.Rho_nd)
 
         X = ( self.Rho_nd-self.rho1_nd )/( self.rho2_nd-self.rho1_nd )
-        self.H_thick_X = mod_util.GetLayerThicknessRT_X(ny, zcoord, 0.01, 0.99, X)
+        self.H_thick_X = mod_util.GetLayerThicknessRT_X(nz, zcoord, 0.01, 0.99, X)
         
-        self.h_thick = mod_util.GetLayerThicknessRT_CabotCook(ny, zcoord, self.Rho_nd, self.rho1_nd, self.rho2_nd)
+        self.h_thick = mod_util.GetLayerThicknessRT_CabotCook(nz, zcoord, self.Rho_nd, self.rho1_nd, self.rho2_nd)
         print("")
         print("RT Layer Thickness")
         print("==================")
         print("H_thick_X = ", self.H_thick_X)
         print("H_thick (x percent criterion), h_thick (Cabot & Cook), H_thick/h_thick = ", self.H_thick, self.h_thick, self.H_thick/self.h_thick)
 
+    def plot_baseflow(self, map, ax=None):
+
+        #print("map.z = ", map.z)
+        try:
+            if not ax:
+                ax = plt.gca()
+            ax.plot(
+                self.Rho_nd,
+                map.z,
+                'k', markerfacecolor='none'
+            )
+            ax.set_xlabel(r'$\rho$', fontsize=20)
+            ax.set_ylabel(r'$z$', fontsize=20)
+
+            plt.gcf().subplots_adjust(left=0.145)
+            plt.gcf().subplots_adjust(bottom=0.145)
+
+            ax.set_title('Baseflow')
+            #ax.set_xlim([-10, 10])
+            #ax.set_ylim([-1, 1])
+        except AttributeError:
+            plt.close()
+            warnings.warn("Something wriong here")
+            
 class RTPsDNS(object):
-    def __init__(self, y, At, map):
+    def __init__(self, z, At, map):
         delta = 1
-        znondim = y
-        ny = len(znondim)
+        znondim = z
+        nz = len(znondim)
         pi = math.pi
 
-        yshift = 12.5
+        zshift = 12.5
 
         tini = 0.
         tend = 85. # 20. #65.
@@ -241,22 +354,22 @@ class RTPsDNS(object):
 
             if ( i == 0 ):
                 #print("data_collected.shape[0], data_collected.shape[1] = ", data_collected.shape[0], data_collected.shape[1])
-                nyb = data_collected.shape[0]
-                y_base = np.zeros((ntb, nyb), dp)
-                rho_base = np.zeros((ntb, nyb), dp)
+                nzb = data_collected.shape[0]
+                z_base = np.zeros((ntb, nzb), dp)
+                rho_base = np.zeros((ntb, nzb), dp)
                 
-            y_base[i, :] = data_collected[:, 0]
+            z_base[i, :] = data_collected[:, 0]
             rho_base[i, :] = data_collected[:, 1]
 
             if ( i > 0 ):
-                if ( np.amax( np.abs( y_base[i, :]-y_base[i-1, :] ) ) > 1.0e-14 ):
-                    sys.exit("y-coordinate of baseflow is not consistent!!!!!")
+                if ( np.amax( np.abs( z_base[i, :]-z_base[i-1, :] ) ) > 1.0e-14 ):
+                    sys.exit("z-coordinate of baseflow is not consistent!!!!!")
 
-        y_base = y_base - yshift
+        z_base = z_base - zshift
 
-        self.Rho_nd_2d = np.zeros((ntb, ny), dp)
-        self.Rhop_nd_2d = np.zeros((ntb, ny), dp)
-        self.Rhopp_nd_2d = np.zeros((ntb, ny), dp)
+        self.Rho_nd_2d = np.zeros((ntb, nz), dp)
+        self.Rhop_nd_2d = np.zeros((ntb, nz), dp)
+        self.Rhopp_nd_2d = np.zeros((ntb, nz), dp)
 
         self.Rho_nd = 0.0*znondim
         self.Rhop_nd = 0.0*znondim
@@ -264,11 +377,11 @@ class RTPsDNS(object):
 
         # Interpolate
         for i in range(0, ntb):
-            if ( y_base[i, 0] > znondim[0] or y_base[i, -1] < znondim[-1] ):
-                print("y_base[i, 0], znondim[0], y_base[i, -1], znondim[-1]", y_base[i, 0], znondim[0], y_base[i, -1], znondim[-1])
+            if ( z_base[i, 0] > znondim[0] or z_base[i, -1] < znondim[-1] ):
+                print("z_base[i, 0], znondim[0], z_base[i, -1], znondim[-1]", z_base[i, 0], znondim[0], z_base[i, -1], znondim[-1])
                 sys.exit("Cannot interpolate baseflow from PsDNS: Extend PsDNS domain!!!!")
             else:
-                tck = interpolate.splrep( y_base[i, :], rho_base[i, :] )
+                tck = interpolate.splrep( z_base[i, :], rho_base[i, :] )
                 self.Rho_nd_2d[i, :] = interpolate.splev(znondim, tck)
                 
                 self.Rhop_nd_2d[i, :] = np.matmul( map.D1, self.Rho_nd_2d[i, :])
@@ -281,749 +394,867 @@ class RTPsDNS(object):
 
         self.rt_flag = True
 
-class RayleighTaylorBaseflow(Baseflow):
-    """
-    This child class of class Baseflow defines the "Rayleigh-Taylor" baseflow
-    """
-    def __init__(self, size, map, bsfl_ref, mtmp): # here I pass ny
+class RT_ShearLayerRogersMoser(Baseflow):
 
-        y = map.y
-        ny = size
-        self.size = size
-        
-        UseConstantMu = True
-        UseNumericalDerivatives = False
-        plotF = True
-        opt  = 1
-
-        if ( mtmp.boussinesq == -555 ): # compressible inviscid solver
-            opt = 3
-            print("")
-            print("Swithching to opt = 3 for compressible inviscid solver")
-            print("")
-
-
-        if ( mtmp.boussinesq == -2 or mtmp.boussinesq == 10 ): # dimensional solver
-            # Baseflow coordinate
-            zdim = y
-            znondim = y/bsfl_ref.Lref
-            # Plotting coordinate
-            zcoord = y
-        else:                         # non-dimensional solvers
-            # Plotting coordinate
-            zcoord = y
-            # Baseflow coordinate
-            zdim = y*bsfl_ref.Lref
-            znondim = y
-            
+    def __init__(self, z, At):
+        delta = 1
+        znondim = z
         pi = math.pi
 
-        At   = bsfl_ref.At
-        Re   = bsfl_ref.Re
-        Sc   = bsfl_ref.Sc
+        print("")
+        print("RT Shear-Layer Baseflow")
+        print("Using erf function from Rogers and Moser for velocity component(s) (JFM, 1992)")
+        print("")
+
+        #
+        # Generate baseflow density
+        #
+        self.Rho_nd = 1. + At*erf(znondim/delta)
+        self.Rhop_nd = At*( 2.0*np.exp( -znondim**2/delta**2 )/( delta*np.sqrt(math.pi) ) )
+        self.Rhopp_nd = 2*At/(delta*np.sqrt(pi))*(-2.*znondim/delta**2.)*np.exp(-znondim**2./delta**2.)
+
+        self.rt_flag = True
+
+        # Dimensional density of material 1 and 2
+        fac = (1.+At)/(1.-At)
         
-        Uref = bsfl_ref.Uref
-        grav = bsfl_ref.gref
-        Lref = bsfl_ref.Lref 
-        nuref = bsfl_ref.nuref
+        self.rho1  = 1.0
+        self.rho2  = self.rho1*fac
+        self.rhoref = 0.5*(self.rho1+self.rho2)
 
-        # Numerical differentiation operators (to compare with analytical baseflow derivatives)
-        if ( mtmp.boussinesq == -2 or mtmp.boussinesq == 10 ): # dimensional solver
-            D1_dim = map.D1
-            D2_dim = map.D2
+        self.rho1_nd = self.rho1/self.rhoref
+        self.rho2_nd = self.rho2/self.rhoref
 
-            D1_nondim = Lref*D1_dim
-            D2_nondim = Lref**2.*D2_dim
+        self.grav = 1
+
+        #
+        # Generate baseflow velocity
+        #
+        flag_monkewitz = 0
+
+        if   (flag_monkewitz==1):
+            # Baseflow to compare with Monkewitz and Huerre PoF (1982) ===> see my validation data in Monkewitz_Huerre_1982_PoF.dat
+            self.U    = erf( np.sqrt(pi)*z/4. )
+            self.Up   = 2.*np.exp( -pi*np.multiply(z, z)/16. )/4.
+        elif (flag_monkewitz==0):
+            # Baseflow from Rogers and Moser (JFM, 1992)
+            self.U    = erf( np.sqrt(pi)*z )
+            self.Up   = 2.*np.exp( -pi*np.multiply(z, z) )
+
+        flag_3d = False
+        if (flag_3d):
+            self.V    = self.U
+            self.Vp   = self.Up
         else:
-            D1_dim = 1/Lref*map.D1    # non-dimensional solvers
-            D2_dim = 1/Lref**2.*map.D2
+            self.V    = 0.*self.U
+            self.Vp   = 0.*self.U
 
-            D1_nondim = map.D1
-            D2_nondim = map.D2
+        set_vel_to_zero=0
+        if (set_vel_to_zero==1):
+            print("")
+            print("Setting velocities to zero in RT_ShearLayerRogersMoser")
+            print("")
+            self.U = 0.*self.U
+            self.V = 0.*self.U
+            self.Up = 0.*self.U
+            self.Vp = 0.*self.U
 
-        self.D1_dim = D1_dim
-        self.D2_dim = D2_dim
+        self.set_density_to_one_gravity_to_zero=0
+        if (self.set_density_to_one_gravity_to_zero==1):
+            print("")
+            print("Setting density to one and gravity to zero in RT_ShearLayerRogersMoser")
+            print("")
+            self.Rho_nd   = np.divide(self.U, self.U) 
+            self.Rhop_nd  = 0.*self.U 
+            self.Rhopp_nd = 0.*self.U
 
-        self.D1_nondim = D1_nondim
-        self.D2_nondim = D2_nondim
+            self.grav = 0.
+        
+class RTPiecewiseLinear(RTSimple):
+    def __init__(self, z, At):
+        delta = 1
+        znondim = z
+        pi = math.pi
 
-        #print("At, Re, Uref, grav, Lref, nuref = ", At, Re, Uref, grav, Lref, nuref)
+        self.Rho_nd = np.zeros(len(z), dp)
+        self.Rhop_nd = np.zeros(len(z), dp)
 
-        if (opt==0):
-
-            sys.exit("Check this before using in terms of bsfl_ref and Rhopp")
+        for k in range(0, len(z)):
             
-            r1 = 1.
-            r2 = 1.5
-            
-            #Lref = 0.1
-            
-            r = r1/2. + (r2-r1)/2.*erf(zdim/Lref)
-            
-            self.Rho  = r
-            self.Rhop = (r2-r1)/2.*( 2.0*np.exp( -zdim**2/Lref**2 )/(Lref*np.sqrt(pi)) )
-            
-            self.Mu   = 1.0e-5*np.abs(y)
-            self.Mup  = 1.0e-5*np.abs(y)
-            
-        elif(opt==1):
-
-            # 
-            # delta_star = 0.01 ==> delta_star is dimensionless delta ======> see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
-            #
-            
-            # delta is dimensionless [-], and delta_dim is dimensional [m]
-            if (nondim_flag==1): # this is the "new" non-dimensionalization
+            if ( z[k] < -1 ):
+                self.Rho_nd[k] = 1.-At
+                self.Rhop_nd[k] = 0.
+            elif ( z[k] > 1 ):
+                self.Rho_nd[k] = 1.+At
+                self.Rhop_nd[k] = 0.
+            else:
+                self.Rho_nd[k] = At*z[k] + 1.
+                self.Rhop_nd[k] = At
                 
-                delta = 1.0 # cannot modify this one here becasue delta = delta_star/Lref = delta_star/delta_star
-                delta_dim = delta*Lref
-                if ( delta != 1.0 ):
-                    sys.exit("Non-dimensional layer thickness (delta) must be one in this non-dimensionalization")
+        self.Rhopp_nd = 0.0*self.Rho_nd
+
+        self.U  = 0.0*self.Rho_nd
+        self.Up = 0.0*self.Rho_nd
+        self.W  = 0.0*self.Rho_nd
+        self.Wp = 0.0*self.Rho_nd
+
+        self.rt_flag = True
+
+        # Dimensional density of material 1 and 2
+        fac = (1.+At)/(1.-At)
+        
+        self.rho1  = 1.0
+        self.rho2  = self.rho1*fac
+        self.rhoref = 0.5*(self.rho1+self.rho2)
+
+        self.rho1_nd = self.rho1/self.rhoref
+        self.rho2_nd = self.rho2/self.rhoref
+
+        self.grav = 1.
+        
+# class RayleighTaylorBaseflow(Baseflow):
+#     """
+#     This child class of class Baseflow defines the "Rayleigh-Taylor" baseflow
+#     """
+#     def __init__(self, size, map, bsfl_ref, mtmp): # here I pass ny
+
+#         y = map.y
+#         ny = size
+#         self.size = size
+        
+#         UseConstantMu = True
+#         UseNumericalDerivatives = False
+#         plotF = True
+#         opt  = 1
+
+#         if ( mtmp.boussinesq == -555 ): # compressible inviscid solver
+#             opt = 3
+#             print("")
+#             print("Swithching to opt = 3 for compressible inviscid solver")
+#             print("")
+
+
+#         if ( mtmp.boussinesq == -2 or mtmp.boussinesq == 10 ): # dimensional solver
+#             # Baseflow coordinate
+#             zdim = y
+#             znondim = y/bsfl_ref.Lref
+#             # Plotting coordinate
+#             zcoord = y
+#         else:                         # non-dimensional solvers
+#             # Plotting coordinate
+#             zcoord = y
+#             # Baseflow coordinate
+#             zdim = y*bsfl_ref.Lref
+#             znondim = y
+            
+#         pi = math.pi
+
+#         At   = bsfl_ref.At
+#         Re   = bsfl_ref.Re
+#         Sc   = bsfl_ref.Sc
+        
+#         Uref = bsfl_ref.Uref
+#         grav = bsfl_ref.gref
+#         Lref = bsfl_ref.Lref 
+#         nuref = bsfl_ref.nuref
+
+#         # Numerical differentiation operators (to compare with analytical baseflow derivatives)
+#         if ( mtmp.boussinesq == -2 or mtmp.boussinesq == 10 ): # dimensional solver
+#             D1_dim = map.D1
+#             D2_dim = map.D2
+
+#             D1_nondim = Lref*D1_dim
+#             D2_nondim = Lref**2.*D2_dim
+#         else:
+#             D1_dim = 1/Lref*map.D1    # non-dimensional solvers
+#             D2_dim = 1/Lref**2.*map.D2
+
+#             D1_nondim = map.D1
+#             D2_nondim = map.D2
+
+#         self.D1_dim = D1_dim
+#         self.D2_dim = D2_dim
+
+#         self.D1_nondim = D1_nondim
+#         self.D2_nondim = D2_nondim
+
+#         #print("At, Re, Uref, grav, Lref, nuref = ", At, Re, Uref, grav, Lref, nuref)
+
+#         if (opt==0):
+
+#             sys.exit("Check this before using in terms of bsfl_ref and Rhopp")
+            
+#             r1 = 1.
+#             r2 = 1.5
+            
+#             #Lref = 0.1
+            
+#             r = r1/2. + (r2-r1)/2.*erf(zdim/Lref)
+            
+#             self.Rho  = r
+#             self.Rhop = (r2-r1)/2.*( 2.0*np.exp( -zdim**2/Lref**2 )/(Lref*np.sqrt(pi)) )
+            
+#             self.Mu   = 1.0e-5*np.abs(y)
+#             self.Mup  = 1.0e-5*np.abs(y)
+            
+#         elif(opt==1):
+
+#             # 
+#             # delta_star = 0.01 ==> delta_star is dimensionless delta ======> see Morgan, Likhachev, Jacobs Fig. 17 legend 0.0005
+#             #
+            
+#             # delta is dimensionless [-], and delta_dim is dimensional [m]
+#             if (nondim_flag==1): # this is the "new" non-dimensionalization
+                
+#                 delta = 1.0 # cannot modify this one here becasue delta = delta_star/Lref = delta_star/delta_star
+#                 delta_dim = delta*Lref
+#                 if ( delta != 1.0 ):
+#                     sys.exit("Non-dimensional layer thickness (delta) must be one in this non-dimensionalization")
                     
-            else:                # this is the "old" non-dimensionalization
-                delta     = 1 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
-                delta_dim = delta*Lref
+#             else:                # this is the "old" non-dimensionalization
+#                 delta     = 1 #0.01 #0.0001 #0.01 #0.01 #0.00005 #0.02
+#                 delta_dim = delta*Lref
 
-            self.delta = delta
-            self.delta_dim = delta_dim
+#             self.delta = delta
+#             self.delta_dim = delta_dim
             
-            # Note: delta is the characteristic thickness of the diffusion layer
-            print("Setting up R-T baseflow")
-            print("-----------------------")
-            print("delta     = ", delta)
-            print("delta_dim = ", delta_dim)
+#             # Note: delta is the characteristic thickness of the diffusion layer
+#             print("Setting up R-T baseflow")
+#             print("-----------------------")
+#             print("delta     = ", delta)
+#             print("delta_dim = ", delta_dim)
 
-            fac   = (1.+At)/(1.-At)
-            div   = 1. + fac
+#             fac   = (1.+At)/(1.-At)
+#             div   = 1. + fac
             
-            # Dimensional density of material 1 and 2
-            rho1  = 1.0
-            rho2  = rho1*fac #1.01*rho1 # use 3 to get Atw = 0.5 ==== 1.01
+#             # Dimensional density of material 1 and 2
+#             rho1  = 1.0
+#             rho2  = rho1*fac #1.01*rho1 # use 3 to get Atw = 0.5 ==== 1.01
 
-            # Dimensional dynamic viscosity of material 1 and 2 (consistent with Reynolds number)
-            mu1   = (rho1+rho2)/Re*Uref*Lref/div # 1.e-6 #1.e-2
-            mu2   = mu1*fac                      #1.01*mu1 # use 3 to get Amu = 0.5  ==== 1.01
+#             # Dimensional dynamic viscosity of material 1 and 2 (consistent with Reynolds number)
+#             mu1   = (rho1+rho2)/Re*Uref*Lref/div # 1.e-6 #1.e-2
+#             mu2   = mu1*fac                      #1.01*mu1 # use 3 to get Amu = 0.5  ==== 1.01
 
-            # Reference density and dynamic viscosity taken as average value between material 1 and 2
-            rhoref = 0.5*( rho1 + rho2 )
-            muref  = 0.5*( mu1 + mu2 )
+#             # Reference density and dynamic viscosity taken as average value between material 1 and 2
+#             rhoref = 0.5*( rho1 + rho2 )
+#             muref  = 0.5*( mu1 + mu2 )
             
-            bsfl_ref.rhoref = rhoref
-            bsfl_ref.muref = muref
+#             bsfl_ref.rhoref = rhoref
+#             bsfl_ref.muref = muref
 
-            print("")
-            print("Setting reference density and dynamic viscosity:")
-            print("------------------------------------------------")
-            print("rhoref = ", rhoref)
-            print("muref  = ", muref)
-            print("")
-            print("Muref recomputed from Reynolds number: Muref=rhoref*Uref*Lref/Re = ", rhoref*Uref*Lref/Re)
-            print("")
+#             print("")
+#             print("Setting reference density and dynamic viscosity:")
+#             print("------------------------------------------------")
+#             print("rhoref = ", rhoref)
+#             print("muref  = ", muref)
+#             print("")
+#             print("Muref recomputed from Reynolds number: Muref=rhoref*Uref*Lref/Re = ", rhoref*Uref*Lref/Re)
+#             print("")
 
-            Atw_check = (rho2-rho1)/(rho2+rho1)
-            Amu_check = (mu2-mu1)/(mu2+mu1)
+#             Atw_check = (rho2-rho1)/(rho2+rho1)
+#             Amu_check = (mu2-mu1)/(mu2+mu1)
 
-            #print("np.abs(At-Atw_check), np.abs(At-Amu_check) = ", np.abs(At-Atw_check), np.abs(At-Amu_check))
+#             #print("np.abs(At-Atw_check), np.abs(At-Amu_check) = ", np.abs(At-Atw_check), np.abs(At-Amu_check))
             
-            tol_c = 1.e-10
-            if ( np.abs(At-Atw_check) > tol_c or np.abs(At-Amu_check) > tol_c ):
-                sys.exit("Atwood number inconsistency!!!!!!!")
+#             tol_c = 1.e-10
+#             if ( np.abs(At-Atw_check) > tol_c or np.abs(At-Amu_check) > tol_c ):
+#                 sys.exit("Atwood number inconsistency!!!!!!!")
 
-            # Since the reference length Lref is dimensional, then zdim needs to be dimensional
+#             # Since the reference length Lref is dimensional, then zdim needs to be dimensional
                 
-            # Compute dimensional density and its derivatives (d/dy_dim and d^2/dy_dim^2)
-            #print("zdim/delta_dim = ", zdim/delta_dim)
-            #print("")
-            #print("znondim/delta = ", znondim/delta)
-            print("np.amax(np.abs(zdim/delta_dim-znondim/delta)) = ", np.amax(np.abs(zdim/delta_dim-znondim/delta)))
+#             # Compute dimensional density and its derivatives (d/dy_dim and d^2/dy_dim^2)
+#             #print("zdim/delta_dim = ", zdim/delta_dim)
+#             #print("")
+#             #print("znondim/delta = ", znondim/delta)
+#             print("np.amax(np.abs(zdim/delta_dim-znondim/delta)) = ", np.amax(np.abs(zdim/delta_dim-znondim/delta)))
 
-            # Compute non-dimensional density and its derivatives (d/dy and d^2/dy^2)
-            self.Rho_nd = 1. + At*erf(znondim/delta)
-            self.Rhop_nd = At*( 2.0*np.exp( -znondim**2/delta**2 )/( delta*np.sqrt(pi) ) )
-            self.Rhopp_nd = 2*At/(delta*np.sqrt(pi))*(-2.*znondim/delta**2.)*np.exp(-znondim**2./delta**2.)
+#             # Compute non-dimensional density and its derivatives (d/dy and d^2/dy^2)
+#             self.Rho_nd = 1. + At*erf(znondim/delta)
+#             self.Rhop_nd = At*( 2.0*np.exp( -znondim**2/delta**2 )/( delta*np.sqrt(pi) ) )
+#             self.Rhopp_nd = 2*At/(delta*np.sqrt(pi))*(-2.*znondim/delta**2.)*np.exp(-znondim**2./delta**2.)
             
-            self.Rho   = rhoref*( 1. + At*erf(zdim/delta_dim) )
-            self.Rhop  = rhoref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/( delta_dim*np.sqrt(pi) ) )
-            self.Rhopp = 2.0*rhoref*At/(delta_dim*np.sqrt(pi))*(-2.*zdim/delta_dim**2.)*np.exp( -zdim**2/delta_dim**2 )
+#             self.Rho   = rhoref*( 1. + At*erf(zdim/delta_dim) )
+#             self.Rhop  = rhoref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/( delta_dim*np.sqrt(pi) ) )
+#             self.Rhopp = 2.0*rhoref*At/(delta_dim*np.sqrt(pi))*(-2.*zdim/delta_dim**2.)*np.exp( -zdim**2/delta_dim**2 )
 
-            self.Rho_new   = rhoref*self.Rho_nd
-            self.Rhop_new  = rhoref/Lref*self.Rhop_nd
-            self.Rhopp_new = rhoref/Lref**2.*self.Rhopp_nd
+#             self.Rho_new   = rhoref*self.Rho_nd
+#             self.Rhop_new  = rhoref/Lref*self.Rhop_nd
+#             self.Rhopp_new = rhoref/Lref**2.*self.Rhopp_nd
 
-            print("")
-            print("np.amax(np.abs(self.Rho-self.Rho_new)) = ", np.amax(np.abs(self.Rho-self.Rho_new)))
-            print("np.amax(np.abs(self.Rhop-self.Rhop_new)) = ", np.amax(np.abs(self.Rhop-self.Rhop_new)))
-            print("np.amax(np.abs(self.Rhopp-self.Rhopp_new)) = ", np.amax(np.abs(self.Rhopp-self.Rhopp_new)))
-            print("")
+#             print("")
+#             print("np.amax(np.abs(self.Rho-self.Rho_new)) = ", np.amax(np.abs(self.Rho-self.Rho_new)))
+#             print("np.amax(np.abs(self.Rhop-self.Rhop_new)) = ", np.amax(np.abs(self.Rhop-self.Rhop_new)))
+#             print("np.amax(np.abs(self.Rhopp-self.Rhopp_new)) = ", np.amax(np.abs(self.Rhopp-self.Rhopp_new)))
+#             print("")
 
-            # To Match Chandrasekhar and simplified Sandoval Equations, I need to use constant mu
-            # in Chandrasekhar equations, i.e. mu = muref
+#             # To Match Chandrasekhar and simplified Sandoval Equations, I need to use constant mu
+#             # in Chandrasekhar equations, i.e. mu = muref
             
-            if (UseConstantMu):
-                print("")
-                print("             ----------------------------------------------------")
-                print("==========> | Using constant dynamic viscosity in baseflow setup |")
-                print("             ----------------------------------------------------")
-                print("")
-                self.Mu  = muref*np.ones(size)
-                self.Mup = 0.0*self.Mu
-            else:
-                print("")
-                print("             --------------------------------------------------------")
-                print("==========> | Using non-constant dynamic viscosity in baseflow setup |")
-                print("             --------------------------------------------------------")
+#             if (UseConstantMu):
+#                 print("")
+#                 print("             ----------------------------------------------------")
+#                 print("==========> | Using constant dynamic viscosity in baseflow setup |")
+#                 print("             ----------------------------------------------------")
+#                 print("")
+#                 self.Mu  = muref*np.ones(size)
+#                 self.Mup = 0.0*self.Mu
+#             else:
+#                 print("")
+#                 print("             --------------------------------------------------------")
+#                 print("==========> | Using non-constant dynamic viscosity in baseflow setup |")
+#                 print("             --------------------------------------------------------")
 
-                print("")
-                print("")
+#                 print("")
+#                 print("")
 
-                #sys.exit("Check this before using again ==> i.e. dimensional vs. non-dimensional")
+#                 #sys.exit("Check this before using again ==> i.e. dimensional vs. non-dimensional")
 
-                if ( mtmp.boussinesq == 1 ): 
-                    sys.exit("Boussinesq equations were derived considering mu = constant")
+#                 if ( mtmp.boussinesq == 1 ): 
+#                     sys.exit("Boussinesq equations were derived considering mu = constant")
 
-                if ( mtmp.boussinesq == -3 ): 
-                    sys.exit("Sandoval equations were derived considering mu = constant")
+#                 if ( mtmp.boussinesq == -3 ): 
+#                     sys.exit("Sandoval equations were derived considering mu = constant")
                 
-                # Compute dimensional viscosity and its derivatives
-                self.Mu  = muref*( 1. + At*erf(zdim/delta_dim) )
-                self.Mup = muref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
+#                 # Compute dimensional viscosity and its derivatives
+#                 self.Mu  = muref*( 1. + At*erf(zdim/delta_dim) )
+#                 self.Mup = muref*At*( 2.0*np.exp( -zdim**2/delta_dim**2 )/(delta_dim*np.sqrt(pi)) )
                 
-            # Compute dimensional kinematic viscosity
-            nu         = np.divide(self.Mu, self.Rho)
-            nu0        = muref/rhoref
+#             # Compute dimensional kinematic viscosity
+#             nu         = np.divide(self.Mu, self.Rho)
+#             nu0        = muref/rhoref
 
-            if ( np.abs(nu0-nuref) > tol_c ):
-                print("np.abs(nu0-nuref) = ", np.abs(nu0-nuref))
-                sys.exit("Kinematic viscosity inconsistency!!!!!!!")
+#             if ( np.abs(nu0-nuref) > tol_c ):
+#                 print("np.abs(nu0-nuref) = ", np.abs(nu0-nuref))
+#                 sys.exit("Kinematic viscosity inconsistency!!!!!!!")
                
-            # Compute non-dimensional density and its derivatives (d/dy and d^2/dy^2)
-            self.Rho_nd_old   = 1/rhoref*self.Rho
-            # drho_dim/dy_dim = rhoref/Lref*(drho/dy) ==> drho/dy = Lref/rhoref*(drho_dim/dy_dim)
-            self.Rhop_nd_old  = Lref/rhoref*self.Rhop
-            # d^2rho/dy^2 = Lref^2/rhoref*(d^2rho_dim/dy_dim^2) 
-            self.Rhopp_nd_old = Lref**2./rhoref*self.Rhopp
+#             # Compute non-dimensional density and its derivatives (d/dy and d^2/dy^2)
+#             self.Rho_nd_old   = 1/rhoref*self.Rho
+#             # drho_dim/dy_dim = rhoref/Lref*(drho/dy) ==> drho/dy = Lref/rhoref*(drho_dim/dy_dim)
+#             self.Rhop_nd_old  = Lref/rhoref*self.Rhop
+#             # d^2rho/dy^2 = Lref^2/rhoref*(d^2rho_dim/dy_dim^2) 
+#             self.Rhopp_nd_old = Lref**2./rhoref*self.Rhopp
 
-            print("np.amax(np.abs(self.Rho_nd-self.Rho_nd_old)) = ", np.amax(np.abs(self.Rho_nd-self.Rho_nd_old)))
-            print("np.amax(np.abs(self.Rhop_nd-self.Rhop_nd_old)) = ", np.amax(np.abs(self.Rhop_nd-self.Rhop_nd_old)))
-            print("np.amax(np.abs(self.Rhopp_nd-self.Rhopp_nd_old)) = ", np.amax(np.abs(self.Rhopp_nd-self.Rhopp_nd_old)))
+#             print("np.amax(np.abs(self.Rho_nd-self.Rho_nd_old)) = ", np.amax(np.abs(self.Rho_nd-self.Rho_nd_old)))
+#             print("np.amax(np.abs(self.Rhop_nd-self.Rhop_nd_old)) = ", np.amax(np.abs(self.Rhop_nd-self.Rhop_nd_old)))
+#             print("np.amax(np.abs(self.Rhopp_nd-self.Rhopp_nd_old)) = ", np.amax(np.abs(self.Rhopp_nd-self.Rhopp_nd_old)))
             
-            ##############################
-            # COMPUTE BASEFLOW W-VELOCITY
-            ##############################
+#             ##############################
+#             # COMPUTE BASEFLOW W-VELOCITY
+#             ##############################
 
-            div_bsfl = -1./(Re*Sc)*( -np.divide( np.multiply(self.Rhop_nd, self.Rhop_nd), np.multiply(self.Rho_nd, self.Rho_nd) ) + np.divide(self.Rhopp_nd, self.Rho_nd) )
-            div_bsfl_dim = -bsfl_ref.Dref*( -np.divide( np.multiply(self.Rhop, self.Rhop), np.multiply(self.Rho, self.Rho) ) + np.divide(self.Rhopp, self.Rho) )
+#             div_bsfl = -1./(Re*Sc)*( -np.divide( np.multiply(self.Rhop_nd, self.Rhop_nd), np.multiply(self.Rho_nd, self.Rho_nd) ) + np.divide(self.Rhopp_nd, self.Rho_nd) )
+#             div_bsfl_dim = -bsfl_ref.Dref*( -np.divide( np.multiply(self.Rhop, self.Rhop), np.multiply(self.Rho, self.Rho) ) + np.divide(self.Rhopp, self.Rho) )
 
-            # Non-dimensional baseflow w-velocity and its z-derivative
-            self.Wvel_nd  = -1./(Re*Sc)*np.divide(self.Rhop_nd, self.Rho_nd)
-            self.Wvelp_nd  = div_bsfl
+#             # Non-dimensional baseflow w-velocity and its z-derivative
+#             self.Wvel_nd  = -1./(Re*Sc)*np.divide(self.Rhop_nd, self.Rho_nd)
+#             self.Wvelp_nd  = div_bsfl
 
-            Wvel_nd_num = mod_util.trapezoid_integration_cum(div_bsfl, znondim)
-            Wvel_num = mod_util.trapezoid_integration_cum(div_bsfl_dim, zdim)
+#             Wvel_nd_num = mod_util.trapezoid_integration_cum(div_bsfl, znondim)
+#             Wvel_num = mod_util.trapezoid_integration_cum(div_bsfl_dim, zdim)
 
-            # Dimensional baseflow w-velocity (to check that non-dimensionalization is consistent)
-            self.Wvel = -bsfl_ref.Dref*np.divide(self.Rhop, self.Rho)
-            self.Wvel_nd_after = self.Wvel/Uref
+#             # Dimensional baseflow w-velocity (to check that non-dimensionalization is consistent)
+#             self.Wvel = -bsfl_ref.Dref*np.divide(self.Rhop, self.Rho)
+#             self.Wvel_nd_after = self.Wvel/Uref
 
-            self.Wvelp = div_bsfl_dim
-            self.Wvelp_nd_after = self.Wvelp*Lref/Uref
+#             self.Wvelp = div_bsfl_dim
+#             self.Wvelp_nd_after = self.Wvelp*Lref/Uref
             
-            self.Wvelp_nd_num = np.matmul(D1_nondim, self.Wvel_nd)
+#             self.Wvelp_nd_num = np.matmul(D1_nondim, self.Wvel_nd)
 
-            # Write baseflow to file
-            mod_util.write_baseflow_out(znondim, zdim, self.Rho_nd, self.Rhop_nd, self.Rhopp_nd, self.Wvel_nd, self.Wvelp_nd, self.Rho, self.Rhop, self.Rhopp, self.Wvel, self.Wvelp)
+#             # Write baseflow to file
+#             mod_util.write_baseflow_out(znondim, zdim, self.Rho_nd, self.Rhop_nd, self.Rhopp_nd, self.Wvel_nd, self.Wvelp_nd, self.Rho, self.Rhop, self.Rhopp, self.Wvel, self.Wvelp)
 
-            # Compute non-dimensional viscosity and its derivatives
-            self.Mu_nd  = 1/muref*self.Mu
-            self.Mup_nd = Lref/muref*self.Mup
+#             # Compute non-dimensional viscosity and its derivatives
+#             self.Mu_nd  = 1/muref*self.Mu
+#             self.Mup_nd = Lref/muref*self.Mup
 
-            # Compute numerical derivatives and compare with analytical ones
-            Rhop_num     = np.matmul(D1_dim, self.Rho)
-            Rhopp_num    = np.matmul(D2_dim, self.Rho)
+#             # Compute numerical derivatives and compare with analytical ones
+#             Rhop_num     = np.matmul(D1_dim, self.Rho)
+#             Rhopp_num    = np.matmul(D2_dim, self.Rho)
             
-            Rhop_num_nd  = np.matmul(D1_nondim, self.Rho_nd)
-            Rhopp_num_nd = np.matmul(D2_nondim, self.Rho_nd)
+#             Rhop_num_nd  = np.matmul(D1_nondim, self.Rho_nd)
+#             Rhopp_num_nd = np.matmul(D2_nondim, self.Rho_nd)
             
-            Mup_num      = np.matmul(D1_dim, self.Mu)
+#             Mup_num      = np.matmul(D1_dim, self.Mu)
 
-            # Compute Chandrasekhar length and time scales
-            print("Computing Chandrasekhar length and time scales")
-            print("==============================================")
-            print("using nu0  = ", nu0)
-            print("using grav = ", grav)
-            bsfl_ref.Tscale_Chandra = (nu0/grav**2.)**(1./3.)
-            bsfl_ref.Lscale_Chandra = (nu0**2./grav)**(1./3.)
-            bsfl_ref.Uref_Chandra   = bsfl_ref.Lscale_Chandra/bsfl_ref.Tscale_Chandra 
+#             # Compute Chandrasekhar length and time scales
+#             print("Computing Chandrasekhar length and time scales")
+#             print("==============================================")
+#             print("using nu0  = ", nu0)
+#             print("using grav = ", grav)
+#             bsfl_ref.Tscale_Chandra = (nu0/grav**2.)**(1./3.)
+#             bsfl_ref.Lscale_Chandra = (nu0**2./grav)**(1./3.)
+#             bsfl_ref.Uref_Chandra   = bsfl_ref.Lscale_Chandra/bsfl_ref.Tscale_Chandra 
 
-            print("Chandrasekhar time scale [s]      = ", bsfl_ref.Tscale_Chandra)
-            print("Chandrasekhar length scale [m]    = ", bsfl_ref.Lscale_Chandra)
-            print("Chandrasekhar velocity scale [m]  = ", bsfl_ref.Uref_Chandra)
-            print("Chandrasekhar Reynolds number [m] = ", rhoref*bsfl_ref.Uref_Chandra*bsfl_ref.Lscale_Chandra/muref)
+#             print("Chandrasekhar time scale [s]      = ", bsfl_ref.Tscale_Chandra)
+#             print("Chandrasekhar length scale [m]    = ", bsfl_ref.Lscale_Chandra)
+#             print("Chandrasekhar velocity scale [m]  = ", bsfl_ref.Uref_Chandra)
+#             print("Chandrasekhar Reynolds number [m] = ", rhoref*bsfl_ref.Uref_Chandra*bsfl_ref.Lscale_Chandra/muref)
 
 
-            for iblk in range(0,1):
-                print("")
+#             for iblk in range(0,1):
+#                 print("")
             
-            # Check Reynolds number
-            if ( np.abs(Re-Uref*Lref/nu0) > tol_c ):
-                print("np.abs(Re-Uref*Lref/nu0) = ", np.abs(Re-Uref*Lref/nu0))
-                warnings.warn("Reynolds number inconsistency!!!!!!!")
-                print("")
+#             # Check Reynolds number
+#             if ( np.abs(Re-Uref*Lref/nu0) > tol_c ):
+#                 print("np.abs(Re-Uref*Lref/nu0) = ", np.abs(Re-Uref*Lref/nu0))
+#                 warnings.warn("Reynolds number inconsistency!!!!!!!")
+#                 print("")
             
-            #print("Input Reynolds number                = ", Re)
-            #print("Re-computed Reynolds number          = ", Uref*Lref/nu0)
+#             #print("Input Reynolds number                = ", Re)
+#             #print("Re-computed Reynolds number          = ", Uref*Lref/nu0)
             
-            #print("Atwood number At                     = ", At)
-            #print("Atwood number (viscosity) Amu        = ", At)
+#             #print("Atwood number At                     = ", At)
+#             #print("Atwood number (viscosity) Amu        = ", At)
 
-            Flag = 0
-            # Check that kinematic viscosity is constant
-            for ii in range(0, size):
-                #print("np.abs(nu0-nu[ii]), tol_c = ", np.abs(nu0-nu[ii]), tol_c)
-                if ( np.abs(nu0-nu[ii]) > tol_c ):
-                    Flag=1
-                    break
+#             Flag = 0
+#             # Check that kinematic viscosity is constant
+#             for ii in range(0, size):
+#                 #print("np.abs(nu0-nu[ii]), tol_c = ", np.abs(nu0-nu[ii]), tol_c)
+#                 if ( np.abs(nu0-nu[ii]) > tol_c ):
+#                     Flag=1
+#                     break
 
-            if (Flag==1):
-                warnings.warn("Kinematic viscosity is not constant!!!!!!!!")
-                print("")
-                    #sys.exit("Kinematic viscosity is not constant!!!!!!!!")
+#             if (Flag==1):
+#                 warnings.warn("Kinematic viscosity is not constant!!!!!!!!")
+#                 print("")
+#                     #sys.exit("Kinematic viscosity is not constant!!!!!!!!")
             
-            #print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
-            #print("nu0-np.amin(nu)                      = ", nu0-np.amin(nu))
-            #print("")
+#             #print("nu0-np.amax(nu)                      = ", nu0-np.amax(nu))
+#             #print("nu0-np.amin(nu)                      = ", nu0-np.amin(nu))
+#             #print("")
 
-            # I want k_nondim = 2
-            #k_nondim = k*self.Lscale
-            #print("k_nondim                             = ", k_nondim)
-            #print("delta_nondim (Lref*)                 = ", Lref/self.Lscale)
-            #print
+#             # I want k_nondim = 2
+#             #k_nondim = k*self.Lscale
+#             #print("k_nondim                             = ", k_nondim)
+#             #print("delta_nondim (Lref*)                 = ", Lref/self.Lscale)
+#             #print
 
-            # PLOT W-VELOCITY
+#             # PLOT W-VELOCITY
 
-            PlotW = 0
-            if (PlotW==1):
+#             PlotW = 0
+#             if (PlotW==1):
             
-                ptn = plt.gcf().number + 1
+#                 ptn = plt.gcf().number + 1
                 
-                f = plt.figure(ptn)
-                #plt.plot(self.Wvel_nd_after, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim after)")
-                plt.plot(Wvel_nd_num, znondim, 'k', linewidth=1.5, label="Baseflow wvel (nondim, numerical)")
-                plt.plot(self.Wvel_nd, znondim, 'r--', linewidth=1.5, label="Baseflow wvel (nondim)")
+#                 f = plt.figure(ptn)
+#                 #plt.plot(self.Wvel_nd_after, zcoord, 'k', linewidth=1.5, label="Baseflow wvel (nondim after)")
+#                 plt.plot(Wvel_nd_num, znondim, 'k', linewidth=1.5, label="Baseflow wvel (nondim, numerical)")
+#                 plt.plot(self.Wvel_nd, znondim, 'r--', linewidth=1.5, label="Baseflow wvel (nondim)")
                 
-                plt.xlabel("w-velocity [-]", fontsize=14)
-                plt.ylabel('z [-]', fontsize=16)
-                plt.gcf().subplots_adjust(left=0.16)
-                plt.gcf().subplots_adjust(bottom=0.15)
-                #plt.ylim([xmin, xmax])
-                plt.legend(loc="upper right")
-                f.show()
+#                 plt.xlabel("w-velocity [-]", fontsize=14)
+#                 plt.ylabel('z [-]', fontsize=16)
+#                 plt.gcf().subplots_adjust(left=0.16)
+#                 plt.gcf().subplots_adjust(bottom=0.15)
+#                 #plt.ylim([xmin, xmax])
+#                 plt.legend(loc="upper right")
+#                 f.show()
                 
-                ptn = plt.gcf().number + 1
+#                 ptn = plt.gcf().number + 1
                 
-                f = plt.figure(ptn)
-                plt.plot(Wvel_num, zdim, 'k', linewidth=1.5, label="Baseflow wvel (dimensional, numerical)")
-                plt.plot(self.Wvel, zdim, 'r--', linewidth=1.5, label="Baseflow wvel (dimensional)")
+#                 f = plt.figure(ptn)
+#                 plt.plot(Wvel_num, zdim, 'k', linewidth=1.5, label="Baseflow wvel (dimensional, numerical)")
+#                 plt.plot(self.Wvel, zdim, 'r--', linewidth=1.5, label="Baseflow wvel (dimensional)")
                 
-                plt.xlabel("w-velocity [m/s]", fontsize=14)
-                plt.ylabel('z [m]', fontsize=16)
-                plt.gcf().subplots_adjust(left=0.16)
-                plt.gcf().subplots_adjust(bottom=0.15)
-                #plt.ylim([xmin, xmax])
-                plt.legend(loc="upper right")
-                f.show()
+#                 plt.xlabel("w-velocity [m/s]", fontsize=14)
+#                 plt.ylabel('z [m]', fontsize=16)
+#                 plt.gcf().subplots_adjust(left=0.16)
+#                 plt.gcf().subplots_adjust(bottom=0.15)
+#                 #plt.ylim([xmin, xmax])
+#                 plt.legend(loc="upper right")
+#                 f.show()
                 
-                ptn = plt.gcf().number + 1
+#                 ptn = plt.gcf().number + 1
                 
-                f = plt.figure(ptn)
-                plt.plot(self.Wvelp_nd, zcoord, 'k', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, exact)")
-                plt.plot(self.Wvelp_nd_num, zcoord, 'r--', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, numerical)")
-                plt.plot(self.Wvelp_nd_after, zcoord, 'b-.', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, after)")
+#                 f = plt.figure(ptn)
+#                 plt.plot(self.Wvelp_nd, zcoord, 'k', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, exact)")
+#                 plt.plot(self.Wvelp_nd_num, zcoord, 'r--', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, numerical)")
+#                 plt.plot(self.Wvelp_nd_after, zcoord, 'b-.', linewidth=1.5, label="Baseflow d(wvel)/dz (nondim, after)")
                 
-                plt.xlabel("d(w-velocity)/dz [-]", fontsize=14)
-                plt.ylabel('z', fontsize=16)
-                plt.gcf().subplots_adjust(left=0.16)
-                plt.gcf().subplots_adjust(bottom=0.15)
-                #plt.ylim([xmin, xmax])
-                plt.legend(loc="upper right")
-                f.show()
+#                 plt.xlabel("d(w-velocity)/dz [-]", fontsize=14)
+#                 plt.ylabel('z', fontsize=16)
+#                 plt.gcf().subplots_adjust(left=0.16)
+#                 plt.gcf().subplots_adjust(bottom=0.15)
+#                 #plt.ylim([xmin, xmax])
+#                 plt.legend(loc="upper right")
+#                 f.show()
                 
-                input("Check baseflow w-velocity!!!!!")
+#                 input("Check baseflow w-velocity!!!!!")
 
 
-        elif(opt==3):
+#         elif(opt==3):
 
-            sys.exit("This needs to be checked!!!!!!")
+#             sys.exit("This needs to be checked!!!!!!")
             
-            x = y
-            nx = len(y)
-            xmin = x[0]
+#             x = y
+#             nx = len(y)
+#             xmin = x[0]
 
-            print("xmin = ", xmin)
+#             print("xmin = ", xmin)
 
-            delta  = At/( 2.0*( 1.0-np.sqrt(1-At**2.) ) )
-            pres_c = 50
-            x_c = xmin
+#             delta  = At/( 2.0*( 1.0-np.sqrt(1-At**2.) ) )
+#             pres_c = 50
+#             x_c = xmin
             
-            self.Rho_nd  = (1.0-At*np.tanh(delta*x))/(1.0+At)
-            self.Rhop_nd = -At/(1.0+At)*delta/np.cosh(delta*x)**2.
+#             self.Rho_nd  = (1.0-At*np.tanh(delta*x))/(1.0+At)
+#             self.Rhop_nd = -At/(1.0+At)*delta/np.cosh(delta*x)**2.
             
-            pres_bsfl_num = mod_util.trapezoid_integration_cum(self.Rho_nd, x)
-            pres_bsfl_num = pres_bsfl_num + pres_c
+#             pres_bsfl_num = mod_util.trapezoid_integration_cum(self.Rho_nd, x)
+#             pres_bsfl_num = pres_bsfl_num + pres_c
             
-            self.Pres_nd = pres_c + 1.0/(1.0+At)*( x-x_c + At/delta*np.log( np.cosh(delta*x_c)/np.cosh(delta*x) ) )
+#             self.Pres_nd = pres_c + 1.0/(1.0+At)*( x-x_c + At/delta*np.log( np.cosh(delta*x_c)/np.cosh(delta*x) ) )
 
-            # Take derivative of pressure and plot (see if you recover density)
-            dpdx = np.zeros(nx, dp)
-            for i in range(1, nx-1):
-                dx = x[i+1]-x[i-1]
-                dpdx[i] = ( self.Pres_nd[i+1] - self.Pres_nd[i-1] )/dx
+#             # Take derivative of pressure and plot (see if you recover density)
+#             dpdx = np.zeros(nx, dp)
+#             for i in range(1, nx-1):
+#                 dx = x[i+1]-x[i-1]
+#                 dpdx[i] = ( self.Pres_nd[i+1] - self.Pres_nd[i-1] )/dx
         
-            ptn = plt.gcf().number + 1
+#             ptn = plt.gcf().number + 1
             
-            f = plt.figure(ptn)
-            plt.plot(x, self.Rho_nd, 'k', linewidth=1.5, label="Baseflow density")
-            plt.plot(x[1:nx-2], dpdx[1:nx-2], 'r-.', linewidth=1.5, label="Numerical derivative of pressure")
+#             f = plt.figure(ptn)
+#             plt.plot(x, self.Rho_nd, 'k', linewidth=1.5, label="Baseflow density")
+#             plt.plot(x[1:nx-2], dpdx[1:nx-2], 'r-.', linewidth=1.5, label="Numerical derivative of pressure")
             
-            plt.xlabel("x", fontsize=14)
-            plt.ylabel('density', fontsize=16)
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            #plt.ylim([xmin, xmax])
-            plt.legend(loc="upper right")
-            f.show()    
+#             plt.xlabel("x", fontsize=14)
+#             plt.ylabel('density', fontsize=16)
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             #plt.ylim([xmin, xmax])
+#             plt.legend(loc="upper right")
+#             f.show()    
             
-            ptn = ptn + 1
+#             ptn = ptn + 1
             
-            f = plt.figure(ptn)
-            plt.plot(x, self.Pres_nd, 'k', linewidth=1.5, label="Analytic integration")
-            plt.plot(x, pres_bsfl_num, 'r-.', linewidth=1.5, label="Numerical integration")
-            plt.xlabel(r"x", fontsize=14)
-            plt.ylabel('pressure', fontsize=16)
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            #plt.ylim([xmin, xmax])
-            plt.legend(loc="upper right")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(x, self.Pres_nd, 'k', linewidth=1.5, label="Analytic integration")
+#             plt.plot(x, pres_bsfl_num, 'r-.', linewidth=1.5, label="Numerical integration")
+#             plt.xlabel(r"x", fontsize=14)
+#             plt.ylabel('pressure', fontsize=16)
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             #plt.ylim([xmin, xmax])
+#             plt.legend(loc="upper right")
+#             f.show()
             
-            input("Plots for compressible inviscid solver")
+#             input("Plots for compressible inviscid solver")
             
-        else:
-            sys.exit("Not a proper value for flag opt in RT baseflow")
+#         else:
+#             sys.exit("Not a proper value for flag opt in RT baseflow")
 
 
-        ###################################
-        # Compute layer thickness
-        ###################################
-        thick_crit = 0.01 # criterion
+#         ###################################
+#         # Compute layer thickness
+#         ###################################
+#         thick_crit = 0.01 # criterion
         
-        delta_rho = rho2-rho1
-        rho_test1 = rho1 + thick_crit*delta_rho
-        rho_test2 = rho2 - thick_crit*delta_rho
+#         delta_rho = rho2-rho1
+#         rho_test1 = rho1 + thick_crit*delta_rho
+#         rho_test2 = rho2 - thick_crit*delta_rho
 
-        rho_thick1 = rho_test1*np.ones(ny)
-        rho_thick2 = rho_test2*np.ones(ny)
+#         rho_thick1 = rho_test1*np.ones(ny)
+#         rho_thick2 = rho_test2*np.ones(ny)
 
-        self.H_thick = mod_util.GetLayerThicknessRT(ny, zdim, rho_test1, rho_test2, self.Rho)
-        self.h_thick = mod_util.GetLayerThicknessRT_CabotCook(ny, zdim, self.Rho, rho1, rho2)
-        print("")
-        print("RT Layer Thickness")
-        print("==================")
-        print("H_thick (x percent criterion), h_thick (Cabot & Cook), H_thick/h_thick = ", self.H_thick, self.h_thick, self.H_thick/self.h_thick)
+#         self.H_thick = mod_util.GetLayerThicknessRT(ny, zdim, rho_test1, rho_test2, self.Rho)
+#         self.h_thick = mod_util.GetLayerThicknessRT_CabotCook(ny, zdim, self.Rho, rho1, rho2)
+#         print("")
+#         print("RT Layer Thickness")
+#         print("==================")
+#         print("H_thick (x percent criterion), h_thick (Cabot & Cook), H_thick/h_thick = ", self.H_thick, self.h_thick, self.H_thick/self.h_thick)
 
-        self.h_thick2 = mod_util.GetLayerThicknessRT_Other(ny, zdim, self. Rho, rho1, rho2)
+#         self.h_thick2 = mod_util.GetLayerThicknessRT_Other(ny, zdim, self. Rho, rho1, rho2)
 
-        print("h_thick2 (other formula) = ", self.h_thick2)
-        print("2*h_thick2 (other formula) = ", 2*self.h_thick2)
-        print("")
+#         print("h_thick2 (other formula) = ", self.h_thick2)
+#         print("2*h_thick2 (other formula) = ", 2*self.h_thick2)
+#         print("")
 
-        #if (Re > 1e10):
-        #    warnings.warn("RT baseflow: Re > 1e10 ==> setting viscosity to zero")
-        #    self.Mu   = 0.0*self.Mu
-        #    self.Mup  = 0.0*self.Mup
+#         #if (Re > 1e10):
+#         #    warnings.warn("RT baseflow: Re > 1e10 ==> setting viscosity to zero")
+#         #    self.Mu   = 0.0*self.Mu
+#         #    self.Mup  = 0.0*self.Mup
 
-        zmin = -0.005
-        zmax = 0.005
+#         zmin = -0.005
+#         zmax = 0.005
         
-        ptn = plt.gcf().number + 1
+#         ptn = plt.gcf().number + 1
         
-        f = plt.figure(ptn)
+#         f = plt.figure(ptn)
 
-        max_tot = np.zeros(2, dp)
-        max_tot[0] = np.amax(np.abs(-np.divide(np.multiply(self.Rhop, self.Rhop), self.Rho )))
-        max_tot[1] = np.amax(np.abs(self.Rhopp))
+#         max_tot = np.zeros(2, dp)
+#         max_tot[0] = np.amax(np.abs(-np.divide(np.multiply(self.Rhop, self.Rhop), self.Rho )))
+#         max_tot[1] = np.amax(np.abs(self.Rhopp))
 
-        max_glob = np.amax(max_tot)
+#         max_glob = np.amax(max_tot)
         
-        plt.plot(-np.divide(np.multiply(self.Rhop, self.Rhop), self.Rho )/max_glob, zcoord, 'k', markerfacecolor='none', label=r"$\dfrac{-1}{\bar{\rho}}\dfrac{\partial \bar{\rho}}{\partial z}\dfrac{\partial \bar{\rho}}{\partial z}$")
-        plt.plot(self.Rhopp/max_glob, zcoord, 'r', markerfacecolor='none', label=r"$\dfrac{\partial^2 \bar{\rho}}{\partial z^2}$")
+#         plt.plot(-np.divide(np.multiply(self.Rhop, self.Rhop), self.Rho )/max_glob, zcoord, 'k', markerfacecolor='none', label=r"$\dfrac{-1}{\bar{\rho}}\dfrac{\partial \bar{\rho}}{\partial z}\dfrac{\partial \bar{\rho}}{\partial z}$")
+#         plt.plot(self.Rhopp/max_glob, zcoord, 'r', markerfacecolor='none', label=r"$\dfrac{\partial^2 \bar{\rho}}{\partial z^2}$")
         
-        #plt.xlabel(r"$\rho$", fontsize=20)
-        plt.ylabel('z', fontsize=20)
-        plt.legend(loc="upper right")
-        plt.gcf().subplots_adjust(left=0.16)
-        plt.gcf().subplots_adjust(bottom=0.15)
-        plt.ylim([zmin, zmax])
-        plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-        plt.title(r"Check validity of Boussinesq")
-        f.show()
+#         #plt.xlabel(r"$\rho$", fontsize=20)
+#         plt.ylabel('z', fontsize=20)
+#         plt.legend(loc="upper right")
+#         plt.gcf().subplots_adjust(left=0.16)
+#         plt.gcf().subplots_adjust(bottom=0.15)
+#         plt.ylim([zmin, zmax])
+#         plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#         plt.title(r"Check validity of Boussinesq")
+#         f.show()
 
-        if (plotF and not opt == 3):
+#         if (plotF and not opt == 3):
 
-            ViewFullDom = True
+#             ViewFullDom = True
             
-            zmin = -0.01
-            zmax = 0.01
+#             zmin = -0.01
+#             zmax = 0.01
 
-            #
-            # Plot rho-rho_ref (dimensional)
-            #
+#             #
+#             # Plot rho-rho_ref (dimensional)
+#             #
             
-            ptn = plt.gcf().number + 1
+#             ptn = plt.gcf().number + 1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rho-rhoref, zdim, 'k', markerfacecolor='none', label=r"$\rho-\rho_{ref}$ (dimensional)")
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rho-rhoref, zdim, 'k', markerfacecolor='none', label=r"$\rho-\rho_{ref}$ (dimensional)")
             
-            plt.xlabel(r"$\rho-\rho_{ref}$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$\rho-\rho_{ref}$")
-            plt.legend(loc="upper center")
-            f.show()
+#             plt.xlabel(r"$\rho-\rho_{ref}$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$\rho-\rho_{ref}$")
+#             plt.legend(loc="upper center")
+#             f.show()
 
-            #
-            # Plot rho (dimensional)
-            #
+#             #
+#             # Plot rho (dimensional)
+#             #
             
-            ptn = plt.gcf().number + 1
+#             ptn = plt.gcf().number + 1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rho, zdim, 'k', markerfacecolor='none', label="density (dimensional)")
-            plt.plot(rho_thick1, zdim, 'r', markerfacecolor='none', label="density (dimensional, rho_thick1)")
-            plt.plot(rho_thick2, zdim, 'b', markerfacecolor='none', label="density (dimensional, rho_thick2)")
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rho, zdim, 'k', markerfacecolor='none', label="density (dimensional)")
+#             plt.plot(rho_thick1, zdim, 'r', markerfacecolor='none', label="density (dimensional, rho_thick1)")
+#             plt.plot(rho_thick2, zdim, 'b', markerfacecolor='none', label="density (dimensional, rho_thick2)")
 
-            plt.xlabel(r"$\rho$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            #plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$\rho$")
-            plt.legend(loc="upper center")
-            f.show()
+#             plt.xlabel(r"$\rho$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             #plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$\rho$")
+#             plt.legend(loc="upper center")
+#             f.show()
 
-            #
-            # Plot rho (non-dimensional)
-            #
+#             #
+#             # Plot rho (non-dimensional)
+#             #
             
-            ptn = plt.gcf().number + 1
+#             ptn = plt.gcf().number + 1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rho_nd, znondim, 'k', markerfacecolor='none', label="density (non-dim)")
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rho_nd, znondim, 'k', markerfacecolor='none', label="density (non-dim)")
 
-            plt.xlabel(r"$\rho$", fontsize=20)
-            plt.ylabel('z (non-dim.)', fontsize=20)
-            #plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$\rho$ Non-Dim.")
-            plt.legend(loc="upper center")
-            f.show()
+#             plt.xlabel(r"$\rho$", fontsize=20)
+#             plt.ylabel('z (non-dim.)', fontsize=20)
+#             #plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$\rho$ Non-Dim.")
+#             plt.legend(loc="upper center")
+#             f.show()
 
-            #
-            # Plot d(rho)/dz (dimensional)
-            #
+#             #
+#             # Plot d(rho)/dz (dimensional)
+#             #
             
-            ptn = ptn+1
+#             ptn = ptn+1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rhop, zdim, 'k', markerfacecolor='none', label="drho/dz (analytical)")
-            plt.plot(Rhop_num, zdim, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
-            plt.xlabel(r"$d\rho/dz$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$d\rho/dz$ DIMENSIONAL")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rhop, zdim, 'k', markerfacecolor='none', label="drho/dz (analytical)")
+#             plt.plot(Rhop_num, zdim, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
+#             plt.xlabel(r"$d\rho/dz$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$d\rho/dz$ DIMENSIONAL")
+#             f.show()
 
-            #
-            # Plot d^2(rho)/dz^2 (dimensional)
-            #
+#             #
+#             # Plot d^2(rho)/dz^2 (dimensional)
+#             #
 
-            ptn = ptn+1
+#             ptn = ptn+1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rhopp, zdim, 'k', markerfacecolor='none', label="d2rho/dz2 (analytical)")
-            plt.plot(Rhopp_num, zdim, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
-            plt.xlabel(r"$d^2\rho/dz^2$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$d^2\rho/dz^2$ DIMENSIONAL")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rhopp, zdim, 'k', markerfacecolor='none', label="d2rho/dz2 (analytical)")
+#             plt.plot(Rhopp_num, zdim, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
+#             plt.xlabel(r"$d^2\rho/dz^2$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$d^2\rho/dz^2$ DIMENSIONAL")
+#             f.show()
 
-            #
-            # Plot d(rho)/dz (non-dimensional)
-            #
+#             #
+#             # Plot d(rho)/dz (non-dimensional)
+#             #
 
-            ptn = ptn+1
+#             ptn = ptn+1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rhop_nd, znondim, 'k', markerfacecolor='none', label="drho/dz (analytical)")
-            plt.plot(Rhop_num_nd, znondim, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
-            plt.xlabel(r"$d\rho/dz$", fontsize=20)
-            plt.ylabel('z (non-dimensional)', fontsize=20)
-            plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$d\rho/dz$ NON-DIM.")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rhop_nd, znondim, 'k', markerfacecolor='none', label="drho/dz (analytical)")
+#             plt.plot(Rhop_num_nd, znondim, 'r--', markerfacecolor='none', label="drho/dz (numerical)")
+#             plt.xlabel(r"$d\rho/dz$", fontsize=20)
+#             plt.ylabel('z (non-dimensional)', fontsize=20)
+#             plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$d\rho/dz$ NON-DIM.")
+#             f.show()
 
-            #
-            # Plot d^2(rho)/dz^2 (non-dimensional)
-            #
+#             #
+#             # Plot d^2(rho)/dz^2 (non-dimensional)
+#             #
 
-            ptn = ptn+1
+#             ptn = ptn+1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Rhopp_nd, znondim, 'k', markerfacecolor='none', label="d2rho/dz2 (analytical)")
-            plt.plot(self.Rhopp_nd_old, znondim, 'r--', markerfacecolor='none', label="d2rho/dz2 (straight nondim.)")
-            #plt.plot(Rhopp_num_nd, zcoord, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
-            plt.xlabel(r"$d^2\rho/dz^2$", fontsize=20)
-            plt.ylabel('z (non-dimensional)', fontsize=20)
-            plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$d^2\rho/dz^2$ NON-DIM.")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(self.Rhopp_nd, znondim, 'k', markerfacecolor='none', label="d2rho/dz2 (analytical)")
+#             plt.plot(self.Rhopp_nd_old, znondim, 'r--', markerfacecolor='none', label="d2rho/dz2 (straight nondim.)")
+#             #plt.plot(Rhopp_num_nd, zcoord, 'r--', markerfacecolor='none', label="d2rho/dz2 (numerical)")
+#             plt.xlabel(r"$d^2\rho/dz^2$", fontsize=20)
+#             plt.ylabel('z (non-dimensional)', fontsize=20)
+#             plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$d^2\rho/dz^2$ NON-DIM.")
+#             f.show()
 
-            #
-            # Plot dynamic viscosity Mu (dimensional)
-            #            
+#             #
+#             # Plot dynamic viscosity Mu (dimensional)
+#             #            
             
-            ptn = ptn+1
+#             ptn = ptn+1
             
-            f = plt.figure(ptn)
-            plt.plot(self.Mu, zdim, 'k', markerfacecolor='none', label="viscosity")
-            plt.xlabel(r"$\mu$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            #plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$\mu$ Dimensional")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(self.Mu, zdim, 'k', markerfacecolor='none', label="viscosity")
+#             plt.xlabel(r"$\mu$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             #plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$\mu$ Dimensional")
+#             f.show()
 
-            #
-            # Plot d(Mu)/dz (dimensional)
-            #            
+#             #
+#             # Plot d(Mu)/dz (dimensional)
+#             #            
 
-            ptn = ptn+1
+#             ptn = ptn+1
 
-            f, ax = plt.subplots()
-            plt.plot(self.Mup, zdim, 'k', markerfacecolor='none', label="dmudz (analytical)")
-            #plt.plot(Mup_num, z, 'r--', markerfacecolor='none', label="dmudz (numerical)")
-            plt.xlabel(r"$d\mu/dz$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            #plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
+#             f, ax = plt.subplots()
+#             plt.plot(self.Mup, zdim, 'k', markerfacecolor='none', label="dmudz (analytical)")
+#             #plt.plot(Mup_num, z, 'r--', markerfacecolor='none', label="dmudz (numerical)")
+#             plt.xlabel(r"$d\mu/dz$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             #plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
 
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$d\mu/dz$ Dimensional")
-            f.show()
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$d\mu/dz$ Dimensional")
+#             f.show()
 
-            #
-            # Plot kinematic viscosity nu (dimensional)
-            #            
+#             #
+#             # Plot kinematic viscosity nu (dimensional)
+#             #            
 
-            ptn = ptn+1
+#             ptn = ptn+1
             
-            f = plt.figure(ptn)
-            plt.plot(nu, zdim, 'k', markerfacecolor='none', label=r"$\nu$")
-            plt.xlabel(r"$\nu$", fontsize=20)
-            plt.ylabel('z (dimensional)', fontsize=20)
-            #plt.legend(loc="upper right")
-            plt.gcf().subplots_adjust(left=0.16)
-            plt.gcf().subplots_adjust(bottom=0.15)
-            if (not ViewFullDom):
-                plt.ylim([zmin, zmax])
-            plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-            plt.title(r"$\nu$ Dimensional")
-            f.show()
+#             f = plt.figure(ptn)
+#             plt.plot(nu, zdim, 'k', markerfacecolor='none', label=r"$\nu$")
+#             plt.xlabel(r"$\nu$", fontsize=20)
+#             plt.ylabel('z (dimensional)', fontsize=20)
+#             #plt.legend(loc="upper right")
+#             plt.gcf().subplots_adjust(left=0.16)
+#             plt.gcf().subplots_adjust(bottom=0.15)
+#             if (not ViewFullDom):
+#                 plt.ylim([zmin, zmax])
+#             plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#             plt.title(r"$\nu$ Dimensional")
+#             f.show()
 
 
-            if ( mtmp.boussinesq == -2 or mtmp.boussinesq == 10 ): # dimensional solver
+#             if ( mtmp.boussinesq == -2 or mtmp.boussinesq == 10 ): # dimensional solver
 
-                ptn = ptn + 1
-                # Baseflow coordinate
-                zdim = y
-                # Plotting coordinate
-                zcoord = y
+#                 ptn = ptn + 1
+#                 # Baseflow coordinate
+#                 zdim = y
+#                 # Plotting coordinate
+#                 zcoord = y
 
-                f = plt.figure(ptn)
-                plt.plot(self.Rho, znondim, 'k', markerfacecolor='none', label="density")
-                plt.xlabel(r"$\rho$", fontsize=20)
-                plt.ylabel('z (non-dimensional)', fontsize=20)
-                #plt.legend(loc="upper right")
-                plt.gcf().subplots_adjust(left=0.16)
-                plt.gcf().subplots_adjust(bottom=0.15)
-                if (not ViewFullDom):
-                    plt.ylim([zmin, zmax])
-                plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-                plt.title(r"$\rho$")
-                f.show()
+#                 f = plt.figure(ptn)
+#                 plt.plot(self.Rho, znondim, 'k', markerfacecolor='none', label="density")
+#                 plt.xlabel(r"$\rho$", fontsize=20)
+#                 plt.ylabel('z (non-dimensional)', fontsize=20)
+#                 #plt.legend(loc="upper right")
+#                 plt.gcf().subplots_adjust(left=0.16)
+#                 plt.gcf().subplots_adjust(bottom=0.15)
+#                 if (not ViewFullDom):
+#                     plt.ylim([zmin, zmax])
+#                 plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+#                 plt.title(r"$\rho$")
+#                 f.show()
 
             
-            print("")
-            input('RT baseflow plots ... strike any key to proceed')
+#             print("")
+#             input('RT baseflow plots ... strike any key to proceed')
 
-            # Close all plots so far
-            mod_util.close_previous_plots()
+#             # Close all plots so far
+#             mod_util.close_previous_plots()
 
-            #sys.exit("Debug RT baseflow")
+#             #sys.exit("Debug RT baseflow")
 
-            if (UseNumericalDerivatives):
-                print("")
-                print("Using numerical derivatives in RayleighTaylorBaseflow")
-                self.Rhop  = np.matmul(D1_dim, self.Rho)
-                self.Rhopp = np.matmul(D2_dim, self.Rho)
-                self.Mup   = np.matmul(D1_dim, self.Mu)
+#             if (UseNumericalDerivatives):
+#                 print("")
+#                 print("Using numerical derivatives in RayleighTaylorBaseflow")
+#                 self.Rhop  = np.matmul(D1_dim, self.Rho)
+#                 self.Rhopp = np.matmul(D2_dim, self.Rho)
+#                 self.Mup   = np.matmul(D1_dim, self.Mu)
 
-                self.Rhop_nd  = np.matmul(D1_nondim, self.Rho_nd)
-                self.Rhopp_nd = np.matmul(D2_nondim, self.Rho_nd)
-                self.Mup_nd   = np.matmul(D1_nondim, self.Mu_nd)
+#                 self.Rhop_nd  = np.matmul(D1_nondim, self.Rho_nd)
+#                 self.Rhopp_nd = np.matmul(D2_nondim, self.Rho_nd)
+#                 self.Mup_nd   = np.matmul(D1_nondim, self.Mu_nd)
                 
-            else:
-                print("")
-                print("Using analytical derivatives in RayleighTaylorBaseflow")
+#             else:
+#                 print("")
+#                 print("Using analytical derivatives in RayleighTaylorBaseflow")
                 
 
 

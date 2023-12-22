@@ -11,34 +11,35 @@ i8 = np.dtype('i8') # integer 8
 #     a mapping is generally required to map the interval [1,-1] to the physical domain of interest
 #     """
 #     def __init__(self, size):
-#         self.y    = np.zeros(size, dp)
+#         self.z    = np.zeros(size, dp)
 
 class MapShearLayer(object):
-    def __init__(self, sinf, cheb, l): # passing yinf (sinf), Gauss-Lobatto points (yi), l and differentiation matrices on [1,-1]
+    def __init__(self, sinf, cheb, l): # passing zinf (sinf), Gauss-Lobatto points (zi), l and differentiation matrices on [1,-1]
         """
-        Mapping for shear-layer flows: From [-1,1] -> [ymin,ymax]
+        Mapping for shear-layer flows: From [-1,1] -> [zmin,zmax]
         """
-        yi = cheb.xc
+        self.l = l
+        zi = cheb.xc
         DM = cheb.DM
-        self.y = np.zeros(shape=yi.shape)
+        self.z = np.zeros(shape=zi.shape)
         sn = (l/sinf)**2.
 
-        npts    = len(yi)
-        dyidy   = np.zeros(npts, dp)
-        d2yidy2 = np.zeros(npts, dp)
+        npts    = len(zi)
+        dzidz   = np.zeros(npts, dp)
+        d2zidz2 = np.zeros(npts, dp)
         
-        for i in range(len(yi)):
+        for i in range(len(zi)):
             #print("i=",i)
-            self.y[i] = -l*yi[i]/np.sqrt(1.+sn-yi[i]**2.)
+            self.z[i] = -l*zi[i]/np.sqrt(1.+sn-zi[i]**2.)
         
-            dyidy[i]   = -np.sqrt(1.+sn)*l**2./(self.y[i]**2.+l**2.)**(3./2.)
-            d2yidy2[i] = 3*self.y[i]*l**2.*np.sqrt(1.+sn)/(self.y[i]**2.+l**2.)**(5./2.)
+            dzidz[i]   = -np.sqrt(1.+sn)*l**2./(self.z[i]**2.+l**2.)**(3./2.)
+            d2zidz2[i] = 3*self.z[i]*l**2.*np.sqrt(1.+sn)/(self.z[i]**2.+l**2.)**(5./2.)
 
-        #print("dyidy**2. = ",dyidy**2.)
+        #print("dzidz**2. = ",dzidz**2.)
     
         #Scale the differentiation matrix (due to the use of algebraic mapping)
-        self.D1 = np.matmul(np.diag(dyidy), DM[:,:,0])
-        self.D2 = np.matmul(np.diag(d2yidy2), DM[:,:,0]) + np.matmul(np.diag(dyidy**2.), DM[:,:,1])
+        self.D1 = np.matmul(np.diag(dzidz), DM[:,:,0])
+        self.D2 = np.matmul(np.diag(d2zidz2), DM[:,:,0]) + np.matmul(np.diag(dzidz**2.), DM[:,:,1])
 
         # if ( boussinesq == -2 or boussinesq == 10 ): # dimensional solver
         #     # Only for solver boussinesq == -2
@@ -54,16 +55,17 @@ class MapShearLayer(object):
         #     self.D1_dim = 1/bsfl_ref.Lref*self.D1
         #     self.D2_dim = 1/bsfl_ref.Lref*self.D2
 
-        #return self.y, self.D1, self.D2
+        #return self.z, self.D1, self.D2
 
 
 class MapVoid(object):
-    def __init__(self, sinf, cheb, l): # void mapping keep matrices and y as is
+    def __init__(self, sinf, cheb, l): # void mapping keep matrices and z as is
         """
         Mapping for Poiseuille flow ==> no mapping
         """
-        self.y  = cheb.xc
-        #print("self.y= ", self.y)
+
+        self.l = l
+        self.z  = cheb.xc
         
         #Scale the differentiation matrix (due to the use of algebraic mapping)
         self.D1 = cheb.DM[:,:,0]
