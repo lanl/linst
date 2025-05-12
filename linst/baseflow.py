@@ -245,7 +245,7 @@ class PlanePoiseuille(Baseflow):
 
 class RTSimple(object):
     def __init__(self, z, At):
-        delta = 1.0
+        delta = 1.0 # 0.1 #1. #0.002
         znondim = z
         pi = math.pi
 
@@ -269,8 +269,10 @@ class RTSimple(object):
         self.rho2  = self.rho1*fac
         self.rhoref = 0.5*(self.rho1+self.rho2)
 
-        self.rho1_nd = self.rho1/self.rhoref
-        self.rho2_nd = self.rho2/self.rhoref
+        self.rho1_nd = self.rho1/self.rhoref # 1+At
+        self.rho2_nd = self.rho2/self.rhoref # 1-At
+
+        #print("self.rho1_nd, self.rho2_nd = ", self.rho1_nd, self.rho2_nd)
 
         self.grav = 1.
 
@@ -326,28 +328,36 @@ class RTSimple(object):
             
 class RTPsDNS(object):
     def __init__(self, z, At, map):
-        delta = 1
+        #delta = 1
         znondim = z
         nz = len(znondim)
         pi = math.pi
 
-        zshift = 12.5
+        #zshift = 12.5 #25. #2.5 #25. #5. #25. #12.5
 
-        tini = 0.
-        tend = 85. # 20. #65.
-        dt = 0.5 #0.04 #0.5
+        tini = 0.1 #0.
+        tend = 0.1 #85. # 20. #65.
+        dt = 0.1 #0.04 #0.5
 
         ntb = int( (tend-tini)/dt + 1 )
         
         self.time_out = np.linspace(tini, tend, ntb)
 
-        read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1e50_delta1_withDisturbance_to_t100_A1emin9_LST"
+        read_path = "/Users/aph/Desktop/PsDNS_computations_/Re50_Gravity_Down_Sc1_A1emin12_LST_EIGENFUNCTIONS_with_fft_DELTA_1/"
+        #read_path = "/Users/aph/Desktop/PsDNS_computations_/Re500_Gravity_Down_Sc1_A0pt0_LST_EIGENFUNCTIONS_divide_rho_by_At_NEW_MAR_11_2025_with_fft_DELTA_0pt1/"
+        #read_path = "/Users/aph/Desktop/PsDNS_computations_/Re500_Sc1_delta1_withDisturbance_Gravity_Down_New_Input_FINER_ReRun_with_full_output_October_29_2024_new_output_COARSER_A0pt0_To_T20_band_3_3_MORE_OUTPUT/"
+        #read_path = "/Users/aph/Desktop/PsDNS_computations_/Re500_Sc1_delta1_withDisturbance_Gravity_Down_New_Input_FINER_ReRun_with_full_output_October_29_2024_new_output_COARSER_A0pt0_To_T20_band_3_3/"
+        #read_path = "/Users/aph/Desktop/Re500_Sc1e50_delta1_withDisturbance_Gravity_Down_New_Input_FINER_ReRun_with_full_output_October_29_2024_new_output_COARSER_A0pt0_To_T20_band_3_3/"
+        #read_path = "/Users/aph/Desktop/Re500_Sc1_delta1_withDisturbance_Gravity_Down_New_Input_A1emin3_FINER_ReRun_with_full_output_October_29_2024_new_output_COARSER_A0pt001_To_T12_mode36_NEW/"
+        #read_path = "/Users/aph/Desktop/Re500_Sc1_delta1_withDisturbance_Gravity_Down_New_Input_A1emin3_FINER_ReRun_with_full_output_October_29_2024_new_output_COARSER_A0pt001_To_T12_mode36_NEW/"
+        #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1e50_delta1_withDisturbance_to_t100_A1emin9_LST/"
         #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t100_A1emin9_LST/"
         #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t100_A1emin7_LST/"
         #read_path = "/Users/aph/Desktop/PsDNS/Re1000_Baseflow_Sc1_delta1_withDisturbance_to_t20_A1emin2_LST_FINER_export_baseflow"
         
         for i in range(0, ntb):
             fname  = "Mean_Density_MoleFracHeavy_UVWVel_time_" + str('{:.5f}'.format(self.time_out[i])) + ".txt"
+            print("fname = ", fname)
             fullname = os.path.join(read_path, fname)
 
             data_collected = np.loadtxt(fullname, skiprows=0, dtype=float)
@@ -359,12 +369,15 @@ class RTPsDNS(object):
                 rho_base = np.zeros((ntb, nzb), dp)
                 
             z_base[i, :] = data_collected[:, 0]
-            rho_base[i, :] = data_collected[:, 1]
+            rho_base[i, :] = data_collected[:, 1]*At + 1.
 
             if ( i > 0 ):
                 if ( np.amax( np.abs( z_base[i, :]-z_base[i-1, :] ) ) > 1.0e-14 ):
                     sys.exit("z-coordinate of baseflow is not consistent!!!!!")
 
+        #print("z_base[0, nzb//4] = ", z_base[0, nzb//4])
+        zshift = z_base[0, nzb//4]
+        print("PsDNS baseflow ====> Setting z_shift to: ", zshift)
         z_base = z_base - zshift
 
         self.Rho_nd_2d = np.zeros((ntb, nz), dp)
@@ -393,6 +406,32 @@ class RTPsDNS(object):
         self.Wp = 0.0*self.Rho_nd
 
         self.rt_flag = True
+
+        self.grav = 1.
+
+    def plot_baseflow(self, map, ax=None):
+
+        #print("map.z = ", map.z)
+        try:
+            if not ax:
+                ax = plt.gca()
+            ax.plot(
+                self.Rho_nd_2d[0, :],
+                map.z,
+                'k', markerfacecolor='none'
+            )
+            ax.set_xlabel(r'$\rho$', fontsize=20)
+            ax.set_ylabel(r'$z$', fontsize=20)
+
+            plt.gcf().subplots_adjust(left=0.145)
+            plt.gcf().subplots_adjust(bottom=0.145)
+
+            ax.set_title('Baseflow')
+            #ax.set_xlim([-10, 10])
+            #ax.set_ylim([-1, 1])
+        except AttributeError:
+            plt.close()
+            warnings.warn("Something wriong here")
 
 class RT_ShearLayerRogersMoser(Baseflow):
 
